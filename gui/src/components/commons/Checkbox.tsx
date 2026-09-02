@@ -3,7 +3,7 @@ import { forwardRef, useMemo } from 'react';
 import { Control, Controller, FieldPath, FieldValues } from 'react-hook-form';
 
 export const CHECKBOX_CLASSES = classNames(
-  'bg-background-50 border-background-50 cursor-pointer rounded-md w-5 h-5 text-accent-background-30 focus:border-accent-background-40 focus:ring-transparent focus:ring-offset-transparent focus:outline-transparent'
+  'bg-background-50/80 border border-white/10 cursor-pointer rounded-lg w-5 h-5 text-accent-background-30 focus:border-accent-background-30 focus:ring-2 focus:ring-accent-background-30/30 focus-visible:outline-none transition-all'
 );
 
 export const CheckboxInternal = forwardRef<
@@ -42,9 +42,11 @@ export const CheckboxInternal = forwardRef<
       },
       toggle: {
         checkbox: classNames('hidden'),
-        toggle: classNames('w-10 h-4 rounded-full relative transition-colors'),
+        toggle: classNames(
+          'w-10 h-5 rounded-full relative transition-colors duration-200 border border-white/10'
+        ),
         pin: classNames(
-          'h-2 w-2 bg-background-10 rounded-full absolute m-1 transition-opacity'
+          'h-3.5 w-3.5 bg-background-10 rounded-full absolute top-[2px] transition-all duration-200 shadow-sm'
         ),
       },
     };
@@ -55,12 +57,15 @@ export const CheckboxInternal = forwardRef<
     <div
       className={classNames(
         {
-          'rounded-md': outlined,
+          'rounded-xl': outlined,
           'text-background-40': disabled,
           'text-background-10': !disabled,
-          'bg-background-60': outlined && color === 'primary',
-          'bg-background-70': outlined && color === 'secondary',
-          'bg-background-50': outlined && color === 'tertiary',
+          'bg-background-60/80 border border-white/10':
+            outlined && color === 'primary',
+          'bg-background-70/80 border border-white/10':
+            outlined && color === 'secondary',
+          'bg-background-50/80 border border-white/10':
+            outlined && color === 'tertiary',
         },
         'flex items-center gap-2 w-full'
       )}
@@ -90,17 +95,18 @@ export const CheckboxInternal = forwardRef<
               'bg-accent-background-30': checked && !disabled && !loading,
               'bg-accent-background-50': checked && disabled,
               'bg-accent-background-30 animate-pulse': loading && !disabled,
-              'bg-background-50':
+              'bg-background-50/80':
                 ((!checked && color == 'primary') || color == 'secondary') &&
                 !loading,
-              'bg-background-40': !checked && color == 'tertiary' && !loading,
+              'bg-background-40/80':
+                !checked && color == 'tertiary' && !loading,
             })}
           >
             <div
               className={classNames(classes.pin, {
-                'left-0': !checked && !loading,
+                'left-[3px]': !checked && !loading,
                 'opacity-0': loading,
-                'right-0': checked && !loading,
+                'left-[21px]': checked && !loading,
                 'bg-background-30': disabled,
               })}
             />

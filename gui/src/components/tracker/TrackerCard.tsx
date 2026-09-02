@@ -173,10 +173,10 @@ export function TrackerCard({
       <div
         onClick={onClick}
         className={classNames(
-          'rounded-lg overflow-hidden transition-[box-shadow] duration-200 ease-linear',
-          interactable && 'hover:bg-background-50 cursor-pointer',
+          'rounded-2xl overflow-hidden transition-all duration-150',
+          interactable && 'glass-interactive cursor-pointer',
           outlined && 'outline outline-2 outline-accent-background-40',
-          bg
+          !bg || bg === 'bg-background-60' ? 'glass-panel' : bg
         )}
         style={
           shakeHighlight

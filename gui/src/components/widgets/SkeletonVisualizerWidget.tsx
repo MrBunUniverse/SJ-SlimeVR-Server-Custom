@@ -170,6 +170,8 @@ function initializePreview(
   const animate = (currentTime: number) => {
     animationFrameId = requestAnimationFrame(animate);
 
+    if (typeof document !== 'undefined' && document.hidden) return;
+
     const now = performance.now();
     const elapsed = now - lastRenderTimeRef;
     if (elapsed < frameInterval) return;

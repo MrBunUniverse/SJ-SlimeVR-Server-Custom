@@ -19,18 +19,20 @@ export function BigButton({
       {...props}
       type="button"
       className={classNames(
-        'flex flex-col justify-center rounded-md p-3 gap-1 cursor-pointer items-center',
+        'flex flex-col justify-center rounded-xl p-3.5 gap-1.5 cursor-pointer items-center transition-all duration-150',
         {
           'bg-background-60 hover:bg-background-60 cursor-not-allowed text-background-40 fill-background-40':
             disabled,
-          'bg-background-60 hover:bg-background-50 text-standard fill-background-10':
+          'bg-background-60 hover:bg-background-50 text-standard-bold font-semibold tracking-tight fill-background-10 active:scale-[0.98]':
             !disabled,
         },
         props.className
       )}
     >
       <div className="flex justify-around">{icon}</div>
-      <div className="flex text-default flex-grow items-center">{children}</div>
+      <div className="flex text-default flex-grow items-center font-semibold tracking-tight">
+        {children}
+      </div>
     </button>
   );
 }

@@ -31,11 +31,14 @@ export function TrackerStatus({ status }: { status: number }) {
   const statusLabel = useMemo(() => statusLabelMap[status], [status]);
 
   return (
-    <div className="flex text-default gap-2">
-      <div className="flex flex-col justify-center">
-        <div className={classNames('w-2 h-2 rounded-full', statusClass)} />
-      </div>
-      <Typography whitespace="whitespace-nowrap">
+    <div className="flex items-center gap-1.5 glass-pill px-2 py-0.5 text-[11px] font-medium">
+      <div
+        className={classNames('w-1.5 h-1.5 rounded-full shrink-0', statusClass)}
+      />
+      <Typography
+        whitespace="whitespace-nowrap"
+        className="text-[11px] leading-tight"
+      >
         {l10n.getString(statusLabel)}
       </Typography>
     </div>

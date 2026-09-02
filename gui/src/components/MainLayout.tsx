@@ -71,28 +71,20 @@ export function MainLayout({
       <div style={{ gridArea: 't' }}>
         <TopBar />
       </div>
-      <div style={{ gridArea: 'n' }} className="overflow-y-auto">
-        <Navbar />
-      </div>
+      <Navbar />
 
       <div
         style={{ gridArea: 'c' }}
         className={classNames(
-          'overflow-y-auto mr-2 my-2 mobile:m-0',
-          'flex flex-col rounded-md',
-          background && 'bg-background-70',
-          { 'rounded-t-none': !isMobile && full }
+          'overflow-y-auto mx-2 my-2 mobile:m-0',
+          'flex flex-col rounded-2xl transition-all',
+          background && 'glass-panel'
         )}
       >
         {children}
       </div>
       {full && isMobile && completion !== 'complete' && (
         <TrackingChecklistMobile />
-      )}
-      {full && (
-        <div style={{ gridArea: 'b' }}>
-          <Toolbar />
-        </div>
       )}
       {!isMobile && full && (
         <div style={{ gridArea: 's' }} className="mr-2">

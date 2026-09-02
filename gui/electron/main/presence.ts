@@ -38,12 +38,17 @@ export const richPresence = () => {
           startTimestamp: state.start,
         })
         .catch((e) => {
-          logger.error(e, 'Failed to update Discord RPC activity');
+          if (state.ready) {
+            logger.error(e, 'Failed to update Discord RPC activity');
+          }
         });
     },
     destroy: () => {
+      state.ready = false;
       logger.info('Destroying Discord RPC');
-      client.destroy();
+      try {
+        client.destroy();
+      } catch {}
       Object.assign(state, initialState());
     },
   };

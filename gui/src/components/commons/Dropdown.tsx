@@ -57,11 +57,11 @@ function DropdownItem({
 }) {
   const variantStyles = {
     primary:
-      'text-background-20 checked-hover:text-background-10 checked-hover:bg-background-50 focus:text-background-10 focus:bg-background-50',
+      'text-background-20 checked-hover:text-background-10 checked-hover:bg-background-50/70 focus:text-background-10 focus:bg-background-50/70 rounded-lg mx-1 my-0.5 transition-colors',
     secondary:
-      'text-background-20 checked-hover:text-background-10 checked-hover:bg-background-60 focus:text-background-10 focus:bg-background-60',
+      'text-background-20 checked-hover:text-background-10 checked-hover:bg-background-60/70 focus:text-background-10 focus:bg-background-60/70 rounded-lg mx-1 my-0.5 transition-colors',
     tertiary:
-      'bg-accent-background-30 checked-hover:bg-accent-background-20 focus:bg-accent-background-20 text-background-10',
+      'bg-accent-background-30 checked-hover:bg-accent-background-20 focus:bg-accent-background-20 text-background-10 rounded-lg mx-1 my-0.5 transition-colors',
   };
 
   const ref = useRef<HTMLDivElement>(null);
@@ -141,9 +141,9 @@ const DropdownList = forwardRef<HTMLDivElement, DropdownListProps>(function (
   ref
 ) {
   const variantStyles = {
-    primary: 'bg-background-60',
-    secondary: 'bg-background-70',
-    tertiary: 'bg-accent-background-30',
+    primary: 'glass-panel-strong border border-white/12 shadow-2xl',
+    secondary: 'glass-panel-strong border border-white/12 shadow-2xl',
+    tertiary: 'bg-accent-background-30 shadow-2xl border border-white/15',
   };
 
   const getDisplayStyle = () => {
@@ -170,7 +170,7 @@ const DropdownList = forwardRef<HTMLDivElement, DropdownListProps>(function (
   return (
     <div
       className={classNames(
-        'grid fixed z-50 overflow-hidden transition-[grid-template-rows] rounded',
+        'grid fixed z-50 overflow-hidden transition-[grid-template-rows] rounded-xl',
         isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         variantStyles[variant]
       )}
@@ -365,7 +365,7 @@ export function DropdownInside({
       >
         <div
           className={classNames(
-            'flex flex-row justify-between items-center gap-2 pl-3 pr-5 py-3 rounded-md cursor-pointer focus:ring-4 relative',
+            'flex flex-row justify-between items-center gap-2 pl-3.5 pr-4 py-2.5 rounded-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-30/60 relative border border-white/10 transition-colors',
             variantStyles[variant]
           )}
           tabIndex={0}

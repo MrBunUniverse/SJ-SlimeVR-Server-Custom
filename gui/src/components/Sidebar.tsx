@@ -231,7 +231,7 @@ export function Sidebar() {
   return (
     <>
       <div
-        className="transition-[height] duration-500 rounded-lg my-2 bg-background-70 overflow-clip"
+        className="transition-[height] duration-500 rounded-2xl my-2 glass-panel overflow-clip border border-white/10"
         style={{ height: checklistSize }}
       >
         <TrackingChecklist
@@ -241,7 +241,7 @@ export function Sidebar() {
         />
       </div>
       <div
-        className="transition-[height] duration-500 rounded-lg my-2 bg-background-70 overflow-clip"
+        className="transition-[height] duration-500 rounded-2xl my-2 glass-panel overflow-clip border border-white/10"
         style={{ height: previewSize }}
       >
         <PreviewSection open={closed} />

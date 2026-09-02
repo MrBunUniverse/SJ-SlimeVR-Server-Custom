@@ -202,8 +202,8 @@ const defaultWindowState: {
   x?: number;
   y?: number;
 } = {
-  width: 1289.0,
-  height: 709.0,
+  width: 960.0,
+  height: 680.0,
   x: undefined,
   y: undefined,
 };
@@ -217,8 +217,8 @@ const windowState = await readFile(getWindowStateFile(), {
     return defaultWindowState;
   });
 
-const MIN_WIDTH = 393;
-const MIN_HEIGHT = 667;
+const MIN_WIDTH = 380;
+const MIN_HEIGHT = 560;
 
 function validateWindowState(state: typeof defaultWindowState) {
   if (state.x === undefined || state.y === undefined) {
@@ -255,6 +255,7 @@ const saveWindowState = async () => {
 
 function createWindow() {
   const validatedState = validateWindowState(windowState);
+  const isMac = process.platform === 'darwin';
 
   mainWindow = new BrowserWindow({
     width: validatedState.width,
@@ -264,19 +265,30 @@ function createWindow() {
     minHeight: MIN_HEIGHT,
     minWidth: MIN_WIDTH,
     movable: true,
-    frame: false,
+    frame: !isMac ? false : false,
+    titleBarStyle: isMac ? 'hiddenInset' : undefined,
+    trafficLightPosition: isMac ? { x: 16, y: 14 } : undefined,
+    vibrancy: isMac ? 'under-window' : undefined,
+    visualEffectState: isMac ? 'active' : undefined,
+    backgroundColor: isMac ? '#00000000' : undefined,
     roundedCorners: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      backgroundThrottling: true,
       devTools: true,
     },
   });
 
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
-    mainWindow.webContents.openDevTools();
+    if (process.env.DEBUG || process.env.OPEN_DEVTOOLS) {
+      mainWindow.webContents.openDevTools();
+    }
+    mainWindow.webContents.on('console-message', (_e, _level, message) => {
+      console.log('[RENDERER LOG]', message);
+    });
   } else {
     mainWindow.loadURL('app://./index.html');
   }
@@ -450,12 +462,12 @@ const spawnServer = async () => {
   });
 
   serverProcess.on('error', (err) => {
-    logger.info({ err }, 'Error launching the java server');
+    if (!isQuitting) logger.info({ err }, 'Error launching the java server');
     if (!isQuitting) app.quit();
   });
 
   serverProcess.on('exit', () => {
-    logger.info('Server process exiting');
+    if (!isQuitting) logger.info('Server process exiting');
   });
 
   const exited = new Promise<void>((resolve) => serverProcess.once('exit', resolve));

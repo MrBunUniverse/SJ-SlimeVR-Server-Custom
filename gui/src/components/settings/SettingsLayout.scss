@@ -1,25 +1,23 @@
 :root {
-  --settings-sidebar-w: 200px;
+  --settings-sidebar-w: 220px;
 }
 
 .settings-layout {
   display: grid;
+  position: relative;
   grid-template:
-    't t t' var(--topbar-h)
-    'n s c' calc(100% - var(--topbar-h))
-    / var(--navbar-w) var(--settings-sidebar-w) calc(
-      100% - var(--navbar-w) - var(--settings-sidebar-w)
-    );
+    't t' var(--topbar-h)
+    's c' calc(100% - var(--topbar-h))
+    / var(--settings-sidebar-w) calc(100% - var(--settings-sidebar-w));
 
   @screen lg {
-    --settings-sidebar-w: 270px;
+    --settings-sidebar-w: 260px;
   }
 
   @screen mobile {
     grid-template:
       't' var(--topbar-h)
-      'c' calc(100% - var(--topbar-h) - var(--navbar-h))
-      'n' calc(var(--navbar-h))
+      'c' calc(100% - var(--topbar-h))
       / 100%;
   }
 }

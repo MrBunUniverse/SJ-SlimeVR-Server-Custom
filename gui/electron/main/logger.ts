@@ -27,8 +27,21 @@ export const logger = pino(transport);
 
 export const closeLogger = () =>
   new Promise<void>((resolve) => {
-    logger.flush(() => {
-      transport.once('close', resolve);
-      transport.end();
-    });
+    try {
+      const timeout = setTimeout(resolve, 1000);
+      logger.flush(() => {
+        try {
+          transport.once('close', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+          transport.end();
+        } catch {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+    } catch {
+      resolve();
+    }
   });

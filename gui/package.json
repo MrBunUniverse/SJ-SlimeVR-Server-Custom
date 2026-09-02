@@ -28,7 +28,8 @@
     "format": "prettier --write \"{electron,src}/**/*.{js,jsx,ts,tsx,css,scss,md,json}\"",
     "javaversion-build": "cd electron/resources/java-version/ && javac JavaVersion.java && jar cvfe JavaVersion.jar JavaVersion JavaVersion.class",
     "gen:javaversion": "cd electron/resources/java-version/ && javac JavaVersion.java && jar cvfe JavaVersion.jar JavaVersion JavaVersion.class",
-    "gen:firmware-tool": "openapi-codegen gen firmwareTool"
+    "gen:firmware-tool": "openapi-codegen gen firmwareTool",
+    "test": "node --experimental-strip-types tests/e2e-runner.ts"
   },
   "devDependencies": {
     "@dword-design/eslint-plugin-import-alias": "^4.0.9",

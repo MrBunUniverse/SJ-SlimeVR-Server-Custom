@@ -1,6 +1,6 @@
 import { useLocalization } from '@fluent/react';
 import classnames from 'classnames';
-import { ReactNode } from 'react';
+import { ReactNode, useRef, useState, useEffect } from 'react';
 import { NavLink, useMatch } from 'react-router-dom';
 import { GearIcon } from './commons/icon/GearIcon';
 import { HumanIcon } from './commons/icon/HumanIcon';
@@ -9,6 +9,8 @@ import { useBreakpoint } from '@/hooks/breakpoint';
 import { HomeIcon } from './commons/icon/HomeIcon';
 import { SkiIcon } from './commons/icon/SkiIcon';
 import { WifiIcon } from './commons/icon/WifiIcon';
+import { Tooltip } from './commons/Tooltip';
+import { Typography } from './commons/Typography';
 
 export function NavButton({
   to,
@@ -28,38 +30,35 @@ export function NavButton({
   });
 
   return (
-    <NavLink
-      to={to}
-      state={state}
-      className={classnames(
-        'flex flex-col justify-center xs:gap-4 mobile:gap-2',
-        'mobile:w-[65px] mobile:h-[65px]',
-        'xs:py-3 mobile:py-4 rounded-md mobile:rounded-b-none group',
-        {
-          'bg-accent-background-50 fill-accent-background-20': doesMatch,
-          'hover:bg-background-70': !doesMatch,
-        }
-      )}
+    <Tooltip
+      preferedDirection="right"
+      spacing={8}
+      content={<Typography className="text-[12px] font-medium whitespace-nowrap">{children}</Typography>}
     >
-      <div className="flex justify-around">
+      <NavLink
+        to={to}
+        state={state}
+        className={classnames(
+          'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-150 active:scale-[0.92]',
+          {
+            'bg-accent-background-30/30 text-accent-background-20 shadow-sm border border-accent-background-20/40':
+              doesMatch,
+            'hover:bg-white/10 text-background-20 hover:text-background-10 border border-transparent':
+              !doesMatch,
+          }
+        )}
+      >
         <div
-          className={classnames('scale-[150%]', {
-            'fill-accent-lighter': doesMatch,
-            'fill-background-40': !doesMatch,
+          className={classnames('scale-100 transition-colors flex items-center justify-center', {
+            'fill-accent-background-20 text-accent-background-20': doesMatch,
+            'fill-background-30 text-background-30 group-hover:fill-background-10 group-hover:text-background-10':
+              !doesMatch,
           })}
         >
           {icon}
         </div>
-      </div>
-      <div
-        className={classnames('text-center mobile:hidden', {
-          'text-accent-background-10': doesMatch,
-          'text-background-10': !doesMatch,
-        })}
-      >
-        {children}
-      </div>
-    </NavLink>
+      </NavLink>
+    </Tooltip>
   );
 }
 
@@ -107,25 +106,14 @@ export function MainLinks() {
 
 export function Navbar() {
   const { isMobile } = useBreakpoint('mobile');
-  const { l10n } = useLocalization();
 
-  return isMobile ? (
-    <div className="flex flex-row justify-around px-2 pt-2 bg-background-80 gap-2">
-      <MainLinks />
-    </div>
-  ) : (
-    <div className="flex flex-col h-full p-2 gap-2">
-      <div className="flex flex-col flex-grow gap-2">
+  if (isMobile) {
+    return (
+      <div className="flex flex-row justify-around px-2 pt-2 bg-background-80 gap-2">
         <MainLinks />
       </div>
-      <NavButton
-        to="/settings/trackers"
-        match="/settings/*"
-        state={{ scrollTo: 'steamvr' }}
-        icon={<GearIcon />}
-      >
-        {l10n.getString('navbar-settings')}
-      </NavButton>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }

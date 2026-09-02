@@ -16,9 +16,7 @@ import { Typography } from './commons/Typography';
 import { DownloadIcon } from './commons/icon/DownloadIcon';
 import { DOCS_SITE, GH_REPO, VersionContext } from '@/App';
 import classNames from 'classnames';
-import { QuestionIcon } from './commons/icon/QuestionIcon';
 import { useBreakpoint } from '@/hooks/breakpoint';
-import { GearIcon } from './commons/icon/GearIcon';
 import { TrackersStillOnModal } from './TrackersStillOnModal';
 import { useConfig } from '@/hooks/config';
 import { TrayOrExitModal } from './TrayOrExitModal';
@@ -26,14 +24,24 @@ import { useAtomValue } from 'jotai';
 import { connectedIMUTrackersAtom } from '@/store/app-store';
 import { useElectron } from '@/hooks/electron';
 import { openUrl } from '@/hooks/crossplatform';
+import { HomeIcon } from './commons/icon/HomeIcon';
+import { HumanIcon } from './commons/icon/HumanIcon';
+import { SkiIcon } from './commons/icon/SkiIcon';
+import { RulerIcon } from './commons/icon/RulerIcon';
+import { WifiIcon } from './commons/icon/WifiIcon';
+import { GearIcon } from './commons/icon/GearIcon';
+import { Tooltip } from './commons/Tooltip';
+import { useLocalization } from '@fluent/react';
+import { useOperatingMode } from '@/hooks/operating-mode';
 
 export function VersionTag() {
   return (
     <div
+      style={{ WebkitAppRegion: 'no-drag' } as any}
       className={classNames(
-        'flex justify-around flex-col text-standard-bold',
-        'text-status-success bg-status-success bg-opacity-20 rounded-lg',
-        'px-3 select-text cursor-pointer'
+        'flex items-center justify-center text-[11px] font-mono font-medium',
+        'text-background-20 hover:text-background-10 bg-white/10 hover:bg-white/15 border border-white/10 rounded-lg',
+        'px-2.5 py-0.5 select-text cursor-pointer transition-colors shadow-sm'
       )}
       onClick={() => {
         const url = `https://github.com/${GH_REPO}/releases`;
@@ -41,6 +49,110 @@ export function VersionTag() {
       }}
     >
       {(__VERSION_TAG__ || __COMMIT_HASH__) + (__GIT_CLEAN__ ? '' : '-dirty')}
+    </div>
+  );
+}
+
+function TopBarNavButton({
+  to,
+  children,
+  match,
+  state = {},
+  icon,
+}: {
+  to: string;
+  children: ReactNode;
+  match?: string;
+  state?: any;
+  icon: ReactNode;
+}) {
+  const doesMatch = useMatch({
+    path: match || to,
+  });
+
+  return (
+    <Tooltip
+      preferedDirection="bottom"
+      spacing={6}
+      content={<Typography className="text-[11.5px] font-medium whitespace-nowrap">{children}</Typography>}
+    >
+      <NavLink
+        to={to}
+        state={state}
+        style={{ WebkitAppRegion: 'no-drag' } as any}
+        className={classNames(
+          'w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-[0.92] select-none cursor-pointer',
+          {
+            'bg-accent-background-30 text-white shadow-sm border border-accent-background-20/40':
+              doesMatch,
+            'hover:bg-white/15 text-background-20 hover:text-background-10 border border-transparent':
+              !doesMatch,
+          }
+        )}
+      >
+        <div
+          className={classNames('scale-95 flex items-center justify-center transition-colors', {
+            'fill-white text-white': doesMatch,
+            'fill-background-30 text-background-30 group-hover:text-background-10': !doesMatch,
+          })}
+        >
+          {icon}
+        </div>
+      </NavLink>
+    </Tooltip>
+  );
+}
+
+export function TopBarNav() {
+  const { l10n } = useLocalization();
+
+  return (
+    <div
+      style={{ WebkitAppRegion: 'no-drag' } as any}
+      className="flex items-center gap-1 p-0.5 rounded-xl bg-background-70/70 border border-white/10 shadow-inner"
+    >
+      <TopBarNavButton to="/" icon={<HomeIcon />}>
+        {l10n.getString('navbar-home')}
+      </TopBarNavButton>
+      <TopBarNavButton
+        to="/onboarding/trackers-assign"
+        state={{ alonePage: true }}
+        icon={<HumanIcon />}
+      >
+        {l10n.getString('navbar-trackers_assign')}
+      </TopBarNavButton>
+      <TopBarNavButton
+        to="/onboarding/mounting/choose"
+        match="/onboarding/mounting/*"
+        state={{ alonePage: true }}
+        icon={<SkiIcon />}
+      >
+        {l10n.getString('navbar-mounting')}
+      </TopBarNavButton>
+      <TopBarNavButton
+        to="/onboarding/body-proportions/scaled"
+        match="/onboarding/body-proportions/*"
+        state={{ alonePage: true }}
+        icon={<RulerIcon />}
+      >
+        {l10n.getString('navbar-body_proportions')}
+      </TopBarNavButton>
+      <TopBarNavButton
+        to="/onboarding/wifi-creds"
+        icon={<WifiIcon value={1} disabled variant="navbar" />}
+        state={{ alonePage: true }}
+      >
+        {l10n.getString('navbar-connect_trackers')}
+      </TopBarNavButton>
+      <div className="w-[1px] h-3.5 bg-background-50/40 mx-0.5" />
+      <TopBarNavButton
+        to="/settings/trackers"
+        match="/settings/*"
+        state={{ scrollTo: 'steamvr' }}
+        icon={<GearIcon />}
+      >
+        {l10n.getString('navbar-settings')}
+      </TopBarNavButton>
     </div>
   );
 }
@@ -56,18 +168,15 @@ export function TopBar({
   const { useRPCPacket, sendRPCPacket } = useWebsocketAPI();
   const connectedIMUTrackers = useAtomValue(connectedIMUTrackersAtom);
   const { config, setConfig, saveConfig } = useConfig();
+  const { isQuestStandalone, toggleMode } = useOperatingMode();
   const version = useContext(VersionContext);
   const [localIp, setLocalIp] = useState<string | null>(null);
+  const [showTrayOrExitModal, setShowTrayOrExitModal] = useState(false);
   const [showConnectedTrackersWarning, setConnectedTrackerWarning] =
     useState(false);
-  const [showTrayOrExitModal, setShowTrayOrExitModal] = useState(false);
-  const doesMatchSettings = useMatch({
-    path: '/settings/*',
-  });
 
   const closeApp = async () => {
-    if (!electron.isElectron) throw 'no electron';
-
+    if (!electron.isElectron) return;
     await saveConfig();
     electron.api.close();
   };
@@ -94,37 +203,6 @@ export function TopBar({
     }
   };
 
-  // useEffect(() => {
-  //   if (!electron.isElectron) return;
-
-  //   const unlistenTrayClose = listen('try-close', async () => {
-  //     const window = getCurrentWindow();
-  //     await window.show();
-  //     await window.requestUserAttention(UserAttentionType.Critical);
-  //     await window.setFocus();
-  //     if (isTrayAvailable) await invoke('update_tray_text');
-  //     await tryCloseApp(true);
-  //   });
-
-  //   const unlistenCloseRequested = getCurrentWindow().listen(
-  //     TauriEvent.WINDOW_CLOSE_REQUESTED,
-  //     async (data) => {
-  //       const ev = new CloseRequestedEvent(data);
-  //       ev.preventDefault();
-  //       await tryCloseApp();
-  //     }
-  //   );
-
-  //   return () => {
-  //     unlistenTrayClose.then((fn) => fn());
-  //     unlistenCloseRequested.then((fn) => fn());
-  //   };
-  // }, [
-  //   config?.useTray,
-  //   config?.connectedTrackersWarning,
-  //   JSON.stringify(connectedIMUTrackers.map((t) => t.tracker.status)),
-  // ]);
-
   useEffect(() => {
     sendRPCPacket(RpcMessage.ServerInfosRequest, new ServerInfosRequestT());
   }, []);
@@ -136,115 +214,162 @@ export function TopBar({
     }
   );
 
+  const isMac =
+    (electron.isElectron && electron.data()?.os?.type === 'macos') ||
+    (typeof navigator !== 'undefined' && /Mac|Macintosh/i.test(navigator.userAgent));
+
   return (
     <>
       <div className="flex gap-0 flex-col">
-        <div className="h-[3px]" />
-        <div className="flex gap-2 h-[38px] z-49">
-          <div className="flex px-2 py-2 justify-around z-49">
-            <div className="flex gap-2">
-              {!isMobile && (
-                <NavLink
-                  to="/"
-                  className="flex justify-around flex-col select-all"
-                >
-                  <SlimeVRIcon />
-                </NavLink>
-              )}
-              {!isMobile && (
-                <div
-                  className={classNames('flex justify-around flex-col')}
-                  data-electron-drag-region
-                >
-                  <Typography>SlimeVR</Typography>
-                </div>
-              )}
-              {(!doesMatchSettings || !isMobile) && <VersionTag />}
-              {doesMatchSettings && (
-                <div
-                  className={classNames(
-                    'flex justify-around flex-col text-standard-bold text-status-special',
-                    'bg-status-special bg-opacity-20 rounded-lg px-3 select-text'
-                  )}
-                >
-                  {localIp || 'unknown local ip'}
-                </div>
-              )}
-
-              {version && electron.isElectron && (
-                <div
-                  className="cursor-pointer"
-                  onClick={() => {
-                    const url =
-                      electron.data().os.type === 'windows'
-                        ? 'https://slimevr.dev/download'
-                        : `https://github.com/${GH_REPO}/releases/latest`;
-                    openUrl(url);
-                  }}
-                >
-                  <DownloadIcon />
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="h-[2px]" />
+        <div
+          className={classNames(
+            'flex items-center justify-between gap-3 h-[44px] z-40 glass-panel-strong border-b border-background-50/20 px-3 select-none',
+            isMac ? 'pl-[108px]' : 'pl-3'
+          )}
+          style={{ WebkitAppRegion: 'drag' } as any}
+          data-electron-drag-region
+        >
+          {/* Left Brand & Quest IP Area */}
           <div
-            className="flex flex-grow items-center h-full justify-center z-50"
+            className="flex items-center gap-2.5 z-40 shrink-0"
+            style={{ WebkitAppRegion: 'drag' } as any}
             data-electron-drag-region
           >
             {!isMobile && (
-              <>
-                <div
-                  className="flex max-w-xl h-full items-center w-full"
-                  data-electron-drag-region
-                >
-                  {progress !== undefined && (
-                    <ProgressBar progress={progress} height={3} parts={3} />
-                  )}
-                </div>
-              </>
+              <NavLink
+                to="/"
+                style={{ WebkitAppRegion: 'no-drag' } as any}
+                className="flex justify-around flex-col select-none opacity-90 hover:opacity-100 transition-opacity"
+              >
+                <SlimeVRIcon />
+              </NavLink>
             )}
-          </div>
-          <div className="flex justify-end items-center px-2 gap-2 z-50">
-            <NavLink
-              to="/settings/trackers"
-              className="flex justify-around flex-col select-all fill-background-50"
-              state={{ scrollTo: 'steamvr' }}
-            >
-              <GearIcon />
-            </NavLink>
-
             {!isMobile && (
               <div
-                className={classNames(
-                  'flex items-center justify-center stroke-window-icon',
-                  'hover:bg-background-60 rounded-full w-7 h-7 cursor-pointer'
-                )}
-                onClick={() => openUrl(DOCS_SITE)}
+                className="flex justify-around flex-col"
+                style={{ WebkitAppRegion: 'drag' } as any}
+                data-electron-drag-region
               >
-                <QuestionIcon />
+                <Typography
+                  bold
+                  variant="standard"
+                  className="font-semibold tracking-tight text-[13px]"
+                >
+                  SirJame SlimeVR
+                </Typography>
               </div>
             )}
-            {electron.isElectron && (
-              <>
+            <VersionTag />
+            {localIp && (
+              <Tooltip
+                preferedDirection="bottom"
+                spacing={6}
+                content={<Typography className="text-[11px] font-medium">Click to copy Quest OSC IP: {localIp}</Typography>}
+              >
                 <div
-                  className="flex items-center justify-center hover:bg-background-60 rounded-full w-7 h-7"
+                  style={{ WebkitAppRegion: 'no-drag' } as any}
+                  className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-accent-background-10 bg-accent-background-30/20 hover:bg-accent-background-30/30 border border-accent-background-20/30 rounded-lg px-2 py-0.5 cursor-pointer transition-colors shadow-sm select-text"
+                  onClick={() => {
+                    navigator.clipboard.writeText(localIp);
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-background-20 animate-pulse" />
+                  <span>{localIp}</span>
+                </div>
+              </Tooltip>
+            )}
+
+            {/* macOS Style Standalone Toggle Switch */}
+            <Tooltip
+              preferedDirection="bottom"
+              spacing={6}
+              content={
+                <Typography className="text-[11px] font-medium">
+                  {isQuestStandalone
+                    ? 'Standalone Mode: Enabled (VRChat OSC & OSCQuery)'
+                    : 'Standalone Mode: Disabled (SteamVR PCVR)'}
+                </Typography>
+              }
+            >
+              <button
+                type="button"
+                style={{ WebkitAppRegion: 'no-drag' } as any}
+                onClick={toggleMode}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-white/10 text-[11.5px] font-medium text-background-10 transition-colors select-none cursor-pointer active:scale-95"
+              >
+                <span className="font-semibold text-[11.5px] text-background-20">Standalone</span>
+                <div
+                  className={classNames(
+                    'w-6 h-3.5 rounded-full transition-colors relative flex items-center shadow-inner',
+                    isQuestStandalone ? 'bg-emerald-500' : 'bg-white/20'
+                  )}
+                >
+                  <div
+                    className={classNames(
+                      'w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-transform duration-150',
+                      isQuestStandalone ? 'translate-x-3' : 'translate-x-0.5'
+                    )}
+                  />
+                </div>
+              </button>
+            </Tooltip>
+
+            {version && electron.isElectron && (
+              <div
+                style={{ WebkitAppRegion: 'no-drag' } as any}
+                className="cursor-pointer"
+                onClick={() => {
+                  const url =
+                    electron.data().os.type === 'windows'
+                      ? 'https://slimevr.dev/download'
+                      : `https://github.com/${GH_REPO}/releases/latest`;
+                  openUrl(url);
+                }}
+              >
+                <DownloadIcon />
+              </div>
+            )}
+          </div>
+
+          {/* Center Navigation Switcher (Desktop - Compact Icon Segment surrounded by draggable space) */}
+          {!isMobile && (
+            <div
+              className="flex items-center justify-center flex-grow h-full z-40"
+              style={{ WebkitAppRegion: 'drag' } as any}
+              data-electron-drag-region
+            >
+              <TopBarNav />
+            </div>
+          )}
+
+          {/* Right Window Controls (Windows / Linux) */}
+          <div
+            className="flex justify-end items-center px-1 gap-1.5 z-40 shrink-0 h-full"
+            style={{ WebkitAppRegion: 'drag' } as any}
+            data-electron-drag-region
+          >
+            {electron.isElectron && !isMac && (
+              <div style={{ WebkitAppRegion: 'no-drag' } as any} className="flex items-center gap-1">
+                <div
+                  className="flex items-center justify-center hover:bg-background-60 rounded-full w-7 h-7 cursor-pointer"
                   onClick={() => electron.api.minimize()}
                 >
                   <MinimiseIcon />
                 </div>
                 <div
-                  className="flex items-center justify-center hover:bg-background-60 rounded-full w-7 h-7"
+                  className="flex items-center justify-center hover:bg-background-60 rounded-full w-7 h-7 cursor-pointer"
                   onClick={() => electron.api.toggleMaximize()}
                 >
                   <MaximiseIcon />
                 </div>
                 <div
-                  className="flex items-center justify-center hover:bg-background-60 rounded-full w-7 h-7"
+                  className="flex items-center justify-center hover:bg-background-60 rounded-full w-7 h-7 cursor-pointer"
                   onClick={() => tryCloseApp()}
                 >
                   <CloseIcon />
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

@@ -50,31 +50,32 @@ export const InputInside = forwardRef<
   const classes = useMemo(() => {
     const variantsMap = {
       primary: classNames({
-        'placeholder:text-background-10 placeholder:italic bg-background-60 border-background-60':
+        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-60/80 backdrop-blur-md border border-white/10':
           !disabled,
-        'text-background-30 placeholder:text-background-30 border-background-70 bg-background-70':
+        'text-background-30 placeholder:text-background-30 border-background-70/50 bg-background-70/50 cursor-not-allowed':
           disabled,
       }),
       secondary: classNames({
-        'placeholder:text-background-10 placeholder:italic bg-background-50 border-background-50':
+        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-50/80 backdrop-blur-md border border-white/10':
           !disabled,
-        'text-background-40 placeholder:text-background-40 border-background-70 bg-background-70':
+        'text-background-40 placeholder:text-background-40 border-background-70/50 bg-background-70/50 cursor-not-allowed':
           disabled,
       }),
       tertiary: classNames({
-        'placeholder:text-background-10 placeholder:italic bg-background-40 border-background-40':
+        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-40/80 backdrop-blur-md border border-white/10':
           !disabled,
-        'text-background-30 placeholder:text-background-30 border-background-70 bg-background-70':
+        'text-background-30 placeholder:text-background-30 border-background-70/50 bg-background-70/50 cursor-not-allowed':
           disabled,
       }),
     };
 
     return classNames(
       variantsMap[variant],
-      'w-full focus:ring-transparent focus:ring-offset-transparent min-h-[42px] z-10',
-      'focus:outline-transparent rounded-md focus:border-accent-background-40',
-      'text-standard text-background-10 relative transition-colors',
-      error && 'border-status-critical border-1'
+      'w-full min-h-[42px] z-10 rounded-xl px-3.5 py-2',
+      'focus:outline-none focus:border-accent-background-30 focus:ring-2 focus:ring-accent-background-30/30 focus-visible:outline-none',
+      'text-standard text-background-10 relative transition-all duration-150',
+      error &&
+        'border-status-critical focus:border-status-critical focus:ring-status-critical/30'
     );
   }, [variant, disabled, error]);
 

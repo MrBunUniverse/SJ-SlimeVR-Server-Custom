@@ -13,6 +13,7 @@ export function Typography({
   truncate = false,
   textAlign,
   sentryMask = false,
+  className,
   id,
   attrs,
   elems,
@@ -42,6 +43,7 @@ export function Typography({
     | 'text-justify'
     | 'text-start'
     | 'text-end';
+  className?: string;
   children?: ReactNode;
   sentryMask?: boolean;
   id?: string;
@@ -64,15 +66,21 @@ export function Typography({
       className: classNames([
         'transition-colors',
         variant === 'mobile-title' &&
-          'xs:text-main-title mobile:text-section-title',
-        variant === 'main-title' && 'text-main-title',
-        variant === 'section-title' && 'text-section-title',
+          'xs:text-main-title mobile:text-section-title font-bold tracking-tight',
+        variant === 'main-title' && 'text-main-title font-bold tracking-tight',
+        variant === 'section-title' &&
+          'text-section-title font-semibold tracking-tight',
         variant === 'standard' &&
-          (bold ? 'text-standard-bold' : 'text-standard'),
+          (bold
+            ? 'text-standard-bold font-semibold tracking-tight'
+            : 'text-standard font-normal leading-normal'),
         variant === 'vr-accessible' &&
-          (bold ? 'text-vr-accesible-bold' : 'text-vr-accesible'),
+          (bold
+            ? 'text-vr-accesible-bold font-semibold tracking-tight'
+            : 'text-vr-accesible font-normal'),
         color === 'primary' && 'text-background-10',
-        color === 'secondary' && 'text-background-30',
+        color === 'secondary' &&
+          'text-background-30 font-normal leading-relaxed',
         typeof color === 'string' && color,
         whitespace,
         textAlign,
@@ -81,6 +89,7 @@ export function Typography({
         truncate && (config?.textSize ?? 12) > 12 && 'line-clamp-1',
         truncate && (config?.textSize ?? 12) <= 12 && 'line-clamp-2',
         sentryMask && 'sentry-mask',
+        className,
       ]),
     },
     children || id || []

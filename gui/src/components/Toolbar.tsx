@@ -1,6 +1,7 @@
 import { Typography } from './commons/Typography';
 import classNames from 'classnames';
-import { ResetType } from 'solarxr-protocol';
+import { ResetType, ResetRequestT, RpcMessage } from 'solarxr-protocol';
+import { useWebsocketAPI } from '@/hooks/websocket-api';
 import {
   BODY_PARTS_GROUPS,
   MountingResetGroup,
@@ -18,9 +19,10 @@ import { ResetButtonIcon } from './home/ResetButton';
 const MAINBUTTON_CLASSES = ({ disabled }: { disabled: boolean }) =>
   classNames(
     'relative overflow-clip',
-    'flex h-full items-center justify-center gap-2 px-4 bg-background-60 rounded-lg fill-background-10 aspect-square md:aspect-auto',
+    'flex h-full items-center justify-center gap-1.5 px-3 bg-background-60 rounded-xl fill-background-10 font-semibold tracking-tight text-[12px] aspect-square md:aspect-auto transition-all duration-150',
     {
-      'cursor-pointer hover:bg-background-50 bg-background-60': !disabled,
+      'cursor-pointer hover:bg-background-50 active:scale-[0.97] bg-background-60':
+        !disabled,
       'cursor-not-allowed bg-background-70 brightness-75': disabled,
     }
   );
@@ -48,7 +50,7 @@ function ButtonProgress({
   );
 }
 
-function BasicResetButton(options: UseResetOptions & { customName?: string }) {
+export function BasicResetButton(options: UseResetOptions & { customName?: string }) {
   const { isMd } = useBreakpoint('md');
   const {
     triggerReset,
@@ -89,9 +91,13 @@ function BasicResetButton(options: UseResetOptions & { customName?: string }) {
         type="button"
         disabled={disabled}
         className={classNames(
-          MAINBUTTON_CLASSES({ disabled }),
-          'rounded-lg',
-          'absolute'
+          'relative overflow-clip h-[34px] px-3 rounded-xl flex items-center justify-center gap-1.5 font-semibold text-[12px] transition-all duration-150',
+          {
+            'cursor-pointer glass-interactive bg-background-60/80 hover:bg-background-50 active:scale-[0.97] fill-background-10 text-background-10 border border-white/10':
+              !disabled,
+            'cursor-not-allowed bg-background-70/40 text-background-30 fill-background-30 brightness-75':
+              disabled,
+          }
         )}
         style={{
           animationIterationCount: 1,
@@ -99,7 +105,7 @@ function BasicResetButton(options: UseResetOptions & { customName?: string }) {
         onClick={() => !disabled && triggerReset()}
       >
         <div
-          className={classNames({
+          className={classNames('scale-90', {
             'animate-spin-ccw': !skiReset && status === 'finished',
             'animate-skiing': skiReset && status === 'finished',
             'opacity-0': status === 'counting',
@@ -117,8 +123,8 @@ function BasicResetButton(options: UseResetOptions & { customName?: string }) {
           })}
         >
           <Typography
-            variant="section-title"
             textAlign="text-center"
+            className="text-[11.5px] font-semibold tracking-tight whitespace-nowrap"
             id={name}
           />
         </div>
@@ -130,10 +136,10 @@ function BasicResetButton(options: UseResetOptions & { customName?: string }) {
               'opacity-0': status !== 'counting',
               'animate-timer-tick': status === 'counting',
             },
-            'absolute top-0 h-full flex items-center justify-center'
+            'absolute inset-0 flex items-center justify-center'
           )}
         >
-          <Typography variant="main-title" textAlign="text-center">
+          <Typography className="text-[12px] font-bold" textAlign="text-center">
             {timer}
           </Typography>
         </div>
@@ -142,10 +148,14 @@ function BasicResetButton(options: UseResetOptions & { customName?: string }) {
   );
 }
 
-export function Toolbar() {
-  const assignedTrackers = useAtomValue(assignedTrackersAtom);
+import { useOperatingMode } from '@/hooks/operating-mode';
 
-  const { visibleGroups, groupVisibility } = useMemo(() => {
+export function ResetActionsGroup() {
+  const assignedTrackers = useAtomValue(assignedTrackersAtom);
+  const { isQuestStandalone, floorAnchor, triggerFloorCalibration } = useOperatingMode();
+  const { sendRPCPacket } = useWebsocketAPI();
+
+  const { groupVisibility } = useMemo(() => {
     const groupVisibility = Object.keys(BODY_PARTS_GROUPS)
       .filter((k) => ['fingers'].includes(k))
       .reduce(
@@ -164,53 +174,74 @@ export function Toolbar() {
 
     return {
       groupVisibility,
-      visibleGroups: Object.values(groupVisibility).filter((v) => v).length,
     };
   }, [assignedTrackers]);
 
+  const recenterHmd = () => {
+    const req = new ResetRequestT();
+    req.resetType = ResetType.Yaw;
+    sendRPCPacket(RpcMessage.ResetRequest, req);
+  };
+
   return (
-    <>
-      <div className="flex mobile:py-2 flex-col items-center bg-background-70 rounded-t-lg h-[var(--toolbar-h)] mr-2 xs:mt-2 mobile:mr-0">
-        <div className="px-3 py-3 w-full flex gap-4 justify-center md:justify-start">
-          <div className="flex-col flex gap-1 md:w-[60%]">
-            <Typography variant="section-title" id="toolbar-drift_reset" />
-            <div className="gap-2 md:h-[72px] h-[62px] w-full grid-cols-2 grid">
-              <BasicResetButton type={ResetType.Full} />
-              <BasicResetButton type={ResetType.Yaw} />
-            </div>
-          </div>
-          <div className="flex-col flex gap-1 md:flex-grow">
-            <Typography
-              variant="section-title"
-              id="toolbar-mounting_calibration"
-            />
-            <div
-              className="gap-2 md:h-[72px] h-[62px] w-full md:grid flex"
-              style={{
-                gridTemplateColumns: `repeat(calc(2 + ${visibleGroups}), 1fr)`,
-              }}
+    <div className="flex items-center gap-1.5 p-1 glass-panel-strong rounded-2xl border border-white/10 shadow-inner">
+      <BasicResetButton type={ResetType.Full} />
+      <BasicResetButton type={ResetType.Yaw} />
+      <div className="w-[1px] h-4 bg-background-50/40 mx-0.5" />
+      <BasicResetButton
+        type={ResetType.Mounting}
+        group={'default'}
+        customName="toolbar-mounting_calibration-default"
+      />
+      <BasicResetButton
+        type={ResetType.Mounting}
+        group={'feet'}
+        customName="toolbar-mounting_calibration-feet"
+      />
+      {groupVisibility['fingers'] && (
+        <BasicResetButton
+          type={ResetType.Mounting}
+          group={'fingers'}
+          customName="toolbar-mounting_calibration-fingers"
+        />
+      )}
+
+      {isQuestStandalone && (
+        <>
+          <div className="w-[1px] h-4 bg-background-50/40 mx-0.5" />
+          <Tooltip
+            preferedDirection="bottom"
+            spacing={6}
+            content={<Typography className="text-[11.5px] whitespace-nowrap">Recenter Headset & SlimeVR Space</Typography>}
+          >
+            <button
+              type="button"
+              onClick={recenterHmd}
+              className="h-8 px-2.5 rounded-xl bg-background-60 hover:bg-background-50 active:scale-95 text-[12px] font-semibold text-background-10 border border-white/5 flex items-center transition-all shadow-sm"
             >
-              <BasicResetButton
-                type={ResetType.Mounting}
-                group={'default'}
-                customName="toolbar-mounting_calibration-default"
-              />
-              <BasicResetButton
-                type={ResetType.Mounting}
-                group={'feet'}
-                customName="toolbar-mounting_calibration-feet"
-              />
-              {groupVisibility['fingers'] && (
-                <BasicResetButton
-                  type={ResetType.Mounting}
-                  group={'fingers'}
-                  customName="toolbar-mounting_calibration-fingers"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+              <span>Recenter</span>
+            </button>
+          </Tooltip>
+
+          <Tooltip
+            preferedDirection="bottom"
+            spacing={6}
+            content={<Typography className="text-[11.5px] whitespace-nowrap">Calibrate & Lock Floor Height ({floorAnchor.isAnchored ? 'Locked' : 'Floating'})</Typography>}
+          >
+            <button
+              type="button"
+              onClick={triggerFloorCalibration}
+              className="h-8 px-2.5 rounded-xl bg-background-60 hover:bg-background-50 active:scale-95 text-[12px] font-semibold text-background-10 border border-white/5 flex items-center transition-all shadow-sm"
+            >
+              <span>Floor Level</span>
+            </button>
+          </Tooltip>
+        </>
+      )}
+    </div>
   );
+}
+
+export function Toolbar() {
+  return null;
 }

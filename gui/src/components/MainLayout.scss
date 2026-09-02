@@ -1,20 +1,21 @@
 :root {
-  --toolbar-h: 120px;
+  --navbar-w: 0px;
+  --topbar-h: 42px;
 }
 
 .main-layout {
   display: grid;
+  position: relative;
   grid-template:
-    't t' var(--topbar-h)
-    'n c' calc(100% - var(--topbar-h))
-    / var(--navbar-w) calc(100% - var(--navbar-w));
+    't' var(--topbar-h)
+    'c' calc(100% - var(--topbar-h))
+    / 100%;
 
   &.full {
     grid-template:
-      't t t' var(--topbar-h)
-      'n b s' var(--toolbar-h)
-      'n c s' calc(100% - var(--topbar-h) - var(--toolbar-h))
-      / var(--navbar-w) calc(100% - var(--navbar-w) - var(--right-section-w))
+      't t' var(--topbar-h)
+      'c s' calc(100% - var(--topbar-h))
+      / calc(100% - var(--right-section-w))
       var(--right-section-w);
   }
 

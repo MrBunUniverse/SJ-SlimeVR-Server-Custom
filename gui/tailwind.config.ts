@@ -215,11 +215,24 @@ const config = {
           50: 'rgb(var(--accent-background-50), <alpha-value>)',
         },
       },
+      fontFamily: {
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"SF Pro Text"',
+          '"SF Pro Display"',
+          '"SF Pro"',
+          '"Helvetica Neue"',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
+      },
       fontSize: {
         DEFAULT: 'calc(var(--font-size-standard) / 16)',
       },
       fontWeight: {
-        DEFAULT: '500',
+        DEFAULT: '400',
       },
       color: {
         DEFAULT: 'rgb(var(--default-color), <alpha-value>)',
@@ -318,11 +331,14 @@ const config = {
 
       addUtilities({
         '.text-main-title': textConfig('calc(var(--font-size-title) / 16)', 700),
-        '.text-section-title': textConfig('calc(var(--font-size-vr) / 16)', 700),
-        '.text-standard': textConfig('calc(var(--font-size-standard) / 16)', 500),
-        '.text-vr-accesible': textConfig('calc(var(--font-size-vr) / 16)', 500),
-        '.text-vr-accesible-bold': textConfig('calc(var(--font-size-vr) / 16)', 700),
-        '.text-standard-bold': textConfig('calc(var(--font-size-standard) / 16)', 700),
+        '.text-section-title': textConfig('calc(var(--font-size-vr) / 16)', 600),
+        '.text-standard': textConfig('calc(var(--font-size-standard) / 16)', 400),
+        '.text-standard-bold': textConfig('calc(var(--font-size-standard) / 16)', 600),
+        '.text-description': textConfig('calc(var(--font-size-standard) / 16)', 400),
+        '.text-description-light': textConfig('calc(var(--font-size-standard) / 16)', 300),
+        '.text-btn-bold': textConfig('calc(var(--font-size-standard) / 16)', 600),
+        '.text-vr-accesible': textConfig('calc(var(--font-size-vr) / 16)', 400),
+        '.text-vr-accesible-bold': textConfig('calc(var(--font-size-vr) / 16)', 600),
       });
     }),
     plugin(function ({ addVariant }) {

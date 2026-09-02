@@ -100,6 +100,12 @@ export function InterfaceSettings() {
 
   const fontOptions = [
     {
+      label: 'SF Pro (Apple System)',
+      value: '-apple-system',
+      fontName:
+        '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", sans-serif',
+    },
+    {
       label: l10n.getString('settings-interface-appearance-font-slime_font'),
       value: 'poppins',
       fontName: 'poppins, Noto Sans',

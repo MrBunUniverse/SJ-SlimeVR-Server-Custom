@@ -114,15 +114,13 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
         <div style={{ gridArea: 't' }}>
           <TopBar />
         </div>
-        <div style={{ gridArea: 'n' }}>
-          <Navbar />
-        </div>
-        <div style={{ gridArea: 's' }} className="my-2 mobile:hidden">
+        <Navbar />
+        <div style={{ gridArea: 's' }} className="my-2 ml-2 mobile:hidden overflow-hidden">
           <SettingsSidebar />
         </div>
         <div
           style={{ gridArea: 'c' }}
-          className="xs:pl-2 xs:pb-2 xs:mt-2 mobile:mt-7 overflow-y-auto"
+          className="my-2 ml-2 mr-2 mobile:m-0 overflow-y-auto glass-panel rounded-2xl p-5 border border-white/10 shadow-2xl"
         >
           {isMobile && <SettingSelectorMobile />}
           {children}
