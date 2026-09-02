@@ -226,12 +226,23 @@ export function ResetActionsGroup() {
           <Tooltip
             preferedDirection="bottom"
             spacing={6}
-            content={<Typography className="text-[11.5px] whitespace-nowrap">Calibrate & Lock Floor Height ({floorAnchor.isAnchored ? 'Locked' : 'Floating'})</Typography>}
+            content={
+              <Typography className="text-[11.5px] whitespace-nowrap">
+                {floorAnchor.isAnchored
+                  ? 'Recalibrate Floor Level (Currently Locked)'
+                  : 'Calibrate & Lock Floor Level (Currently Floating)'}
+              </Typography>
+            }
           >
             <button
               type="button"
               onClick={triggerFloorCalibration}
-              className="h-8 px-2.5 rounded-xl bg-background-60 hover:bg-background-50 active:scale-95 text-[12px] font-semibold text-background-10 border border-white/5 flex items-center transition-all shadow-sm"
+              className={classNames(
+                'h-8 px-2.5 rounded-xl text-[12px] font-semibold border flex items-center transition-all shadow-sm active:scale-95',
+                floorAnchor.isAnchored
+                  ? 'bg-background-60 hover:bg-background-50 text-background-10 border-white/5'
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/25'
+              )}
             >
               <span>Floor Level</span>
             </button>

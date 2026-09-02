@@ -1168,7 +1168,9 @@ class HumanSkeleton(
 
 	private fun updateComputedTracker(computedTracker: Tracker?, trackerBone: Bone) {
 		computedTracker?.let {
-			it.position = trackerBone.getTailPosition()
+			val tailPos = trackerBone.getTailPosition()
+			val flyOffset = humanPoseManager.server?.configManager?.vrConfig?.questStandalone?.floorHeight ?: 0f
+			it.position = if (flyOffset != 0f) Vector3(tailPos.x, tailPos.y + flyOffset, tailPos.z) else tailPos
 			it.setRotation(trackerBone.getGlobalRotation() * trackerBone.rotationOffset.inv())
 			it.dataTick()
 			it.updateDerivedVelocity()

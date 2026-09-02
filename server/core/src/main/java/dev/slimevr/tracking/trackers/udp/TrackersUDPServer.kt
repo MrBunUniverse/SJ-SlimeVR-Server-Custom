@@ -293,105 +293,171 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 		socket.send(DatagramPacket(rcvBuffer, bb.position(), device.address))
 	}
 
-	override fun run() {
-		val serialBuffer2 = StringBuilder()
-		try {
-			socket = DatagramSocket(port)
-			var prevPacketTime = System.currentTimeMillis()
-			socket.soTimeout = 250
-			while (true) {
-				var received: DatagramPacket? = null
+	fun refreshTrackers() {
+		LogManager.info("[TrackerServer] Manual refresh of trackers initiated")
+		// 1. Broadcast discovery heartbeat on all active network interfaces
+		if (::socket.isInitialized && !socket.isClosed) {
+			for (addr in broadcastAddresses) {
 				try {
-					val hasActiveTrackers = connections.any { it.trackers.size > 0 }
-					if (!hasActiveTrackers) {
-						val discoveryPacketTime = System.currentTimeMillis()
-						if (discoveryPacketTime - prevPacketTime >= 2000) {
-							for (addr in broadcastAddresses) {
-								bb.limit(bb.capacity())
-								bb.rewind()
-								parser.write(bb, null, UDPPacket0Heartbeat)
-								socket.send(DatagramPacket(rcvBuffer, bb.position(), addr))
-							}
-							prevPacketTime = discoveryPacketTime
-						}
-					}
-					received = DatagramPacket(rcvBuffer, rcvBuffer.size)
-					socket.receive(received)
-					bb.limit(received.length)
+					bb.limit(bb.capacity())
 					bb.rewind()
-					val connection = synchronized(connections) { connectionsByAddress[received.socketAddress] }
-					parser.parse(bb, connection)
-						.filterNotNull()
-						.forEach { processPacket(received, it, connection) }
-
-					queues.forEach { (t, p) ->
-						val q = p.firstOrNull() ?: return@forEach
-						if (q.ran) return@forEach
-
-						val device = connectionsByAddress[t.first] ?: run {
-							p.removeFirst()
-							LogManager.info("[TrackerServer] Device ${t.first} not connected, so can't communicate with it")
-							return@forEach
-						}
-						actualSetConfigFlag(device, t.second, q.expectedState, t.third)
-						if (!device.timedOut) q.ran = true
-					}
-				} catch (ignored: SocketTimeoutException) {
-				} catch (e: Exception) {
-					LogManager.warning(
-						"[TrackerServer] Error parsing packet ${packetToString(received)}",
-						e,
-					)
+					parser.write(bb, null, UDPPacket0Heartbeat)
+					socket.send(DatagramPacket(rcvBuffer, bb.position(), addr))
+				} catch (ignored: Exception) {
 				}
-				if (lastKeepup + 500 < System.currentTimeMillis()) {
-					lastKeepup = System.currentTimeMillis()
-					synchronized(connections) {
-						for (conn in connections) {
-							bb.limit(bb.capacity())
-							bb.rewind()
-							parser.write(bb, conn, UDPPacket1Heartbeat)
-							socket.send(DatagramPacket(rcvBuffer, bb.position(), conn.address))
-							if (conn.lastPacket + 1000 < System.currentTimeMillis()) {
-								if (!conn.timedOut) {
-									conn.timedOut = true
-									LogManager.info("[TrackerServer] Tracker timed out: $conn")
-								}
-							} else {
-								conn.timedOut = false
-							}
+			}
 
-							if (conn.serialBuffer.isNotEmpty() &&
-								conn.lastSerialUpdate + 500L < System.currentTimeMillis()
-							) {
-								serialBuffer2
-									.append('[')
-									.append(conn.name)
-									.append("] ")
-									.append(conn.serialBuffer)
-								println(serialBuffer2)
-								serialBuffer2.setLength(0)
-								conn.serialBuffer.setLength(0)
-							}
-
-							if (conn.lastPingPacketTime + 500 < System.currentTimeMillis()) {
-								conn.lastPingPacketId = random.nextInt()
-								conn.lastPingPacketTime = System.currentTimeMillis()
-								bb.limit(bb.capacity())
-								bb.rewind()
-								bb.putInt(10)
-								bb.putLong(0)
-								bb.putInt(conn.lastPingPacketId)
-								socket.send(DatagramPacket(rcvBuffer, bb.position(), conn.address))
-							}
-						}
+			// 2. Ping all known connections with error isolation
+			synchronized(connections) {
+				for (conn in connections) {
+					try {
+						bb.limit(bb.capacity())
+						bb.rewind()
+						parser.write(bb, conn, UDPPacket1Heartbeat)
+						socket.send(DatagramPacket(rcvBuffer, bb.position(), conn.address))
+					} catch (e: Exception) {
+						LogManager.warning("[TrackerServer] Refresh ping failed for ${conn.name} (${conn.address}): ${e.message}")
 					}
 				}
 			}
-		} catch (e: Exception) {
-			e.printStackTrace()
-		} finally {
-			if (::socket.isInitialized) {
-				Util.close(socket)
+		}
+
+		// 3. Reconcile skeleton model safely without resetting calibration/proportions
+		VRServer.instance.updateSkeletonModel()
+	}
+
+	override fun run() {
+		val serialBuffer2 = StringBuilder()
+		while (!isInterrupted) {
+			try {
+				socket = DatagramSocket(port)
+				var prevPacketTime = System.currentTimeMillis()
+				socket.soTimeout = 250
+				while (!isInterrupted) {
+					var received: DatagramPacket? = null
+					try {
+						val hasActiveTrackers = connections.any { it.trackers.size > 0 && !it.timedOut }
+						if (!hasActiveTrackers) {
+							val discoveryPacketTime = System.currentTimeMillis()
+							if (discoveryPacketTime - prevPacketTime >= 2000) {
+								for (addr in broadcastAddresses) {
+									try {
+										bb.limit(bb.capacity())
+										bb.rewind()
+										parser.write(bb, null, UDPPacket0Heartbeat)
+										socket.send(DatagramPacket(rcvBuffer, bb.position(), addr))
+									} catch (ignored: Exception) {
+									}
+								}
+								prevPacketTime = discoveryPacketTime
+							}
+						}
+						received = DatagramPacket(rcvBuffer, rcvBuffer.size)
+						socket.receive(received)
+						bb.limit(received.length)
+						bb.rewind()
+						val connection = synchronized(connections) { connectionsByAddress[received.socketAddress] }
+						parser.parse(bb, connection)
+							.filterNotNull()
+							.forEach { processPacket(received, it, connection) }
+
+						queues.forEach { (t, p) ->
+							val q = p.firstOrNull() ?: return@forEach
+							if (q.ran) return@forEach
+
+							val device = connectionsByAddress[t.first] ?: run {
+								p.removeFirst()
+								LogManager.info("[TrackerServer] Device ${t.first} not connected, so can't communicate with it")
+								return@forEach
+							}
+							try {
+								actualSetConfigFlag(device, t.second, q.expectedState, t.third)
+								if (!device.timedOut) q.ran = true
+							} catch (e: Exception) {
+								LogManager.warning("[TrackerServer] Failed to set config flag on ${device.name}: ${e.message}")
+							}
+						}
+					} catch (ignored: SocketTimeoutException) {
+					} catch (e: Exception) {
+						LogManager.warning(
+							"[TrackerServer] Error parsing packet ${packetToString(received)}",
+							e,
+						)
+					}
+					if (lastKeepup + 500 < System.currentTimeMillis()) {
+						lastKeepup = System.currentTimeMillis()
+						synchronized(connections) {
+							for (conn in connections) {
+								// Guard each tracker individually so failure on one never impacts others
+								try {
+									bb.limit(bb.capacity())
+									bb.rewind()
+									parser.write(bb, conn, UDPPacket1Heartbeat)
+									socket.send(DatagramPacket(rcvBuffer, bb.position(), conn.address))
+								} catch (e: Exception) {
+									if (!conn.timedOut) {
+										conn.timedOut = true
+										LogManager.warning("[TrackerServer] Failed sending keepalive to ${conn.name} (${conn.address}): ${e.message}")
+									}
+								}
+
+								if (conn.lastPacket + 1000 < System.currentTimeMillis()) {
+									if (!conn.timedOut) {
+										conn.timedOut = true
+										LogManager.info("[TrackerServer] Tracker timed out: $conn")
+									}
+								} else {
+									conn.timedOut = false
+								}
+
+								if (conn.serialBuffer.isNotEmpty() &&
+									conn.lastSerialUpdate + 500L < System.currentTimeMillis()
+								) {
+									serialBuffer2
+										.append('[')
+										.append(conn.name)
+										.append("] ")
+										.append(conn.serialBuffer)
+									println(serialBuffer2)
+									serialBuffer2.setLength(0)
+									conn.serialBuffer.setLength(0)
+								}
+
+								if (!conn.timedOut && conn.lastPingPacketTime + 500 < System.currentTimeMillis()) {
+									try {
+										conn.lastPingPacketId = random.nextInt()
+										conn.lastPingPacketTime = System.currentTimeMillis()
+										bb.limit(bb.capacity())
+										bb.rewind()
+										bb.putInt(10)
+										bb.putLong(0)
+										bb.putInt(conn.lastPingPacketId)
+										socket.send(DatagramPacket(rcvBuffer, bb.position(), conn.address))
+									} catch (e: Exception) {
+										// Ignore ping send failure for dead/lagging tracker
+									}
+								}
+							}
+						}
+					}
+				}
+			} catch (e: Exception) {
+				LogManager.severe("[TrackerServer] Fatal socket error in UDP server supervisor loop, reinitializing in 1000ms...", e)
+				try {
+					if (::socket.isInitialized) {
+						Util.close(socket)
+					}
+				} catch (ignored: Exception) {
+				}
+				try {
+					sleep(1000)
+				} catch (ie: InterruptedException) {
+					break
+				}
+			} finally {
+				if (::socket.isInitialized) {
+					Util.close(socket)
+				}
 			}
 		}
 	}

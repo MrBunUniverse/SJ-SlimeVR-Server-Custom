@@ -62,6 +62,8 @@ class VRConfig {
 
 	val vrcConfig: VRCConfig = VRCConfig()
 
+	val questStandalone: QuestStandaloneConfig = QuestStandaloneConfig()
+
 	init {
 		// Initialize default settings for OSC Router
 		oscRouter.portIn = 9002

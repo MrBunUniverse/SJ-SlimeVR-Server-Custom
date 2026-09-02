@@ -8,6 +8,8 @@ import dev.slimevr.protocol.rpc.setup.RPCUtil
 import io.eiren.util.logging.LogManager
 import randomFreePort
 import java.io.IOException
+import java.util.Timer
+import java.util.TimerTask
 import kotlin.concurrent.thread
 
 private const val serviceStartsWith = "VRChat-Client"
@@ -22,6 +24,7 @@ class VRCOSCQueryHandler(
 	private val vrcOscHandler: VRCOSCHandler,
 ) {
 	private val oscQueryServer: OSCQueryServer
+	private var discoveryTimer: Timer? = null
 
 	init {
 		// Request data
@@ -39,11 +42,12 @@ class VRCOSCQueryHandler(
 		LogManager.info("[VRCOSCQueryHandler] SlimeVR OSCQueryServer started at http://$localIp:$httpPort")
 
 		try {
-			// Add service listener
+			// Add service listener for both added and resolved events
 			LogManager.info("[VRCOSCQueryHandler] Listening for VRChat OSCQuery")
 			oscQueryServer.service.addServiceListener(
 				"_osc._udp.local.",
 				onServiceAdded = ::serviceAdded,
+				onServiceResolved = ::serviceAdded,
 			)
 		} catch (e: IOException) {
 			LogManager.warning("[VRCOSCQueryHandler] " + e.message)
@@ -62,14 +66,16 @@ class VRCOSCQueryHandler(
 	}
 
 	/**
-	 * Called when a service is added
+	 * Called when a service is added or resolved
 	 */
 	private fun serviceAdded(info: ServiceInfo) {
 		// Check the service name
 		if (!info.name.startsWith(serviceStartsWith)) return
 
 		// Get url from ServiceInfo
-		val ip = info.inetAddresses[0].hostAddress
+		val addresses = info.inetAddresses
+		if (addresses == null || addresses.isEmpty()) return
+		val ip = addresses[0].hostAddress
 		val port = info.port
 
 		// create a new OSCHandler for this service
@@ -88,3 +94,4 @@ class VRCOSCQueryHandler(
 		}
 	}
 }
+

@@ -64,6 +64,8 @@ class VRCOSCHandler(
 	private var oscQueryIp: InetAddress? = null
 	private var oscQueryIpMatch = false
 	private var timeAtLastError: Long = 0
+	private var timeAtLastSend: Long = 0
+	private var lastHeartbeatTime: Long = 0
 	private var receivingPositionOffset = Vector3.NULL
 	private var postReceivingPositionOffset = Vector3.NULL
 	private var receivingRotationOffset = Quaternion.IDENTITY
@@ -80,12 +82,14 @@ class VRCOSCHandler(
 	override fun refreshSettings(refreshRouterSettings: Boolean) {
 		// Sets which trackers are enabled and force head and hands to false
 		for (i in computedTrackers.indices) {
-			if (computedTrackers[i].trackerPosition != TrackerPosition.HEAD || computedTrackers[i].trackerPosition != TrackerPosition.LEFT_HAND || computedTrackers[i].trackerPosition != TrackerPosition.RIGHT_HAND) {
-				trackersEnabled[i] = config
-					.getOSCTrackerRole(
-						computedTrackers[i].trackerPosition!!.trackerRole!!,
-						false,
-					)
+			val pos = computedTrackers[i].trackerPosition
+			if (pos != null && pos != TrackerPosition.HEAD && pos != TrackerPosition.LEFT_HAND && pos != TrackerPosition.RIGHT_HAND) {
+				val role = pos.trackerRole
+				trackersEnabled[i] = if (role != null) {
+					config.getOSCTrackerRole(role, false)
+				} else {
+					false
+				}
 			} else {
 				trackersEnabled[i] = false
 			}
@@ -517,8 +521,16 @@ class VRCOSCHandler(
 			receivingRotationOffset = receivingRotationOffset.interpR(receivingRotationOffsetGoal, OFFSET_SLERP_FACTOR * (fpsTimer?.timePerFrame ?: 1f))
 		}
 
+		val now = System.currentTimeMillis()
+		val targetRate = server.configManager.vrConfig.questStandalone.oscRate.coerceIn(20, 120)
+		val minIntervalMs = 1000L / targetRate
+		if (now - timeAtLastSend < minIntervalMs) {
+			return
+		}
+		timeAtLastSend = now
+
 		// Update current time
-		val currentTime = System.currentTimeMillis().toFloat()
+		val currentTime = now.toFloat()
 
 		// Send OSC data
 		if (oscSender != null || oscQuerySender != null) {
@@ -527,44 +539,40 @@ class VRCOSCHandler(
 
 			for (i in computedTrackers.indices) {
 				if (trackersEnabled[i]) {
-					// Send regular trackers' positions
-					val (x, y, z) = computedTrackers[i].position
-					oscArgs.clear()
-					oscArgs.add(x)
-					oscArgs.add(y)
-					oscArgs.add(-z)
-					bundle.addPacket(
-						OSCMessage(
-							"/tracking/trackers/${getVRCOSCTrackersId(computedTrackers[i].trackerPosition)}/position",
-							oscArgs.clone(),
-						),
-					)
+					val vrcId = getVRCOSCTrackersId(computedTrackers[i].trackerPosition)
+					if (vrcId > 0) {
+						// Send regular trackers' positions
+						val (x, y, z) = computedTrackers[i].position
+						oscArgs.clear()
+						oscArgs.add(x)
+						oscArgs.add(y)
+						oscArgs.add(-z)
+						bundle.addPacket(
+							OSCMessage(
+								"/tracking/trackers/$vrcId/position",
+								oscArgs.clone(),
+							),
+						)
 
-					// Send regular trackers' rotations
-					val (w, x1, y1, z1) = computedTrackers[i].getRotation()
-					// We flip the X and Y components of the quaternion because
-					// we flip the z direction when communicating from
-					// our right-handed API to VRChat's left-handed API.
-					// X quaternion represents a rotation from y to z
-					// Y quaternion represents a rotation from z to x
-					// When we negate the z direction, X and Y quaternion
-					// components must be negated.
-					val (_, x2, y2, z2) = Quaternion(
-						w,
-						-x1,
-						-y1,
-						z1,
-					).toEulerAngles(EulerOrder.YXZ)
-					oscArgs.clear()
-					oscArgs.add(x2 * FastMath.RAD_TO_DEG)
-					oscArgs.add(y2 * FastMath.RAD_TO_DEG)
-					oscArgs.add(z2 * FastMath.RAD_TO_DEG)
-					bundle.addPacket(
-						OSCMessage(
-							"/tracking/trackers/${getVRCOSCTrackersId(computedTrackers[i].trackerPosition)}/rotation",
-							oscArgs.clone(),
-						),
-					)
+						// Send regular trackers' rotations
+						val (w, x1, y1, z1) = computedTrackers[i].getRotation()
+						val (_, x2, y2, z2) = Quaternion(
+							w,
+							-x1,
+							-y1,
+							z1,
+						).toEulerAngles(EulerOrder.YXZ)
+						oscArgs.clear()
+						oscArgs.add(x2 * FastMath.RAD_TO_DEG)
+						oscArgs.add(y2 * FastMath.RAD_TO_DEG)
+						oscArgs.add(z2 * FastMath.RAD_TO_DEG)
+						bundle.addPacket(
+							OSCMessage(
+								"/tracking/trackers/$vrcId/rotation",
+								oscArgs.clone(),
+							),
+						)
+					}
 				}
 				if (computedTrackers[i].trackerPosition == TrackerPosition.HEAD) {
 					// Send HMD position
@@ -583,15 +591,21 @@ class VRCOSCHandler(
 			}
 
 			try {
-				// Prioritize OSCQuery since we can't validate oscSender
-				if (oscQuerySender != null) {
-					oscQuerySender?.send(bundle)
-				} else {
-					oscSender?.send(bundle)
+				oscSender?.send(bundle)
+				if (oscQuerySender != null && oscQuerySender != oscSender) {
+					try {
+						oscQuerySender?.send(bundle)
+					} catch (ignored: Throwable) {
+					}
+				}
+
+				if (now - lastHeartbeatTime > 5000L) {
+					lastHeartbeatTime = now
+					var activeCount = 0
+					for (b in trackersEnabled) if (b) activeCount++
+					LogManager.info("[VRCOSCHandler] Streaming $activeCount OSC trackers to $oscIp:$oscPortOut")
 				}
 			} catch (e: IOException) {
-				// Avoid spamming AsynchronousCloseException too many
-				// times per second
 				if (currentTime - timeAtLastError > 100) {
 					timeAtLastError = System.currentTimeMillis()
 					LogManager.warning("[VRCOSCHandler] Error sending OSC message to VRChat: $e")

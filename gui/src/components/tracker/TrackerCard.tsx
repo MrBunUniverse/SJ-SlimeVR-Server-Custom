@@ -21,9 +21,11 @@ import { trackingchecklistIdtoLabel } from '@/hooks/tracking-checklist';
 function TrackerBig({
   device,
   tracker,
+  velocity = 0,
 }: {
   tracker: TrackerDataT;
   device?: DeviceDataT;
+  velocity?: number;
 }) {
   const { config } = useConfig();
 
@@ -33,11 +35,25 @@ function TrackerBig({
 
   return (
     <div className="flex flex-col justify-center rounded-md py-3 pr-4 pl-4 w-full gap-2 box-border my-8 px-6 h-32">
-      <div className="flex justify-center fill-background-10">
+      <div
+        className={classNames(
+          'flex justify-center fill-background-10 transition-all duration-200',
+          velocity > 0.15 &&
+            'scale-110 drop-shadow-[0_0_14px_rgba(139,92,246,0.85)]'
+        )}
+      >
         <BodyPartIcon bodyPart={tracker.info?.bodyPart} />
       </div>
       <div className="flex justify-center">
-        <Typography bold truncate>
+        <Typography
+          bold
+          truncate
+          className={classNames(
+            'transition-colors duration-200',
+            velocity > 0.15 &&
+              'text-accent-background-20 drop-shadow-[0_0_8px_rgba(139,92,246,0.7)]'
+          )}
+        >
           {trackerName}
         </Typography>
       </div>
@@ -78,10 +94,12 @@ function TrackerSmol({
   device,
   tracker,
   warning,
+  velocity = 0,
 }: {
   tracker: TrackerDataT;
   device?: DeviceDataT;
   warning?: TrackingChecklistStepT | boolean;
+  velocity?: number;
 }) {
   const { useName } = useTracker(tracker);
 
@@ -97,10 +115,12 @@ function TrackerSmol({
         )}
         <div
           className={classNames(
-            'border-[3px] border-opacity-80 rounded-md overflow-clip',
+            'border-[3px] border-opacity-80 rounded-xl overflow-clip transition-all duration-200',
             {
-              'border-status-warning': warning,
-              'border-transparent': !warning,
+              'border-status-warning': warning && velocity <= 0.15,
+              'border-transparent': !warning && velocity <= 0.15,
+              'border-accent-background-30 ring-4 ring-accent-background-30/40 shadow-[0_0_18px_rgba(139,92,246,0.85)] scale-105':
+                velocity > 0.15,
             }
           )}
         >
@@ -108,8 +128,22 @@ function TrackerSmol({
         </div>
       </div>
 
-      <div className="flex flex-col flex-grow justify-center gap-1">
-        <Typography bold truncate variant="section-title">
+      <div
+        className={classNames(
+          'flex flex-col flex-grow justify-center gap-1 transition-all duration-200',
+          velocity > 0.15 && 'translate-x-0.5'
+        )}
+      >
+        <Typography
+          bold
+          truncate
+          variant="section-title"
+          className={classNames(
+            'transition-colors duration-200',
+            velocity > 0.15 &&
+              'text-accent-background-20 drop-shadow-[0_0_8px_rgba(139,92,246,0.7)]'
+          )}
+        >
           {trackerName}
         </Typography>
         <TrackerStatus status={tracker.status} />
@@ -173,20 +207,14 @@ export function TrackerCard({
       <div
         onClick={onClick}
         className={classNames(
-          'rounded-2xl overflow-hidden transition-all duration-150',
+          'rounded-2xl overflow-hidden transition-all duration-200',
           interactable && 'glass-interactive cursor-pointer',
           outlined && 'outline outline-2 outline-accent-background-40',
-          !bg || bg === 'bg-background-60' ? 'glass-panel' : bg
+          !bg || bg === 'bg-background-60' ? 'card-surface' : bg,
+          shakeHighlight &&
+            velocity > 0.15 &&
+            'border-accent-background-30/90 ring-2 ring-accent-background-30/40 shadow-[0_0_22px_rgba(139,92,246,0.35)]'
         )}
-        style={
-          shakeHighlight
-            ? {
-                boxShadow: `0px 0px ${Math.floor(velocity * 8)}px ${Math.floor(
-                  velocity * 8
-                )}px rgb(var(--accent-background-30))`,
-              }
-            : {}
-        }
       >
         {smol && (
           <Tooltip
@@ -202,10 +230,17 @@ export function TrackerCard({
               )
             }
           >
-            <TrackerSmol tracker={tracker} device={device} warning={warning} />
+            <TrackerSmol
+              tracker={tracker}
+              device={device}
+              warning={warning}
+              velocity={velocity}
+            />
           </Tooltip>
         )}
-        {!smol && <TrackerBig tracker={tracker} device={device} />}
+        {!smol && (
+          <TrackerBig tracker={tracker} device={device} velocity={velocity} />
+        )}
       </div>
       {showUpdates && <FirmwareIcon tracker={tracker} device={device} />}
     </div>

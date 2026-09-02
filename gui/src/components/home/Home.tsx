@@ -60,7 +60,7 @@ export function Home() {
       </NavLink>
 
       {/* macOS Unified Floating Action Dock */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 mb-2 glass-panel rounded-2xl border border-white/10 shadow-lg">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 mb-2 glass-panel rounded-[20px] border border-white/10 shadow-lg">
         {/* Left Section: Presets & Quest Telemetry */}
         <div className="flex items-center gap-2">
           <PresetSelector />

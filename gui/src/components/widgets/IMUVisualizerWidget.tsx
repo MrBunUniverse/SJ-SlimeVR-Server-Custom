@@ -58,7 +58,13 @@ async function initializeIMUVisualizer(
   );
   camera.position.set(0, 0, 7);
 
-  const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
+  const renderer = new WebGLRenderer({
+    canvas,
+    alpha: true,
+    antialias: false,
+    powerPreference: 'low-power',
+    stencil: false,
+  });
   renderer.setSize(canvas.clientWidth, CANVAS_HEIGHT);
 
   const ambientLight = new AmbientLight(0xffffff, 0.5 * Math.PI);
@@ -88,7 +94,7 @@ async function initializeIMUVisualizer(
     new Vector3(0, 1, 0),
     new Vector3(0, 0, 0),
     1,
-    0xffff00
+    0x00ffff
   );
   scene.add(accelArrow);
 
@@ -96,7 +102,7 @@ async function initializeIMUVisualizer(
     new Vector3(0, 1, 0),
     new Vector3(0, 0, 0),
     1,
-    Color.NAMES.aqua
+    0xff00ff
   );
   scene.add(magArrow);
 
@@ -113,12 +119,14 @@ async function initializeIMUVisualizer(
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  let animationId: number | null = null;
-  const animate = () => {
-    animationId = requestAnimationFrame(animate);
-    renderer.render(scene, camera);
+  const renderScene = () => {
+    if (renderer && scene && camera) {
+      renderer.render(scene, camera);
+    }
   };
-  animate();
+
+  // Initial render
+  renderScene();
 
   const update = (quat: QuatObject, vec: Vector3Object, mag: Vector3Object) => {
     trackerGroup.quaternion.set(quat.x, quat.y, quat.z, quat.w);
@@ -143,12 +151,18 @@ async function initializeIMUVisualizer(
     } else {
       magArrow.removeFromParent();
     }
+    renderScene();
   };
 
   const dispose = () => {
-    if (animationId !== null) {
-      cancelAnimationFrame(animationId);
-    }
+    trackerGroup.traverse((child) => {
+      if ('geometry' in child && child.geometry) (child.geometry as any).dispose();
+      if ('material' in child && child.material) {
+        const mat = child.material as any;
+        if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+        else mat.dispose();
+      }
+    });
     renderer.dispose();
     groundGeometry.dispose();
     groundMaterial.dispose();
@@ -162,7 +176,7 @@ async function initializeIMUVisualizer(
     trackerGroup,
     accelArrow,
     magArrow,
-    animationId,
+    animationId: null,
     update,
     dispose,
   };

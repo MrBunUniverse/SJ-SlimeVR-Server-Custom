@@ -68,7 +68,10 @@ function initializePreview(
   let renderer: WebGLRenderer | null = new WebGLRenderer({
     canvas,
     alpha: true,
-    antialias: true,
+    antialias: false,
+    powerPreference: 'low-power',
+    stencil: false,
+    depth: true,
   });
   renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
@@ -86,6 +89,7 @@ function initializePreview(
 
   let heightOffset = 0;
   let skeletonOffset = 0;
+  let animationFrameId: number;
 
   const rebuildSkeleton = (
     newSkeleton: (BoneKind | Bone)[],
@@ -166,17 +170,27 @@ function initializePreview(
     });
   };
 
-  let animationFrameId: number;
   const animate = (currentTime: number) => {
     animationFrameId = requestAnimationFrame(animate);
 
-    if (typeof document !== 'undefined' && document.hidden) return;
+    const isHidden = typeof document !== 'undefined' && document.hidden;
+    const isFocused =
+      typeof document !== 'undefined' &&
+      document.hasFocus &&
+      document.hasFocus();
+
+    // Dynamic Framerate Caps:
+    // - If hidden/minimized: drop to 1 FPS (1000ms)
+    // - If unfocused/different monitor: drop to 30 FPS (33.3ms)
+    // - If focused & active: cap at 60 FPS (16.6ms)
+    const adaptiveBaseInterval = isHidden ? 1000 : (!isFocused ? 33.3 : 16.6);
+    const effectiveInterval = Math.max(adaptiveBaseInterval, frameInterval);
 
     const now = performance.now();
     const elapsed = now - lastRenderTimeRef;
-    if (elapsed < frameInterval) return;
+    if (elapsed < effectiveInterval) return;
     render(currentTime);
-    lastRenderTimeRef = now - (elapsed % frameInterval);
+    lastRenderTimeRef = now - (elapsed % effectiveInterval);
   };
 
   animationFrameId = requestAnimationFrame(animate);
@@ -231,6 +245,8 @@ function initializePreview(
     destroy: () => {
       cancelAnimationFrame(animationFrameId);
       skeletonHelper.dispose();
+      grid.geometry.dispose();
+      (grid.material as any)?.dispose?.();
       if (!renderer) return;
       renderer.dispose();
       renderer = null; // Very important for js to free the WebGL context. dispose does not to it alone

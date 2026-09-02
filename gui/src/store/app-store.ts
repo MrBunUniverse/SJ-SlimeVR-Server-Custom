@@ -64,6 +64,11 @@ export const connectedIMUTrackersAtom = atom((get) => {
   return trackers.filter(({ tracker }) => tracker.info?.isImu);
 });
 
+export const connectedIMUCountAtom = selectAtom(
+  connectedIMUTrackersAtom,
+  (trackers) => trackers.length
+);
+
 export const computedTrackersAtom = selectAtom(
   datafeedAtom,
   (datafeed) => datafeed.syntheticTrackers.map((tracker) => ({ tracker })),

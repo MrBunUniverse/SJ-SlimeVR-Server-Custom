@@ -148,14 +148,11 @@ function Cell({
       className={classNames('py-2 group overflow-hidden', { hidden: !show })}
     >
       <div
-        style={{
-          boxShadow: `0px 0px ${Math.floor(velocity * 8)}px ${Math.floor(
-            velocity * 8
-          )}px rgb(var(--accent-background-30))`,
-        }}
         className={classNames(
-          { 'rounded-l-md ml-3': first, 'rounded-r-md mr-3': last },
-          'bg-background-60 group-hover:bg-background-50 hover:cursor-pointer p-2 h-[50px] flex items-center'
+          { 'rounded-l-xl ml-3': first, 'rounded-r-xl mr-3': last },
+          'bg-background-60 group-hover:bg-background-50 hover:cursor-pointer p-2 h-[50px] flex items-center transition-all duration-200',
+          velocity > 0.15 &&
+            'border-accent-background-30/90 ring-1 ring-accent-background-30/60 shadow-[0_0_16px_rgba(139,92,246,0.35)]'
         )}
       >
         {children}

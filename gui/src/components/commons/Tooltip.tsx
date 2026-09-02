@@ -303,12 +303,12 @@ export function FloatingTooltip({
 
   return (
     <div
-      className={classNames('fixed z-50 pointer-events-none')}
+      className={classNames('fixed z-50 pointer-events-none transition-opacity duration-150 ease-out')}
       ref={tooltipRef}
       style={style}
     >
       <div
-        className="bg-background-90 rounded-md p-2 text-background-10 overflow-auto"
+        className="glass-panel-strong rounded-xl px-2.5 py-1.5 text-background-10 border border-white/15 shadow-2xl"
         style={style}
       >
         {children}

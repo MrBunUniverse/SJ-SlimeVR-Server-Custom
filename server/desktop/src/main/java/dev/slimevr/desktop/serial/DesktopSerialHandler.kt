@@ -210,8 +210,20 @@ class DesktopSerialHandler :
 		}
 	}
 
+	private var lastLogTime = 0L
+	private var lastLoggedContent = ""
+
 	fun addLog(str: String, server: Boolean = true) {
-		LogManager.info("[Serial] $str")
+		val now = System.currentTimeMillis()
+		val trimmed = str.trim()
+		if (trimmed.isNotEmpty()) {
+			// Throttle identical or rapid serial noise to prevent terminal lockup and server crash
+			if (server || trimmed != lastLoggedContent || now - lastLogTime > 2000L) {
+				lastLoggedContent = trimmed
+				lastLogTime = now
+				LogManager.info("[Serial] $trimmed")
+			}
+		}
 		listeners.forEach { it.onSerialLog(str, server) }
 	}
 

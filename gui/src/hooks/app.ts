@@ -64,9 +64,10 @@ export function useProvideAppContext(): AppContext {
   useEffect(() => {
     if (!config) return;
 
+    fetchCurrentFirmwareRelease(config.uuid).then(setCurrentFirmwareRelease);
     const interval = setInterval(() => {
       fetchCurrentFirmwareRelease(config.uuid).then(setCurrentFirmwareRelease);
-    }, 1000);
+    }, 3600000);
     return () => {
       clearInterval(interval);
     };

@@ -1,10 +1,16 @@
-import { ReactNode, useContext, useEffect, useState } from 'react';
+import { ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { NavLink, useMatch } from 'react-router-dom';
 import {
   RpcMessage,
   ServerInfosRequestT,
   ServerInfosResponseT,
   TrackerStatus,
+  ChangeSettingsRequestT,
+  SettingsRequestT,
+  SettingsResponseT,
+  VRCOSCSettingsT,
+  OSCSettingsT,
+  HeartbeatRequestT,
 } from 'solarxr-protocol';
 import { useWebsocketAPI } from '@/hooks/websocket-api';
 import { CloseIcon } from './commons/icon/CloseIcon';
@@ -21,7 +27,7 @@ import { TrackersStillOnModal } from './TrackersStillOnModal';
 import { useConfig } from '@/hooks/config';
 import { TrayOrExitModal } from './TrayOrExitModal';
 import { useAtomValue } from 'jotai';
-import { connectedIMUTrackersAtom } from '@/store/app-store';
+import { connectedIMUCountAtom } from '@/store/app-store';
 import { useElectron } from '@/hooks/electron';
 import { openUrl } from '@/hooks/crossplatform';
 import { HomeIcon } from './commons/icon/HomeIcon';
@@ -33,6 +39,178 @@ import { GearIcon } from './commons/icon/GearIcon';
 import { Tooltip } from './commons/Tooltip';
 import { useLocalization } from '@fluent/react';
 import { useOperatingMode } from '@/hooks/operating-mode';
+
+export function QuestTargetIPPill() {
+  const { sendRPCPacket, useRPCPacket } = useWebsocketAPI();
+  const [questIp, setQuestIp] = useState<string>('192.168.0.103');
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [saved, setSaved] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    sendRPCPacket(RpcMessage.SettingsRequest, new SettingsRequestT());
+  }, []);
+
+  useRPCPacket(RpcMessage.SettingsResponse, (settings: SettingsResponseT) => {
+    if (settings.vrcOsc?.oscSettings?.address) {
+      setQuestIp(settings.vrcOsc.oscSettings.address.toString());
+    }
+  });
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInputValue(questIp);
+    setIsEditing(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 50);
+  };
+
+  const handleSave = () => {
+    const trimmed = inputValue.trim();
+    if (trimmed && trimmed !== questIp) {
+      setQuestIp(trimmed);
+      const settings = new ChangeSettingsRequestT();
+      const vrcOsc = new VRCOSCSettingsT();
+      const oscSettings = new OSCSettingsT();
+      oscSettings.enabled = true;
+      oscSettings.address = trimmed;
+      oscSettings.portOut = 9000;
+      oscSettings.portIn = 9001;
+      vrcOsc.oscSettings = oscSettings;
+      vrcOsc.oscqueryEnabled = true;
+      settings.vrcOsc = vrcOsc;
+      sendRPCPacket(RpcMessage.ChangeSettingsRequest, settings);
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div
+        style={{ WebkitAppRegion: 'no-drag' } as any}
+        className="flex items-center gap-1 bg-background-80 border border-emerald-500/50 rounded-lg px-1.5 py-0.5 shadow-md"
+      >
+        <span className="text-[10px] uppercase font-bold text-emerald-300">Quest:</span>
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="w-28 bg-transparent text-[11px] font-mono font-semibold text-background-10 focus:outline-none border-b border-emerald-400 px-1 py-0"
+          placeholder="192.168.0.xxx"
+        />
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-medium hover:bg-emerald-400 transition-colors cursor-pointer"
+        >
+          Set
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <Tooltip
+      preferedDirection="bottom"
+      spacing={6}
+      content={
+        <Typography className="text-[11px] font-medium">
+          Click to change Quest / VRChat target network address (Currently: {questIp})
+        </Typography>
+      }
+    >
+      <div
+        style={{ WebkitAppRegion: 'no-drag' } as any}
+        onClick={handleStartEdit}
+        className={classNames(
+          'flex items-center gap-1.5 text-[11px] font-mono font-semibold rounded-lg px-2 py-0.5 cursor-pointer transition-all shadow-sm select-none active:scale-95 border',
+          saved
+            ? 'bg-emerald-500/25 border-emerald-500/40 text-emerald-300'
+            : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/25 text-emerald-300'
+        )}
+      >
+        <span className={classNames('w-1.5 h-1.5 rounded-full', saved ? 'bg-emerald-300' : 'bg-emerald-400 animate-pulse')} />
+        <span className="text-[10px] uppercase tracking-wider font-bold opacity-75">Quest:</span>
+        <span>{questIp}</span>
+      </div>
+    </Tooltip>
+  );
+}
+
+export function RefreshTrackersButton() {
+  const { sendRPCPacket } = useWebsocketAPI();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (refreshing) return;
+    setRefreshing(true);
+    sendRPCPacket(RpcMessage.HeartbeatRequest, new HeartbeatRequestT());
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1200);
+  };
+
+  return (
+    <Tooltip
+      preferedDirection="bottom"
+      spacing={6}
+      content={
+        <Typography className="text-[11px] font-medium">
+          Refresh Trackers: Safe network re-scan without restarting SlimeVR or resetting calibrations
+        </Typography>
+      }
+    >
+      <button
+        type="button"
+        style={{ WebkitAppRegion: 'no-drag' } as any}
+        onClick={handleRefresh}
+        disabled={refreshing}
+        className={classNames(
+          'flex items-center gap-1.5 text-[11px] font-mono font-medium rounded-lg px-2 py-0.5 cursor-pointer transition-all shadow-sm select-none active:scale-95 border',
+          refreshing
+            ? 'bg-sky-500/20 border-sky-500/40 text-sky-300'
+            : 'bg-white/5 hover:bg-white/10 border-white/10 text-background-20 hover:text-background-10'
+        )}
+      >
+        <svg
+          className={classNames('w-3 h-3', refreshing && 'animate-spin text-sky-400')}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          />
+        </svg>
+        <span>{refreshing ? 'Scanning...' : 'Refresh'}</span>
+      </button>
+    </Tooltip>
+  );
+}
 
 export function VersionTag() {
   return (
@@ -166,7 +344,7 @@ export function TopBar({
   const electron = useElectron();
   const { isMobile } = useBreakpoint('mobile');
   const { useRPCPacket, sendRPCPacket } = useWebsocketAPI();
-  const connectedIMUTrackers = useAtomValue(connectedIMUTrackersAtom);
+  const connectedIMUCount = useAtomValue(connectedIMUCountAtom);
   const { config, setConfig, saveConfig } = useConfig();
   const { isQuestStandalone, toggleMode } = useOperatingMode();
   const version = useContext(VersionContext);
@@ -193,9 +371,7 @@ export function TopBar({
       electron.api.hide();
     } else if (
       config?.connectedTrackersWarning &&
-      connectedIMUTrackers.filter(
-        (t) => t.tracker.status !== TrackerStatus.TIMED_OUT
-      ).length > 0
+      connectedIMUCount > 0
     ) {
       setConnectedTrackerWarning(true);
     } else {
@@ -265,7 +441,7 @@ export function TopBar({
               <Tooltip
                 preferedDirection="bottom"
                 spacing={6}
-                content={<Typography className="text-[11px] font-medium">Click to copy Quest OSC IP: {localIp}</Typography>}
+                content={<Typography className="text-[11px] font-medium">Click to copy Mac Host IP: {localIp}</Typography>}
               >
                 <div
                   style={{ WebkitAppRegion: 'no-drag' } as any}
@@ -275,10 +451,14 @@ export function TopBar({
                   }}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-accent-background-20 animate-pulse" />
+                  <span className="text-[10px] uppercase font-bold opacity-75">Mac:</span>
                   <span>{localIp}</span>
                 </div>
               </Tooltip>
             )}
+
+            <QuestTargetIPPill />
+            <RefreshTrackersButton />
 
             {/* macOS Style Standalone Toggle Switch */}
             <Tooltip
@@ -392,9 +572,7 @@ export function TopBar({
               // await invoke('update_tray_text');
             } else if (
               config?.connectedTrackersWarning &&
-              connectedIMUTrackers.filter(
-                (t) => t.tracker.status !== TrackerStatus.TIMED_OUT
-              ).length > 0
+              connectedIMUCount > 0
             ) {
               setConnectedTrackerWarning(true);
             } else {

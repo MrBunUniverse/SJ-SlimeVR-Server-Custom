@@ -102,9 +102,9 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 
 			if (osc != null) {
 				vrcOSCConfig.enabled = osc.enabled()
-				vrcOSCConfig.portIn = osc.portIn()
-				vrcOSCConfig.portOut = osc.portOut()
-				vrcOSCConfig.address = osc.address()
+				if (osc.portIn() > 0) vrcOSCConfig.portIn = osc.portIn()
+				if (osc.portOut() > 0) vrcOSCConfig.portOut = osc.portOut()
+				if (osc.address() != null && osc.address().isNotBlank()) vrcOSCConfig.address = osc.address()
 			}
 			if (trackers != null) {
 				vrcOSCConfig.setOSCTrackerRole(TrackerRole.HEAD, trackers.head())
@@ -318,8 +318,9 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 			}
 
 			modelSettings.skeletonHeight()?.let {
-				api.server.configManager.vrConfig.skeleton.hmdHeight = it.hmdHeight()
+				if (it.hmdHeight() > 0) api.server.configManager.vrConfig.skeleton.hmdHeight = it.hmdHeight()
 				api.server.configManager.vrConfig.skeleton.floorHeight = it.floorHeight()
+				api.server.configManager.vrConfig.questStandalone.floorHeight = it.floorHeight()
 			}
 
 			hpm.saveConfig()

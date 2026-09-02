@@ -466,8 +466,20 @@ const spawnServer = async () => {
     if (!isQuitting) app.quit();
   });
 
-  serverProcess.on('exit', () => {
-    if (!isQuitting) logger.info('Server process exiting');
+  serverProcess.on('exit', (code, signal) => {
+    if (!isQuitting) {
+      logger.info({ code, signal }, 'Server process exited unexpectedly, auto-respawning in 1500ms...');
+      setTimeout(async () => {
+        if (!isQuitting) {
+          try {
+            await spawnServer();
+            logger.info('Server process auto-respawned successfully');
+          } catch (err) {
+            logger.error({ err }, 'Failed to auto-respawn server process');
+          }
+        }
+      }, 1500);
+    }
   });
 
   const exited = new Promise<void>((resolve) => serverProcess.once('exit', resolve));

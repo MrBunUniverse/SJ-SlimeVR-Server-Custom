@@ -60,6 +60,11 @@ class RPCHandler(private val api: ProtocolAPI) : ProtocolHandler<RpcMessageHeade
 		RPCInstallInfoHandler(this, api)
 
 		registerPacketListener(
+			RpcMessage.HeartbeatRequest,
+			::onHeartbeatRequest,
+		)
+
+		registerPacketListener(
 			RpcMessage.AssignTrackerRequest,
 			::onAssignTrackerRequest,
 		)
@@ -200,6 +205,19 @@ class RPCHandler(private val api: ProtocolAPI) : ProtocolHandler<RpcMessageHeade
 		config.isVisible = req.isVisible
 
 		api.server.configManager.saveConfig()
+	}
+
+	private fun onHeartbeatRequest(
+		conn: GenericConnection,
+		messageHeader: RpcMessageHeader,
+	) {
+		api.server.trackersServer.refreshTrackers()
+		val fbb = FlatBufferBuilder(16)
+		HeartbeatResponse.startHeartbeatResponse(fbb)
+		val response = HeartbeatResponse.endHeartbeatResponse(fbb)
+		val outbound = this.createRPCMessage(fbb, RpcMessage.HeartbeatResponse, response, messageHeader)
+		fbb.finish(outbound)
+		conn.send(fbb.dataBuffer())
 	}
 
 	fun onSkeletonResetAllRequest(conn: GenericConnection, messageHeader: RpcMessageHeader) {

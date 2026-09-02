@@ -31,8 +31,8 @@ export function BaseModal({
         props.className ||
         classNames(
           'items-center focus:ring-transparent focus:ring-offset-transparent',
-          'focus:outline-transparent outline-none glass-panel-strong p-6 rounded-3xl m-2',
-          'text-background-10 shadow-2xl border border-white/12 max-w-lg w-full',
+          'focus:outline-transparent outline-none glass-panel-strong p-5 rounded-[28px] m-2',
+          'text-background-10 shadow-2xl border border-white/15 max-w-lg w-full',
           props.appendClasses
         )
       }
