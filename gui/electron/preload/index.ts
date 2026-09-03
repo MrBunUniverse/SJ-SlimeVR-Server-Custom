@@ -48,4 +48,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setPresence: (options) => ipcRenderer.invoke(IPC_CHANNELS.DISCORD_PRESENCE, options),
   getInstallDir: () => ipcRenderer.invoke(IPC_CHANNELS.GET_FOLDER, 'exe'),
   isSteam: () => ipcRenderer.invoke(IPC_CHANNELS.IS_STEAM),
+  onTrayReset: (cb) => {
+    const sub = (_: IpcRendererEvent, type: string) => cb(type);
+    ipcRenderer.on('tray-reset', sub);
+    return () => ipcRenderer.removeListener('tray-reset', sub);
+  },
+  onTrayElevationStep: (cb) => {
+    const sub = (_: IpcRendererEvent, delta: number) => cb(delta);
+    ipcRenderer.on('tray-elevation-step', sub);
+    return () => ipcRenderer.removeListener('tray-elevation-step', sub);
+  },
+  onTrayElevationReset: (cb) => {
+    const sub = () => cb();
+    ipcRenderer.on('tray-elevation-reset', sub);
+    return () => ipcRenderer.removeListener('tray-elevation-reset', sub);
+  },
 } satisfies IElectronAPI);

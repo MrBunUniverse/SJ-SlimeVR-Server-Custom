@@ -4,7 +4,7 @@ import { assignedTrackersAtom, unassignedTrackersAtom } from '@/store/app-store'
 import { useOperatingMode } from '@/hooks/operating-mode';
 import { useTrackerPresets } from '@/hooks/presets';
 import { Typography } from '@/components/commons/Typography';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RpcMessage, HeartbeatRequestT } from 'solarxr-protocol';
 import { useWebsocketAPI } from '@/hooks/websocket-api';
 
@@ -24,6 +24,21 @@ export function QuestDiagnosticsCard() {
     setOscRate,
     selectProfile,
   } = useOperatingMode();
+
+  useEffect(() => {
+    const onDelta = (e: CustomEvent<number>) => {
+      adjustFloorHeight(e.detail);
+    };
+    const onReset = () => {
+      setFloorHeight(0);
+    };
+    window.addEventListener('tray-elevation-delta', onDelta as EventListener);
+    window.addEventListener('tray-elevation-reset-event', onReset);
+    return () => {
+      window.removeEventListener('tray-elevation-delta', onDelta as EventListener);
+      window.removeEventListener('tray-elevation-reset-event', onReset);
+    };
+  }, [adjustFloorHeight, setFloorHeight]);
   const assignedTrackers = useAtomValue(assignedTrackersAtom);
   const unassignedTrackers = useAtomValue(unassignedTrackersAtom);
   const { activePreset } = useTrackerPresets();

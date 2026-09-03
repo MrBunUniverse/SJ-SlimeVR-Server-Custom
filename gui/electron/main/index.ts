@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   dialog,
+  globalShortcut,
   Menu,
   nativeImage,
   net,
@@ -330,20 +331,83 @@ function createWindow() {
   });
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Show',
+      label: 'SlimeVR • macOS Tray',
+      enabled: false,
+    },
+    { type: 'separator' },
+    {
+      label: 'Show SlimeVR Window',
       click: () => {
         mainWindow?.show();
+        mainWindow?.focus();
       },
     },
     {
-      label: 'Hide',
+      label: 'Hide to Menu Bar',
       click: () => {
         mainWindow?.hide();
       },
     },
-    { role: 'quit' },
+    { type: 'separator' },
+    {
+      label: 'Floor Elevation',
+      submenu: [
+        {
+          label: 'Elevation Up (+1cm) [Ctrl+Alt+Up]',
+          click: () => mainWindow?.webContents.send('tray-elevation-step', 1),
+        },
+        {
+          label: 'Elevation Down (-1cm) [Ctrl+Alt+Down]',
+          click: () => mainWindow?.webContents.send('tray-elevation-step', -1),
+        },
+        {
+          label: 'Reset Floor (0cm) [Ctrl+Alt+0]',
+          click: () => mainWindow?.webContents.send('tray-elevation-reset'),
+        },
+      ],
+    },
+    {
+      label: 'Quick Calibration',
+      submenu: [
+        {
+          label: 'Yaw Reset [Ctrl+Alt+R]',
+          click: () => mainWindow?.webContents.send('tray-reset', 'yaw'),
+        },
+        {
+          label: 'Full Reset (3s) [Ctrl+Alt+F]',
+          click: () => mainWindow?.webContents.send('tray-reset', 'full'),
+        },
+        {
+          label: 'Mounting Reset',
+          click: () => mainWindow?.webContents.send('tray-reset', 'mounting'),
+        },
+      ],
+    },
+    { type: 'separator' },
+    { role: 'quit', label: 'Quit SlimeVR' },
   ]);
   tray.setContextMenu(contextMenu);
+
+  // Register global shortcuts for VR convenience
+  try {
+    globalShortcut.register('CommandOrControl+Alt+R', () => {
+      mainWindow?.webContents.send('tray-reset', 'yaw');
+    });
+    globalShortcut.register('CommandOrControl+Alt+F', () => {
+      mainWindow?.webContents.send('tray-reset', 'full');
+    });
+    globalShortcut.register('CommandOrControl+Alt+Up', () => {
+      mainWindow?.webContents.send('tray-elevation-step', 1);
+    });
+    globalShortcut.register('CommandOrControl+Alt+Down', () => {
+      mainWindow?.webContents.send('tray-elevation-step', -1);
+    });
+    globalShortcut.register('CommandOrControl+Alt+0', () => {
+      mainWindow?.webContents.send('tray-elevation-reset');
+    });
+  } catch (err) {
+    logger.warn(err, 'Failed to register global shortcuts');
+  }
 
   const updateWindowState = () => {
     if (!mainWindow) return;
@@ -543,6 +607,7 @@ app.whenReady().then(async () => {
     isQuitting = true;
     event.preventDefault();
     logger.info('App quitting, saving...');
+    globalShortcut.unregisterAll();
     if (powerSaveBlockerId !== null && powerSaveBlocker.isStarted(powerSaveBlockerId)) {
       powerSaveBlocker.stop(powerSaveBlockerId);
       powerSaveBlockerId = null;

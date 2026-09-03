@@ -73,7 +73,13 @@ function initializePreview(
     stencil: false,
     depth: true,
   });
+  renderer.setPixelRatio(Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 1.5));
   renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+  let dirtyFrames = 20;
+  const markDirty = (frames = 3) => {
+    dirtyFrames = Math.max(dirtyFrames, frames);
+  };
 
   const grid = new GridHelper(10, 50, GROUND_COLOR, GROUND_COLOR);
   grid.position.set(0, 0, 0);
@@ -95,6 +101,7 @@ function initializePreview(
     newSkeleton: (BoneKind | Bone)[],
     bones: Map<BodyPart, BoneT>
   ) => {
+    markDirty(10);
     skeletonGroup.remove(skeletonHelper);
     skeletonHelper.dispose();
     scene.remove(skeleton[0]);
@@ -189,6 +196,8 @@ function initializePreview(
     const now = performance.now();
     const elapsed = now - lastRenderTimeRef;
     if (elapsed < effectiveInterval) return;
+    if (dirtyFrames <= 0) return;
+    dirtyFrames--;
     render(currentTime);
     lastRenderTimeRef = now - (elapsed % effectiveInterval);
   };
@@ -219,12 +228,15 @@ function initializePreview(
       skeletonHelper.resolution.copy(resolution);
       if (!renderer) return;
       renderer.setSize(width, height);
+      markDirty(5);
     },
     setFrameInterval: (interval: number) => {
       frameInterval = interval;
+      markDirty(5);
     },
     rebuildSkeleton,
     updatesBones: (bones: Map<BodyPart, BoneT>) => {
+      markDirty(3);
       skeleton.forEach(
         (bone) => bone instanceof BoneKind && bone.updateData(bones)
       );
@@ -281,12 +293,17 @@ function initializePreview(
       controls.maxDistance = 20;
       controls.dampingFactor = 0.2;
       controls.enableDamping = true;
+      controls.addEventListener('change', () => markDirty(4));
 
       const tween = new Tween(position)
         .onUpdate(() => {
           camera.position.copy(position);
+          markDirty(3);
         })
-        .onStart(() => (frameInterval = 0))
+        .onStart(() => {
+          frameInterval = 0;
+          markDirty(10);
+        })
         .onComplete(() => (frameInterval = 1000 / LOW_FRAMERATE));
 
       camera.position.copy(position);

@@ -13,6 +13,7 @@ import { assignedTrackersAtom, serverGuardsAtom } from '@/store/app-store';
 import { FEET_BODY_PARTS, FINGER_BODY_PARTS } from './body-parts';
 import { useLocaleConfig } from '@/i18n/config';
 import * as Sentry from '@sentry/react';
+import { audioFeedback } from '@/utils/audio-feedback';
 
 export type ResetBtnStatus = 'idle' | 'counting' | 'finished';
 
@@ -58,12 +59,17 @@ export function useReset(
     });
   };
 
+  const lastBeepSecRef = useRef<number>(-1);
+
   const onResetFinished = () => {
     setStatus('finished');
+    lastBeepSecRef.current = -1;
+    audioFeedback.playResetSuccessChime();
     if (onReseted) onReseted();
   };
 
   const onResetCanceled = () => {
+    lastBeepSecRef.current = -1;
     if (status !== 'finished') setStatus('idle');
     if (onFailed) onFailed();
   };
@@ -82,8 +88,16 @@ export function useReset(
   }, [status]);
 
   const onResetProgress = (progress: number, duration: number) => {
-    setProgress(progress / 1000);
-    setDuration(duration / 1000);
+    const pSec = progress / 1000;
+    const dSec = duration / 1000;
+    setProgress(pSec);
+    setDuration(dSec);
+
+    const remainingSec = Math.ceil(dSec - pSec);
+    if (remainingSec > 0 && remainingSec !== lastBeepSecRef.current) {
+      lastBeepSecRef.current = remainingSec;
+      audioFeedback.playCountdownBeep(remainingSec === 1 ? 1046 : 880);
+    }
   };
 
   useRPCPacket(

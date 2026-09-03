@@ -60,6 +60,9 @@ export interface IElectronAPI {
   setPresence: (options: DiscordPresence) => void;
   getInstallDir: () => Promise<string>;
   isSteam: () => Promise<boolean>;
+  onTrayReset?: (cb: (type: string) => void) => () => void;
+  onTrayElevationStep?: (cb: (delta: number) => void) => () => void;
+  onTrayElevationReset?: (cb: () => void) => () => void;
 }
 
 declare global {

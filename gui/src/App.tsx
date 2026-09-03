@@ -43,6 +43,8 @@ import { Preload } from './components/Preload';
 import { UnknownDeviceModal } from './components/UnknownDeviceModal';
 import { useDiscordPresence } from './hooks/discord-presence';
 import { withSentryReactRouterV6Routing } from '@sentry/react';
+import { audioFeedback } from './utils/audio-feedback';
+import { ResetRequestT, ResetType, RpcMessage } from 'solarxr-protocol';
 import { ScaledProportionsPage } from './components/onboarding/pages/body-proportions/ScaledProportions';
 import { AdvancedSettings } from './components/settings/pages/AdvancedSettings';
 import { FirmwareUpdate } from './components/firmware-update/FirmwareUpdate';
@@ -283,6 +285,30 @@ export default function App() {
         unlisten();
       };
     }, []);
+
+    useEffect(() => {
+      const u1 = electron.api.onTrayReset?.((type) => {
+        const req = new ResetRequestT();
+        req.resetType = type === 'yaw' ? ResetType.Yaw : (type === 'full' ? ResetType.Full : ResetType.Mounting);
+        websocketAPI.sendRPCPacket(RpcMessage.ResetRequest, req);
+      });
+
+      const u2 = electron.api.onTrayElevationStep?.((delta) => {
+        audioFeedback.playStepClick(delta > 0);
+        window.dispatchEvent(new CustomEvent('tray-elevation-delta', { detail: delta }));
+      });
+
+      const u3 = electron.api.onTrayElevationReset?.(() => {
+        audioFeedback.playStepClick(false);
+        window.dispatchEvent(new CustomEvent('tray-elevation-reset-event'));
+      });
+
+      return () => {
+        u1?.();
+        u2?.();
+        u3?.();
+      };
+    }, [websocketAPI]);
   }
 
   useEffect(() => {

@@ -44,6 +44,7 @@ export function useTracker(tracker: TrackerDataT) {
       );
       const [velocity, setVelocity] = useState<number>(0);
       const [deltas] = useState<number[]>([]);
+      const lastUpdateRef = useRef<number>(0);
 
       useEffect(() => {
         if (tracker.rotation) {
@@ -64,15 +65,23 @@ export function useTracker(tracker: TrackerDataT) {
             deltas.shift();
           }
           deltas.push(dif);
-          setVelocity(
-            Math.min(
-              1,
-              Math.max(
-                0,
-                deltas.reduce((a, b) => a + b)
-              )
+          const newV = Math.min(
+            1,
+            Math.max(
+              0,
+              deltas.reduce((a, b) => a + b)
             )
           );
+
+          const now = performance.now();
+          const thresholdCrossed =
+            (newV > 0.18 && velocity <= 0.18) || (newV <= 0.18 && velocity > 0.18);
+
+          if (thresholdCrossed || now - lastUpdateRef.current > 33) {
+            lastUpdateRef.current = now;
+            setVelocity(newV);
+          }
+
           previousRot.current = QuaternionFromQuatT(tracker.rotation);
           previousAcc.current = Vector3FromVec3fT(tracker.linearAcceleration);
         }
