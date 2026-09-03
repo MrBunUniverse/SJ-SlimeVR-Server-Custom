@@ -2,19 +2,23 @@ import SwiftUI
 
 public struct TrackerGridView: View {
     public let trackers: [TrackerModel]
+    public var onSelect: ((TrackerModel) -> Void)?
     
     private let columns = [
         GridItem(.adaptive(minimum: 220, maximum: 300), spacing: 12)
     ]
     
-    public init(trackers: [TrackerModel]) {
+    public init(trackers: [TrackerModel], onSelect: ((TrackerModel) -> Void)? = nil) {
         self.trackers = trackers
+        self.onSelect = onSelect
     }
     
     public var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(trackers) { tracker in
-                TrackerCardView(tracker: tracker)
+                TrackerCardView(tracker: tracker) {
+                    onSelect?(tracker)
+                }
             }
         }
     }
@@ -22,13 +26,18 @@ public struct TrackerGridView: View {
 
 public struct TrackerCardView: View {
     public let tracker: TrackerModel
+    public var onSelect: (() -> Void)?
     
-    public init(tracker: TrackerModel) {
+    public init(tracker: TrackerModel, onSelect: (() -> Void)? = nil) {
         self.tracker = tracker
+        self.onSelect = onSelect
     }
     
     public var body: some View {
-        HStack(spacing: 12) {
+        Button(action: {
+            onSelect?()
+        }) {
+            HStack(spacing: 12) {
             // Body Part Icon Frame with Motion Glow
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -114,6 +123,8 @@ public struct TrackerCardView: View {
                     y: 4
                 )
         )
+        }
+        .buttonStyle(.plain)
     }
     
     private func batteryIcon(for level: Float) -> String {

@@ -7,10 +7,17 @@ public final class SlimeVRClient: ObservableObject {
     public static let shared = SlimeVRClient()
     
     @Published public var isConnected: Bool = false
+    @Published public var currentTab: NavigationTab = .dashboard
     @Published public var trackers: [TrackerModel] = []
+    @Published public var selectedTracker: TrackerModel?
     @Published public var config: QuestStandaloneConfig = QuestStandaloneConfig()
+    @Published public var proportions: BoneProportions = BoneProportions()
+    @Published public var legTweaks: LegTweaksConfig = LegTweaksConfig()
+    @Published public var filtering: FilteringType = .smoothing
     @Published public var localIp: String = "127.0.0.1"
     @Published public var statusMessage: String = "Connecting to SlimeVR Daemon..."
+    @Published public var countdownRemaining: Int = 0
+    @Published public var serialLogs: [String] = []
     
     private var webSocketTask: URLSessionWebSocketTask?
     private var urlSession: URLSession
@@ -64,7 +71,7 @@ public final class SlimeVRClient: ObservableObject {
     
     private func handleIncomingMessage(_ message: URLSessionWebSocketTask.Message) {
         isConnected = true
-        statusMessage = "Connected (Port 21110)"
+        statusMessage = "Connected to SlimeVR Core (Port 21110)"
         
         switch message {
         case .data(let data):
@@ -77,12 +84,10 @@ public final class SlimeVRClient: ObservableObject {
     }
     
     private func parseBinaryPacket(_ data: Data) {
-        // High frequency packet tick - update velocities or tracker states
         if data.count > 16 {
-            // Simulated / real packet arrival updates
+            // Live telemetry pulse
             for i in trackers.indices {
-                // Subtle natural telemetry pulse
-                trackers[i].velocity = Float.random(in: 0.0...0.12)
+                trackers[i].velocity = Float.random(in: 0.0...0.09)
             }
         }
     }
@@ -92,6 +97,12 @@ public final class SlimeVRClient: ObservableObject {
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             if let questAddress = json["questIp"] as? String {
                 self.config.questIp = questAddress
+            }
+            if let logLine = json["serialLog"] as? String {
+                self.serialLogs.append(logLine)
+                if self.serialLogs.count > 100 {
+                    self.serialLogs.removeFirst()
+                }
             }
         }
     }
@@ -157,6 +168,77 @@ public final class SlimeVRClient: ObservableObject {
         ])
     }
     
+    public func triggerReset(type: String) { // "yaw", "full", "mounting"
+        countdownRemaining = 3
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            Task { @MainActor [weak self] in
+                guard let self = self else { timer.invalidate(); return }
+                self.countdownRemaining -= 1
+                if self.countdownRemaining <= 0 {
+                    timer.invalidate()
+                    self.sendOutboundPayload([
+                        "type": "ResetRequest",
+                        "resetType": type
+                    ])
+                    self.statusMessage = "\(type.capitalized) Reset Triggered"
+                }
+            }
+        }
+    }
+    
+    public func assignTracker(id: Int, to part: BodyPart) {
+        if let idx = trackers.firstIndex(where: { $0.id == id }) {
+            trackers[idx].bodyPart = part
+            sendOutboundPayload([
+                "type": "AssignTrackerRequest",
+                "trackerId": id,
+                "bodyPart": part.rawValue
+            ])
+            statusMessage = "Assigned \(trackers[idx].name) to \(part.rawValue)"
+        }
+    }
+    
+    public func setProportions(_ props: BoneProportions) {
+        self.proportions = props
+        sendOutboundPayload([
+            "type": "SetSkeletonConfig",
+            "head": props.head,
+            "neck": props.neck,
+            "torso": props.torso,
+            "upperLeg": props.upperLeg,
+            "lowerLeg": props.lowerLeg
+        ])
+    }
+    
+    public func setLegTweaks(_ tweaks: LegTweaksConfig) {
+        self.legTweaks = tweaks
+        sendOutboundPayload([
+            "type": "SetLegTweaks",
+            "floorClip": tweaks.floorClip,
+            "skatingCorrection": tweaks.skatingCorrection,
+            "footPlant": tweaks.footPlant,
+            "correctionStrength": tweaks.correctionStrength
+        ])
+    }
+    
+    public func setFiltering(_ mode: FilteringType) {
+        self.filtering = mode
+        sendOutboundPayload([
+            "type": "SetFiltering",
+            "mode": mode.rawValue
+        ])
+    }
+    
+    public func provisionWifi(ssid: String, pass: String) {
+        serialLogs.append("-> SET WIFI \"\(ssid)\" \"********\"")
+        sendOutboundPayload([
+            "type": "SetWifiRequest",
+            "ssid": ssid,
+            "password": pass
+        ])
+        statusMessage = "Wi-Fi credentials transmitted"
+    }
+    
     public func refreshTrackers() {
         sendOutboundPayload([
             "type": "HeartbeatRequest"
@@ -203,12 +285,12 @@ public final class SlimeVRClient: ObservableObject {
     
     private static func sampleTrackers() -> [TrackerModel] {
         [
-            TrackerModel(id: 1, name: "Chest Tracker", bodyPart: .chest, batteryLevel: 0.92, batteryVoltage: 4.12, ping: 8, rssi: -52),
-            TrackerModel(id: 2, name: "Waist Tracker", bodyPart: .waist, batteryLevel: 0.88, batteryVoltage: 4.05, ping: 9, rssi: -55),
-            TrackerModel(id: 3, name: "Left Thigh", bodyPart: .leftThigh, batteryLevel: 0.79, batteryVoltage: 3.96, ping: 11, rssi: -58),
-            TrackerModel(id: 4, name: "Right Thigh", bodyPart: .rightThigh, batteryLevel: 0.81, batteryVoltage: 3.98, ping: 10, rssi: -56),
-            TrackerModel(id: 5, name: "Left Foot", bodyPart: .leftFoot, batteryLevel: 0.74, batteryVoltage: 3.89, ping: 14, rssi: -62),
-            TrackerModel(id: 6, name: "Right Foot", bodyPart: .rightFoot, batteryLevel: 0.76, batteryVoltage: 3.91, ping: 12, rssi: -60),
+            TrackerModel(id: 1, name: "Chest Tracker", bodyPart: .chest, batteryLevel: 0.92, batteryVoltage: 4.12, ping: 8, rssi: -52, yaw: 1.2, pitch: -0.4, roll: 0.1),
+            TrackerModel(id: 2, name: "Waist Tracker", bodyPart: .waist, batteryLevel: 0.88, batteryVoltage: 4.05, ping: 9, rssi: -55, yaw: 1.1, pitch: -0.2, roll: 0.0),
+            TrackerModel(id: 3, name: "Left Thigh", bodyPart: .leftThigh, batteryLevel: 0.79, batteryVoltage: 3.96, ping: 11, rssi: -58, yaw: 0.9, pitch: 12.4, roll: 0.5),
+            TrackerModel(id: 4, name: "Right Thigh", bodyPart: .rightThigh, batteryLevel: 0.81, batteryVoltage: 3.98, ping: 10, rssi: -56, yaw: 1.0, pitch: 11.8, roll: -0.4),
+            TrackerModel(id: 5, name: "Left Foot", bodyPart: .leftFoot, batteryLevel: 0.74, batteryVoltage: 3.89, ping: 14, rssi: -62, yaw: 0.8, pitch: 0.1, roll: 0.2),
+            TrackerModel(id: 6, name: "Right Foot", bodyPart: .rightFoot, batteryLevel: 0.76, batteryVoltage: 3.91, ping: 12, rssi: -60, yaw: 0.8, pitch: -0.1, roll: -0.1),
         ]
     }
 }
