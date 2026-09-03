@@ -635,11 +635,47 @@ a,
 }
 
 /* OpenType Tabular Numerals for Telemetry & Spatial HUDs */
-.telemetry-numeral {
+.telemetry-numeral,
+.tnum {
   font-family: inherit;
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "cv02" 1, "cv05" 1;
+  font-feature-settings: "tnum" 1, "cv02" 1, "cv05" 1, "ss01" 1;
   letter-spacing: -0.01em;
+}
+
+.apple-interactive {
+  background: var(--material-tertiary);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim);
+  transition: background-color 140ms cubic-bezier(0.25, 1, 0.5, 1),
+              border-color 140ms cubic-bezier(0.25, 1, 0.5, 1),
+              transform 140ms cubic-bezier(0.25, 1.4, 0.5, 1);
+
+  &:hover {
+    background: var(--material-tertiary-hover);
+    border-color: var(--material-border-primary);
+  }
+
+  &:active {
+    background: var(--material-tertiary-active);
+    transform: scale(0.98);
+  }
+}
+
+.glass-panel-primary {
+  background: var(--material-primary);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim), var(--specular-shadow), var(--glass-elevation);
+}
+
+.glass-panel-secondary {
+  background: var(--material-secondary);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid var(--material-border-primary);
+  box-shadow: var(--specular-rim), var(--specular-shadow), 0 12px 36px -4px rgba(0, 0, 0, 0.38);
 }
 
 /* Reduced transparency fallback */

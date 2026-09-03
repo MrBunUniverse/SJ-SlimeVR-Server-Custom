@@ -38,8 +38,7 @@ function TrackerBig({
       <div
         className={classNames(
           'flex justify-center fill-background-10 transition-all duration-200',
-          velocity > 0.15 &&
-            'scale-110 drop-shadow-[0_0_14px_rgba(139,92,246,0.85)]'
+          velocity > 0.18 && 'scale-105 text-[#0A84FF]'
         )}
       >
         <BodyPartIcon bodyPart={tracker.info?.bodyPart} />
@@ -50,8 +49,7 @@ function TrackerBig({
           truncate
           className={classNames(
             'transition-colors duration-200',
-            velocity > 0.15 &&
-              'text-accent-background-20 drop-shadow-[0_0_8px_rgba(139,92,246,0.7)]'
+            velocity > 0.18 ? 'text-[#0A84FF]' : 'text-background-10'
           )}
         >
           {trackerName}
@@ -115,11 +113,11 @@ function TrackerSmol({
         )}
         <div
           className={classNames(
-            'border-[2px] rounded-[10px] overflow-clip transition-all duration-200',
+            'border rounded-[8px] overflow-clip transition-all duration-200',
             {
               'border-status-warning': warning && velocity <= 0.18,
               'border-white/10': !warning && velocity <= 0.18,
-              'border-accent-background-20 shadow-[0_0_16px_rgba(10,132,255,0.45)] scale-105 bg-accent-background-30/15':
+              'border-[#0A84FF]/70 shadow-[0_0_12px_-2px_rgba(10,132,255,0.4)] scale-105 bg-[#0A84FF]/10':
                 velocity > 0.18,
             }
           )}
@@ -131,7 +129,7 @@ function TrackerSmol({
       <div
         className={classNames(
           'flex flex-col flex-grow justify-center gap-1 transition-all duration-200',
-          velocity > 0.15 && 'translate-x-0.5'
+          velocity > 0.18 && 'translate-x-0.5'
         )}
       >
         <Typography
@@ -140,8 +138,7 @@ function TrackerSmol({
           variant="section-title"
           className={classNames(
             'transition-colors duration-200',
-            velocity > 0.15 &&
-              'text-accent-background-20 drop-shadow-[0_0_8px_rgba(139,92,246,0.7)]'
+            velocity > 0.18 ? 'text-[#0A84FF]' : 'text-background-10'
           )}
         >
           {trackerName}
@@ -207,13 +204,13 @@ export function TrackerCard({
       <div
         onClick={onClick}
         className={classNames(
-          'rounded-[22px] overflow-hidden transition-all duration-200 select-none',
-          interactable && 'glass-interactive cursor-pointer active:scale-[0.985]',
-          outlined && 'outline outline-2 outline-accent-background-40',
+          'rounded-[18px] overflow-hidden transition-all duration-200 select-none',
+          interactable && 'glass-interactive cursor-pointer active:scale-[0.98]',
+          outlined && 'outline outline-2 outline-[#0A84FF]/50',
           !bg || bg === 'bg-background-60' ? 'card-surface' : bg,
           shakeHighlight &&
             velocity > 0.18 &&
-            'border-accent-background-20/80 shadow-[0_0_20px_-2px_rgba(10,132,255,0.35)]'
+            'border-[#0A84FF]/60 shadow-[0_0_16px_-4px_rgba(10,132,255,0.35)]'
         )}
       >
         {smol && (

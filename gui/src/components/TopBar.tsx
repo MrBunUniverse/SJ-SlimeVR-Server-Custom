@@ -143,15 +143,13 @@ export function QuestTargetIPPill() {
         style={{ WebkitAppRegion: 'no-drag' } as any}
         onClick={handleStartEdit}
         className={classNames(
-          'flex items-center gap-1.5 text-[11.5px] telemetry-numeral font-semibold rounded-[9px] px-2.5 py-1 cursor-pointer transition-all shadow-sm select-none active:scale-[0.98] border',
-          saved
-            ? 'bg-emerald-500/25 border-emerald-500/40 text-emerald-300'
-            : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/25 text-emerald-300'
+          'apple-interactive flex items-center gap-1.5 text-[11px] tnum font-medium rounded-[8px] px-2.5 py-1 cursor-pointer select-none',
+          saved ? 'border-emerald-500/40 text-emerald-300' : 'text-background-20 hover:text-background-10'
         )}
       >
-        <span className={classNames('w-1.5 h-1.5 rounded-full', saved ? 'bg-emerald-300' : 'bg-emerald-400 animate-pulse')} />
-        <span className="text-[10px] uppercase tracking-wider font-bold opacity-75">Quest:</span>
-        <span>{questIp}</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#30D158] shrink-0" />
+        <span className="text-[10px] uppercase font-semibold text-background-30 tracking-wide">Quest:</span>
+        <span className="font-medium text-background-10">{questIp}</span>
       </div>
     </Tooltip>
   );
@@ -187,10 +185,8 @@ export function RefreshTrackersButton() {
         onClick={handleRefresh}
         disabled={refreshing}
         className={classNames(
-          'flex items-center gap-1.5 text-[11.5px] telemetry-numeral font-medium rounded-[9px] px-2.5 py-1 cursor-pointer transition-all shadow-sm select-none active:scale-[0.98] border',
-          refreshing
-            ? 'bg-sky-500/20 border-sky-500/40 text-sky-300'
-            : 'bg-white/5 hover:bg-white/10 border-white/10 text-background-20 hover:text-background-10'
+          'apple-interactive flex items-center gap-1.5 text-[11px] tnum font-medium rounded-[8px] px-2.5 py-1 cursor-pointer select-none',
+          refreshing ? 'border-sky-500/40 text-sky-300' : 'text-background-20 hover:text-background-10'
         )}
       >
         <svg
@@ -206,7 +202,7 @@ export function RefreshTrackersButton() {
             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
           />
         </svg>
-        <span>{refreshing ? 'Scanning...' : 'Refresh'}</span>
+        <span>{refreshing ? 'Scanning...' : 'Scan'}</span>
       </button>
     </Tooltip>
   );
@@ -216,11 +212,7 @@ export function VersionTag() {
   return (
     <div
       style={{ WebkitAppRegion: 'no-drag' } as any}
-      className={classNames(
-        'flex items-center justify-center text-[11px] font-mono font-medium',
-        'text-background-20 hover:text-background-10 bg-white/10 hover:bg-white/15 border border-white/10 rounded-lg',
-        'px-2.5 py-0.5 select-text cursor-pointer transition-colors shadow-sm'
-      )}
+      className="apple-interactive flex items-center justify-center text-[10px] tnum font-medium text-background-30 hover:text-background-10 rounded-[6px] px-2 py-0.5 select-text cursor-pointer"
       onClick={() => {
         const url = `https://github.com/${GH_REPO}/releases`;
         openUrl(url);
@@ -445,14 +437,14 @@ export function TopBar({
               >
                 <div
                   style={{ WebkitAppRegion: 'no-drag' } as any}
-                  className="flex items-center gap-1.5 text-[11.5px] telemetry-numeral font-medium text-accent-background-10 bg-accent-background-30/20 hover:bg-accent-background-30/30 border border-accent-background-20/30 rounded-[9px] px-2.5 py-1 cursor-pointer transition-all shadow-sm select-text active:scale-[0.98]"
+                  className="apple-interactive flex items-center gap-1.5 text-[11px] tnum font-medium text-background-20 hover:text-background-10 rounded-[8px] px-2.5 py-1 cursor-pointer select-text"
                   onClick={() => {
                     navigator.clipboard.writeText(localIp);
                   }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent-background-20 animate-pulse" />
-                  <span className="text-[10px] uppercase font-bold opacity-75">Mac:</span>
-                  <span>{localIp}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-white/40 shrink-0" />
+                  <span className="text-[10px] uppercase font-semibold text-background-30 tracking-wide">Mac:</span>
+                  <span className="font-medium text-background-10">{localIp}</span>
                 </div>
               </Tooltip>
             )}
@@ -460,7 +452,7 @@ export function TopBar({
             <QuestTargetIPPill />
             <RefreshTrackersButton />
 
-            {/* macOS Sequoia Style Standalone Toggle Switch */}
+            {/* Authentic macOS Toggle Switch */}
             <Tooltip
               preferedDirection="bottom"
               spacing={6}
@@ -476,19 +468,18 @@ export function TopBar({
                 type="button"
                 style={{ WebkitAppRegion: 'no-drag' } as any}
                 onClick={toggleMode}
-                className="flex items-center gap-2 px-2 py-1 rounded-[9px] hover:bg-white/10 text-[11.5px] font-medium text-background-10 transition-all select-none cursor-pointer active:scale-[0.98]"
+                className="flex items-center gap-2 px-2 py-1 rounded-[8px] hover:bg-white/5 text-[11px] font-medium text-background-20 hover:text-background-10 transition-all select-none cursor-pointer active:scale-[0.98]"
               >
-                <span className="font-semibold text-[11.5px] tracking-mac-caption text-background-20">Standalone</span>
-                {/* Authentic macOS Toggle: 38px x 22px with 18px thumb */}
+                <span className="font-medium text-[11px] tracking-wide">Standalone</span>
                 <div
                   className={classNames(
-                    'w-[38px] h-[22px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center shadow-inner border border-white/10',
-                    isQuestStandalone ? 'bg-emerald-500' : 'bg-white/15'
+                    'w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-white/10',
+                    isQuestStandalone ? 'bg-[#30D158]' : 'bg-white/15'
                   )}
                 >
                   <div
                     className={classNames(
-                      'w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform duration-200 ease-mac-spring',
+                      'w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ease-mac-spring',
                       isQuestStandalone ? 'translate-x-[16px]' : 'translate-x-0'
                     )}
                   />
