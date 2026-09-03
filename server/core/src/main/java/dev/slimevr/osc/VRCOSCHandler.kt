@@ -4,7 +4,9 @@ import com.illposed.osc.OSCBundle
 import com.illposed.osc.OSCMessage
 import com.illposed.osc.OSCMessageEvent
 import com.illposed.osc.OSCMessageListener
+import com.illposed.osc.OSCPacketEvent
 import com.illposed.osc.OSCSerializeException
+import com.illposed.osc.OSCSerializerAndParserBuilder
 import com.illposed.osc.messageselector.OSCPatternAddressMessageSelector
 import com.illposed.osc.transport.OSCPortIn
 import com.illposed.osc.transport.OSCPortOut
@@ -27,6 +29,10 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
+import java.nio.ByteBuffer
+import java.nio.channels.AsynchronousCloseException
+import java.nio.channels.ClosedChannelException
+import java.nio.channels.DatagramChannel
 import kotlin.collections.iterator
 
 private const val OFFSET_SLERP_FACTOR = 0.5f // Guessed from eyeing VRChat
@@ -253,7 +259,7 @@ class VRCOSCHandler(
 
 			// Instantiate the new OSC receiver
 			LogManager.info("[VRCOSCHandler] Listening to port $portIn")
-			val newOscReceiver = OSCPortIn(portIn)
+			val newOscReceiver = TrackedOSCPortIn(portIn)
 			oscReceiver = newOscReceiver
 			oscPortIn = portIn
 
@@ -325,8 +331,24 @@ class VRCOSCHandler(
 	}
 
 	private fun handleReceivedMessage(event: OSCMessageEvent) {
-		// TODO: Track the IP who sent this, we can list them as a send target and
-		//  resolve the VRChat IP/port without scanning OSCQuery
+		// Auto-detect inbound sender IP from Quest/VRChat on port 9001
+		val senderAddress = (event.source as? InetSocketAddress)
+			?: (oscReceiver as? TrackedOSCPortIn)?.lastReceivedAddress
+		val senderIp = senderAddress?.address?.hostAddress ?: senderAddress?.hostString
+
+		if (!senderIp.isNullOrBlank()) {
+			val isLoopback = oscIp == null || oscIp?.isLoopbackAddress == true || oscIp?.hostAddress == "127.0.0.1" || oscIp?.hostAddress == "localhost"
+			if (isLoopback || oscQuerySender == null) {
+				if (oscIp?.hostAddress != senderIp) {
+					LogManager.info("[VRCOSCHandler] Auto-detected inbound Quest IP: $senderIp, updating OSC sender")
+					val targetPort = if (oscPortOut > 0) oscPortOut else (if (config.portOut > 0) config.portOut else 9000)
+					updateOscSender(targetPort, senderIp)
+					config.address = senderIp
+					server.configManager.saveConfig()
+				}
+			}
+		}
+
 		if (vrsystemTrackersAddresses.contains(event.message.address)) {
 			// Receiving Head and Wrist pose data thanks to OSCQuery
 			// Create device if it doesn't exist
@@ -680,4 +702,57 @@ class VRCOSCHandler(
 	override fun getOscReceiver(): OSCPortIn = oscReceiver!!
 
 	override fun getPortIn(): Int = oscPortIn
+}
+
+private class TrackedOSCPortIn(port: Int) : OSCPortIn(port) {
+	@Volatile
+	var lastReceivedAddress: InetSocketAddress? = null
+
+	private val channel: DatagramChannel? by lazy {
+		try {
+			val tr = transport
+			val field = tr.javaClass.getDeclaredField("channel")
+			field.isAccessible = true
+			field.get(tr) as? DatagramChannel
+		} catch (e: Exception) {
+			LogManager.warning("[VRCOSCHandler] Could not access DatagramChannel for sender tracking: $e")
+			null
+		}
+	}
+
+	private val parser by lazy {
+		OSCSerializerAndParserBuilder().buildParser()
+	}
+
+	override fun run() {
+		val ch = channel
+		if (ch == null) {
+			super.run()
+			return
+		}
+
+		val buffer = ByteBuffer.allocate(65536)
+		while (isListening) {
+			try {
+				buffer.clear()
+				val sender = ch.receive(buffer) as? InetSocketAddress ?: continue
+				buffer.flip()
+				if (!buffer.hasRemaining()) continue
+
+				lastReceivedAddress = sender
+				val packet = parser.convert(buffer)
+				val packetEvent = OSCPacketEvent(sender, packet)
+				for (listener in packetListeners) {
+					listener.handlePacket(packetEvent)
+				}
+			} catch (e: Exception) {
+				if (isListening) {
+					if (e !is ClosedChannelException && e !is AsynchronousCloseException) {
+						LogManager.warning("[VRCOSCHandler] Error receiving OSC packet: $e")
+					}
+				}
+				break
+			}
+		}
+	}
 }

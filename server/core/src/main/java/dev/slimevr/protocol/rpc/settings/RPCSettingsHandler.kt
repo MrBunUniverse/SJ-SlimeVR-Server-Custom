@@ -321,6 +321,9 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 				if (it.hmdHeight() > 0) api.server.configManager.vrConfig.skeleton.hmdHeight = it.hmdHeight()
 				api.server.configManager.vrConfig.skeleton.floorHeight = it.floorHeight()
 				api.server.configManager.vrConfig.questStandalone.floorHeight = it.floorHeight()
+				if (it.hasOscRate() && it.oscRate() > 0) {
+					api.server.configManager.vrConfig.questStandalone.oscRate = it.oscRate()
+				}
 			}
 
 			hpm.saveConfig()

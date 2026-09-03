@@ -44,6 +44,9 @@ fi
 cleanup() {
     echo ""
     echo "Shutting down SlimeVR..."
+    if [ -n "$CAFFEINATE_PID" ]; then
+        kill "$CAFFEINATE_PID" 2>/dev/null
+    fi
     # Kill any lingering GUI/Server processes spawned in this session
     pkill -P $$ 2>/dev/null
     exit 0
@@ -51,9 +54,20 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM SIGHUP EXIT
 
+# Enable macOS sleep prevention fallback layer
+if command -v caffeinate &> /dev/null; then
+    echo "Enabling macOS sleep prevention fallback (caffeinate)..."
+    caffeinate -i -m -s -u -w $$ &
+    CAFFEINATE_PID=$!
+fi
+
 echo "Launching SlimeVR GUI with embedded server..."
 cd "$DIR/gui"
-pnpm run gui -- --path "$DIR/server/desktop/build/libs"
+if command -v caffeinate &> /dev/null; then
+    caffeinate -i -m -s -u pnpm run gui -- --path "$DIR/server/desktop/build/libs" "$@"
+else
+    pnpm run gui -- --path "$DIR/server/desktop/build/libs" "$@"
+fi
 
 # Clean exit
 exit 0

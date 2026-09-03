@@ -246,33 +246,46 @@ export function FloatingTooltip({
 >) {
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [tooltipStyle, setTooltipStyle] = useState<TooltipPos | undefined>();
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onMouseEnter = () => {
-    if (!childRef.current || !tooltipRef.current)
-      throw new Error('invalid state');
+    if (!childRef.current || !tooltipRef.current) return;
 
-    const childrenRect = childRef.current.children[0].getBoundingClientRect();
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const show = () => {
+      if (!childRef.current || !tooltipRef.current) return;
+      const childrenRect = childRef.current.children[0]?.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current?.getBoundingClientRect();
+      if (!childrenRect || !tooltipRect) return;
 
-    setTooltipStyle(
-      getFloatingTooltipPosition(
-        preferedDirection,
-        blockedDirections,
-        mode,
-        childrenRect,
-        tooltipRect,
-        spacing ?? 20
-      )
-    );
+      setTooltipStyle(
+        getFloatingTooltipPosition(
+          preferedDirection,
+          blockedDirections,
+          mode,
+          childrenRect,
+          tooltipRect,
+          spacing ?? 14
+        )
+      );
+    };
+
+    // 500ms Apple HIG dwell delay to eliminate hover strobing
+    hoverTimerRef.current = setTimeout(show, 500);
   };
 
   const onMouseLeave = () => {
-    if (!childRef.current || !tooltipRef.current)
-      throw new Error('invalid state');
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
     setTooltipStyle(undefined);
   };
 
   const onResize = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
     setTooltipStyle(undefined);
   };
 

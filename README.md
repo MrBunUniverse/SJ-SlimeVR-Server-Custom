@@ -1,75 +1,82 @@
-# SlimeVR Server
-Server app for SlimeVR ecosystem
+# SJ SlimeVR Server (macOS Edition)
 
-Server orchestrates communication between multiple sensors and integrations, like SteamVR.
+A high-performance, native macOS SlimeVR Server and GUI fork engineered for **Quest Standalone VRChat OSC** and **SteamVR Full Body Tracking**.
 
-Sensors implementations:
-* [SlimeVR Tracker for ESP](https://github.com/SlimeVR/SlimeVR-Tracker-ESP) - ESP microcontrollers and multiple IMUs are supported
-* [owoTrack Mobile App](https://github.com/abb128/owoTrackVRSyncMobile) - use phones as trackers (limited functionality and compatibility)
-* [SlimeVR Wrangler](https://github.com/carl-anders/slimevr-wrangler) - use Nintendo Switch Joycon controllers as trackers
+---
 
-Integrations:
-* Use [SlimeVR OpenVR Driver](https://github.com/SlimeVR/SlimeVR-OpenVR-Driver) as a driver for SteamVR.
-* Use built-in OSC Trackers support for FBT integration with VRChat, PCVR or Standalone.
-* Use built-in VMC support for sending and receiving tracking data to and from other apps such as VSeeFace.
-* Export recordings as .BVH files to integrate motion capture data into 3d applications such as Blender.
+## ⚡ Quick Start
 
-## Installing
-It's highly recommended to install using the installer downloadable here: https://github.com/SlimeVR/SlimeVR-Installer/releases/latest/download/slimevr_web_installer.exe
+Double-click to run on macOS:
 
-Latest setup instructions are [in our docs](https://docs.slimevr.dev/server/index.html).
+* **Launch Application**: [`./Launch SlimeVR.command`](./Launch%20SlimeVR.command)
+* **Stop Application**: [`./Stop SlimeVR.command`](./Stop%20SlimeVR.command)
 
-## Building & Contributing
-For information on building and contributing to the codebase, see [CONTRIBUTING.md](CONTRIBUTING.md).
+---
 
-## Translating
+## 📁 Project Architecture
 
-Translation is done via Pontoon at [i18n.slimevr.dev](https://i18n.slimevr.dev/). Please join our [Discord translation forum](https://discord.com/channels/817184208525983775/1050413434249949235) to coordinate.
+```
+SJ SlimeVR Sever/
+├── Launch SlimeVR.command    # One-click macOS launcher (builds & runs)
+├── Stop SlimeVR.command      # Clean process shutdown helper
+│
+├── gui/                      # Electron + React + Tailwind Frontend (macOS HIG)
+│   ├── src/components/       # TopBar, Home, QuestDiagnosticsCard, TrackerCard
+│   ├── src/hooks/            # operating-mode.ts, websocket-api.ts
+│   └── electron/             # Native macOS window & vibrancy host
+│
+├── server/                   # Kotlin / Java Server Daemon
+│   ├── core/                 # Tracking engine, HumanSkeleton, VRCOSCHandler, UDP server
+│   └── desktop/              # Desktop entry point, serial, named pipes
+│
+├── solarxr-protocol/         # SolarXR FlatBuffers schema & TypeScript definitions
+├── bindings-provider/        # SteamVR OpenVR driver bridge
+└── docs/                     # Project documentation, guides & licenses
+    ├── PROJECT.md            # Architecture specifications
+    ├── TEST_INFRA.md         # End-to-end test runner documentation
+    ├── CONTRIBUTING.md       # Contribution guidelines
+    └── licenses/             # Dual MIT / Apache-2.0 legal licenses
+```
 
-## License clarification
-**SlimeVR software** (including server, firmware, drivers, installer, documents, and others - see
-licence for each case specifically) **is distributed under a dual MIT/Apache 2.0 License
-([LICENSE-MIT] and [LICENSE-APACHE]). The software is the copyright of the SlimeVR
-contributors.**
+---
 
-**However, these licenses have some limits, and if you wish to distribute software based
-on SlimeVR, you need to be aware of them:**
+## ✨ Key Features & Enhancements
 
-* When distributing any software that uses or is based on SlimeVR, you have to provide
-  to the end-user at least one of the original, unmodified [LICENSE-MIT] or
-  [LICENSE-APACHE] files from SlimeVR. This includes the `Copyright (c) 2020 Eiren Rain
-  and SlimeVR Contributors` part of the license. It is insufficient to use a generic MIT
-  or Apache-2.0 License, **it must be the original license file**.
-* This applies even if you distribute software without the source code. In this case,
-  one way to provide it to the end-user is to have a menu in your application that lists
-  all the open source licenses used, including SlimeVR's.
+1. **Tracker Disconnect Isolation & Self-Healing**:
+   * Per-tracker socket isolation prevents single battery deaths from cascading to other healthy trackers.
+   * Background supervisor loop auto-rebinds UDP 6969 if network drops.
+   * Safe in-app **Scan for Trackers** button probes for silent IMUs non-destructively without wiping calibrations.
+2. **Quest Standalone VRChat OSC & Floor Flight**:
+   * Native OSC & OSCQuery auto-discovery with active target IP pill.
+   * **Pro Elevation Scrubber**: Tactile `[-1cm]` / `[+1cm]` micro-steppers with centered magnetic `0cm` floor snap detent to fly or level in-game.
+3. **macOS Sequoia Design Standards**:
+   * 4-Tier optical glass vibrancy (`--material-primary`, `--material-secondary`).
+   * 52pt Unified Toolbar with exact 82px window traffic light clearance.
+   * Concentric squircle curvature ($R_{\text{outer}} = R_{\text{inner}} + \text{Padding}$).
+   * SF Pro typography with OpenType tabular figures (`tnum`) for jitter-free telemetry.
+   * 500ms tooltip dwell delay and CoreAnimation spring dynamics.
 
-Please refer to the [LICENSE-MIT] and [LICENSE-APACHE] files if you are at any point
-uncertain what the exact requirements are.
+---
 
-## Trademark and Logo use
-**SlimeVR is a trademark or a registered trademark of SlimeVR B.V. Usage of SlimeVR software, hardware, or other intellectual property in this or other repositories does not grant you the right to use SlimeVR trademark as your own.**
+## 🛠️ Build Commands
 
-For more information, please refer to the [TRADEMARK].
+```bash
+# Build Backend Server
+./gradlew :server:desktop:build
 
-## Contributions
-Any contributions submitted for inclusion in this repository will be dual-licensed under
-either:
+# Build Frontend GUI
+cd gui && pnpm run build
 
-- MIT License ([LICENSE-MIT])
-- Apache License, Version 2.0 ([LICENSE-APACHE])
+# Run Development GUI with Live Reload
+cd gui && pnpm run gui
+```
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for
-inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual
-licensed as above, without any additional terms or conditions.
+---
 
-You also certify that the code you have used is compatible with those licenses or is
-authored by you. If you're doing so on your work time, you certify that your employer is
-okay with this and that you are authorized to provide the above licenses.
+## 📄 License & Legal
 
-[LICENSE-MIT]: LICENSE-MIT
-[LICENSE-APACHE]: LICENSE-APACHE
-[TRADEMARK]: TRADEMARK.md
-
-
-*if you read this, u cute*
+Distributed under dual **MIT** and **Apache 2.0** licenses.
+* [MIT License](docs/licenses/LICENSE-MIT)
+* [Apache 2.0 License](docs/licenses/LICENSE-APACHE)
+* [Trademark Information](docs/TRADEMARK.md)
+* [Contributing Guidelines](docs/CONTRIBUTING.md)

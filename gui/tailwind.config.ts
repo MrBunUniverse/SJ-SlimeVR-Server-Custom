@@ -314,6 +314,24 @@ const config = {
         'timer-tick': 'timer-tick 1s linear infinite',
         skiing: 'skiing 1s linear infinite',
       },
+      letterSpacing: {
+        'mac-caption': '0.015em',
+        'mac-subhead': '-0.006em',
+        'mac-body': '-0.011em',
+        'mac-title3': '-0.014em',
+        'mac-title1': '-0.021em',
+      },
+      borderRadius: {
+        'mac-card': '24px',
+        'mac-tile': '12px',
+        'mac-dock': '18px',
+        'mac-control': '9px',
+        'mac-inner': '7px',
+      },
+      transitionTimingFunction: {
+        'mac-spring': 'cubic-bezier(0.25, 1.4, 0.5, 1)',
+        'mac-glide': 'cubic-bezier(0.16, 1, 0.3, 1)',
+      },
     },
     data: {
       checked: 'checked=true',

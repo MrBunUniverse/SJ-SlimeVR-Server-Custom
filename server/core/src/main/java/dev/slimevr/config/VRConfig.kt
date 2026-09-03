@@ -74,18 +74,33 @@ class VRConfig {
 		vrcOSC.portOut = 9000
 		vrcOSC
 			.setOSCTrackerRole(
+				TrackerRole.CHEST,
+				vrcOSC.getOSCTrackerRole(TrackerRole.CHEST, true),
+			)
+		vrcOSC
+			.setOSCTrackerRole(
 				TrackerRole.WAIST,
 				vrcOSC.getOSCTrackerRole(TrackerRole.WAIST, true),
 			)
 		vrcOSC
 			.setOSCTrackerRole(
+				TrackerRole.LEFT_KNEE,
+				vrcOSC.getOSCTrackerRole(TrackerRole.LEFT_KNEE, true),
+			)
+		vrcOSC
+			.setOSCTrackerRole(
+				TrackerRole.RIGHT_KNEE,
+				vrcOSC.getOSCTrackerRole(TrackerRole.RIGHT_KNEE, true),
+			)
+		vrcOSC
+			.setOSCTrackerRole(
 				TrackerRole.LEFT_FOOT,
-				vrcOSC.getOSCTrackerRole(TrackerRole.WAIST, true),
+				vrcOSC.getOSCTrackerRole(TrackerRole.LEFT_FOOT, true),
 			)
 		vrcOSC
 			.setOSCTrackerRole(
 				TrackerRole.RIGHT_FOOT,
-				vrcOSC.getOSCTrackerRole(TrackerRole.WAIST, true),
+				vrcOSC.getOSCTrackerRole(TrackerRole.RIGHT_FOOT, true),
 			)
 
 		// Initialize default settings for VMC

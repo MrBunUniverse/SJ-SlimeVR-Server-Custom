@@ -210,21 +210,69 @@ class DesktopSerialHandler :
 		}
 	}
 
-	private var lastLogTime = 0L
-	private var lastLoggedContent = ""
+	private val logLock = Any()
+	private var lastBroadcastContent = ""
+	private var lastBroadcastTime = 0L
+	private var broadcastWindowStart = 0L
+	private var broadcastCountInWindow = 0
+	private val maxBroadcastsPerSec = 30
+	private val identicalMsgIntervalMs = 1000L
 
 	fun addLog(str: String, server: Boolean = true) {
-		val now = System.currentTimeMillis()
 		val trimmed = str.trim()
-		if (trimmed.isNotEmpty()) {
-			// Throttle identical or rapid serial noise to prevent terminal lockup and server crash
-			if (server || trimmed != lastLoggedContent || now - lastLogTime > 2000L) {
-				lastLoggedContent = trimmed
-				lastLogTime = now
-				LogManager.info("[Serial] $trimmed")
+		if (trimmed.isEmpty() && !server) {
+			return
+		}
+
+		val now = System.currentTimeMillis()
+		val isCritical = server ||
+			trimmed.contains("mac:", ignoreCase = true) ||
+			trimmed.contains("starting up...", ignoreCase = true) ||
+			trimmed.startsWith("[!]") ||
+			trimmed.startsWith("->")
+
+		var shouldBroadcast = false
+
+		synchronized(logLock) {
+			if (isCritical) {
+				shouldBroadcast = true
+				lastBroadcastContent = trimmed
+				lastBroadcastTime = now
+			} else {
+				// Reset 1-second rate-limiting window
+				if (now - broadcastWindowStart >= 1000L) {
+					broadcastWindowStart = now
+					broadcastCountInWindow = 0
+				}
+
+				val isIdentical = (trimmed == lastBroadcastContent)
+				val timeSinceLastBroadcast = now - lastBroadcastTime
+
+				if (isIdentical) {
+					// Throttle identical strings (e.g., repeated battery voltage spam)
+					if (timeSinceLastBroadcast >= identicalMsgIntervalMs && broadcastCountInWindow < maxBroadcastsPerSec) {
+						shouldBroadcast = true
+						lastBroadcastTime = now
+						broadcastCountInWindow++
+					}
+				} else {
+					// Throttle rapid serial streams (e.g., high-rate IMU dumps)
+					if (broadcastCountInWindow < maxBroadcastsPerSec) {
+						shouldBroadcast = true
+						lastBroadcastContent = trimmed
+						lastBroadcastTime = now
+						broadcastCountInWindow++
+					}
+				}
 			}
 		}
-		listeners.forEach { it.onSerialLog(str, server) }
+
+		if (shouldBroadcast) {
+			if (trimmed.isNotEmpty()) {
+				LogManager.info("[Serial] $trimmed")
+			}
+			listeners.forEach { it.onSerialLog(str, server) }
+		}
 	}
 
 	override fun getListeningEvents(): Int = (

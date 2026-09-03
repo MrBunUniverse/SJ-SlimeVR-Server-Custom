@@ -52,4 +52,28 @@ class QuestStandaloneConfigTests {
 		assertTrue(deserialized.questStandalone.floorAnchorEnabled)
 		assertEquals(0.5f, deserialized.questStandalone.correctionStrength)
 	}
+
+	@Test
+	fun `test default vrc osc tracker roles enabled`() {
+		val vrConfig = VRConfig()
+		val vrcOsc = vrConfig.vrcOSC
+
+		assertTrue(vrcOsc.getOSCTrackerRole(dev.slimevr.tracking.trackers.TrackerRole.CHEST, false), "CHEST should be enabled by default")
+		assertTrue(vrcOsc.getOSCTrackerRole(dev.slimevr.tracking.trackers.TrackerRole.WAIST, false), "WAIST should be enabled by default")
+		assertTrue(vrcOsc.getOSCTrackerRole(dev.slimevr.tracking.trackers.TrackerRole.LEFT_KNEE, false), "LEFT_KNEE should be enabled by default")
+		assertTrue(vrcOsc.getOSCTrackerRole(dev.slimevr.tracking.trackers.TrackerRole.RIGHT_KNEE, false), "RIGHT_KNEE should be enabled by default")
+		assertTrue(vrcOsc.getOSCTrackerRole(dev.slimevr.tracking.trackers.TrackerRole.LEFT_FOOT, false), "LEFT_FOOT should be enabled by default")
+		assertTrue(vrcOsc.getOSCTrackerRole(dev.slimevr.tracking.trackers.TrackerRole.RIGHT_FOOT, false), "RIGHT_FOOT should be enabled by default")
+	}
+
+	@Test
+	fun `test quest standalone osc rate default and values`() {
+		val vrConfig = VRConfig()
+		assertEquals(60, vrConfig.questStandalone.oscRate)
+
+		listOf(30, 50, 60, 90).forEach { rate ->
+			vrConfig.questStandalone.oscRate = rate
+			assertEquals(rate, vrConfig.questStandalone.oscRate)
+		}
+	}
 }

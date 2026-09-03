@@ -143,7 +143,7 @@ export function QuestTargetIPPill() {
         style={{ WebkitAppRegion: 'no-drag' } as any}
         onClick={handleStartEdit}
         className={classNames(
-          'flex items-center gap-1.5 text-[11px] font-mono font-semibold rounded-lg px-2 py-0.5 cursor-pointer transition-all shadow-sm select-none active:scale-95 border',
+          'flex items-center gap-1.5 text-[11.5px] telemetry-numeral font-semibold rounded-[9px] px-2.5 py-1 cursor-pointer transition-all shadow-sm select-none active:scale-[0.98] border',
           saved
             ? 'bg-emerald-500/25 border-emerald-500/40 text-emerald-300'
             : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/25 text-emerald-300'
@@ -177,7 +177,7 @@ export function RefreshTrackersButton() {
       spacing={6}
       content={
         <Typography className="text-[11px] font-medium">
-          Refresh Trackers: Safe network re-scan without restarting SlimeVR or resetting calibrations
+          Scan for Trackers: Broadcast discovery probe without resetting calibrations
         </Typography>
       }
     >
@@ -187,14 +187,14 @@ export function RefreshTrackersButton() {
         onClick={handleRefresh}
         disabled={refreshing}
         className={classNames(
-          'flex items-center gap-1.5 text-[11px] font-mono font-medium rounded-lg px-2 py-0.5 cursor-pointer transition-all shadow-sm select-none active:scale-95 border',
+          'flex items-center gap-1.5 text-[11.5px] telemetry-numeral font-medium rounded-[9px] px-2.5 py-1 cursor-pointer transition-all shadow-sm select-none active:scale-[0.98] border',
           refreshing
             ? 'bg-sky-500/20 border-sky-500/40 text-sky-300'
             : 'bg-white/5 hover:bg-white/10 border-white/10 text-background-20 hover:text-background-10'
         )}
       >
         <svg
-          className={classNames('w-3 h-3', refreshing && 'animate-spin text-sky-400')}
+          className={classNames('w-3.5 h-3.5', refreshing && 'animate-spin text-sky-400')}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -259,11 +259,11 @@ function TopBarNavButton({
         state={state}
         style={{ WebkitAppRegion: 'no-drag' } as any}
         className={classNames(
-          'w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150 active:scale-[0.92] select-none cursor-pointer',
+          'w-7 h-7 rounded-[9px] flex items-center justify-center transition-all duration-150 active:scale-[0.98] select-none cursor-pointer',
           {
-            'bg-accent-background-30 text-white shadow-sm border border-accent-background-20/40':
+            'bg-accent-background-30 text-white shadow-sm border border-accent-background-20/40 font-medium':
               doesMatch,
-            'hover:bg-white/15 text-background-20 hover:text-background-10 border border-transparent':
+            'hover:bg-white/10 text-background-20 hover:text-background-10 border border-transparent':
               !doesMatch,
           }
         )}
@@ -287,7 +287,7 @@ export function TopBarNav() {
   return (
     <div
       style={{ WebkitAppRegion: 'no-drag' } as any}
-      className="flex items-center gap-1 p-0.5 rounded-xl bg-background-70/70 border border-white/10 shadow-inner"
+      className="flex items-center gap-1 p-[2px] rounded-[11px] bg-black/25 border border-white/8 backdrop-blur-md shadow-inner"
     >
       <TopBarNavButton to="/" icon={<HomeIcon />}>
         {l10n.getString('navbar-home')}
@@ -400,8 +400,8 @@ export function TopBar({
         <div className="h-[2px]" />
         <div
           className={classNames(
-            'flex items-center justify-between gap-3 h-[44px] z-40 glass-panel-strong border-b border-background-50/20 px-3 select-none',
-            isMac ? 'pl-[108px]' : 'pl-3'
+            'flex items-center justify-between gap-3 h-[52px] z-40 glass-panel-strong border-b border-background-50/20 px-3 select-none',
+            isMac ? 'pl-[82px]' : 'pl-3'
           )}
           style={{ WebkitAppRegion: 'drag' } as any}
           data-electron-drag-region
@@ -430,7 +430,7 @@ export function TopBar({
                 <Typography
                   bold
                   variant="standard"
-                  className="font-semibold tracking-tight text-[13px]"
+                  className="font-semibold tracking-mac-subhead text-[13px]"
                 >
                   SirJame SlimeVR
                 </Typography>
@@ -445,7 +445,7 @@ export function TopBar({
               >
                 <div
                   style={{ WebkitAppRegion: 'no-drag' } as any}
-                  className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-accent-background-10 bg-accent-background-30/20 hover:bg-accent-background-30/30 border border-accent-background-20/30 rounded-lg px-2 py-0.5 cursor-pointer transition-colors shadow-sm select-text"
+                  className="flex items-center gap-1.5 text-[11.5px] telemetry-numeral font-medium text-accent-background-10 bg-accent-background-30/20 hover:bg-accent-background-30/30 border border-accent-background-20/30 rounded-[9px] px-2.5 py-1 cursor-pointer transition-all shadow-sm select-text active:scale-[0.98]"
                   onClick={() => {
                     navigator.clipboard.writeText(localIp);
                   }}
@@ -460,7 +460,7 @@ export function TopBar({
             <QuestTargetIPPill />
             <RefreshTrackersButton />
 
-            {/* macOS Style Standalone Toggle Switch */}
+            {/* macOS Sequoia Style Standalone Toggle Switch */}
             <Tooltip
               preferedDirection="bottom"
               spacing={6}
@@ -476,19 +476,20 @@ export function TopBar({
                 type="button"
                 style={{ WebkitAppRegion: 'no-drag' } as any}
                 onClick={toggleMode}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-white/10 text-[11.5px] font-medium text-background-10 transition-colors select-none cursor-pointer active:scale-95"
+                className="flex items-center gap-2 px-2 py-1 rounded-[9px] hover:bg-white/10 text-[11.5px] font-medium text-background-10 transition-all select-none cursor-pointer active:scale-[0.98]"
               >
-                <span className="font-semibold text-[11.5px] text-background-20">Standalone</span>
+                <span className="font-semibold text-[11.5px] tracking-mac-caption text-background-20">Standalone</span>
+                {/* Authentic macOS Toggle: 38px x 22px with 18px thumb */}
                 <div
                   className={classNames(
-                    'w-6 h-3.5 rounded-full transition-colors relative flex items-center shadow-inner',
-                    isQuestStandalone ? 'bg-emerald-500' : 'bg-white/20'
+                    'w-[38px] h-[22px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center shadow-inner border border-white/10',
+                    isQuestStandalone ? 'bg-emerald-500' : 'bg-white/15'
                   )}
                 >
                   <div
                     className={classNames(
-                      'w-2.5 h-2.5 rounded-full bg-white shadow-sm transition-transform duration-150',
-                      isQuestStandalone ? 'translate-x-3' : 'translate-x-0.5'
+                      'w-[18px] h-[18px] rounded-full bg-white shadow-sm transition-transform duration-200 ease-mac-spring',
+                      isQuestStandalone ? 'translate-x-[16px]' : 'translate-x-0'
                     )}
                   />
                 </div>

@@ -13,6 +13,8 @@ import {
   SkeletonResetAllRequestT,
   SkeletonHeightT,
   BodyPart,
+  VRCOSCSettingsT,
+  OSCSettingsT,
 } from 'solarxr-protocol';
 
 export type OperatingMode = 'quest_standalone' | 'pcvr';
@@ -76,7 +78,17 @@ export function useOperatingMode() {
   const isPCVR = useMemo(() => mode === 'pcvr', [mode]);
 
   const toggleMode = () => {
-    setMode((prev) => (prev === 'quest_standalone' ? 'pcvr' : 'quest_standalone'));
+    const nextMode: OperatingMode = mode === 'quest_standalone' ? 'pcvr' : 'quest_standalone';
+    setMode(nextMode);
+
+    const settingsRequest = new ChangeSettingsRequestT();
+    const vrcOsc = new VRCOSCSettingsT();
+    const oscSettings = new OSCSettingsT();
+    oscSettings.enabled = nextMode === 'quest_standalone';
+    vrcOsc.oscSettings = oscSettings;
+    vrcOsc.oscqueryEnabled = true;
+    settingsRequest.vrcOsc = vrcOsc;
+    sendRPCPacket(RpcMessage.ChangeSettingsRequest, settingsRequest);
   };
 
   const syncToServer = (updates: Partial<QuestStandaloneState>) => {
@@ -103,6 +115,7 @@ export function useOperatingMode() {
 
     const skeletonHeight = new SkeletonHeightT();
     skeletonHeight.floorHeight = next.floorOffset;
+    skeletonHeight.oscRate = next.oscRate;
     modelSettings.skeletonHeight = skeletonHeight;
 
     settingsRequest.modelSettings = modelSettings;
@@ -205,6 +218,7 @@ export function useOperatingMode() {
 
   const setOscRate = (rate: number) => {
     setState((prev) => ({ ...prev, oscRate: rate }));
+    syncToServer({ oscRate: rate });
   };
 
   const setRecenterBehavior = (mode: RecenterBehaviorMode) => {

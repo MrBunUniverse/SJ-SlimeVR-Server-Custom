@@ -115,16 +115,16 @@ function TrackerSmol({
         )}
         <div
           className={classNames(
-            'border-[3px] border-opacity-80 rounded-xl overflow-clip transition-all duration-200',
+            'border-[2px] rounded-[10px] overflow-clip transition-all duration-200',
             {
-              'border-status-warning': warning && velocity <= 0.15,
-              'border-transparent': !warning && velocity <= 0.15,
-              'border-accent-background-30 ring-4 ring-accent-background-30/40 shadow-[0_0_18px_rgba(139,92,246,0.85)] scale-105':
-                velocity > 0.15,
+              'border-status-warning': warning && velocity <= 0.18,
+              'border-white/10': !warning && velocity <= 0.18,
+              'border-accent-background-20 shadow-[0_0_16px_rgba(10,132,255,0.45)] scale-105 bg-accent-background-30/15':
+                velocity > 0.18,
             }
           )}
         >
-          <BodyPartIcon bodyPart={tracker.info?.bodyPart} width={40} />
+          <BodyPartIcon bodyPart={tracker.info?.bodyPart} width={38} />
         </div>
       </div>
 
@@ -207,13 +207,13 @@ export function TrackerCard({
       <div
         onClick={onClick}
         className={classNames(
-          'rounded-2xl overflow-hidden transition-all duration-200',
-          interactable && 'glass-interactive cursor-pointer',
+          'rounded-[22px] overflow-hidden transition-all duration-200 select-none',
+          interactable && 'glass-interactive cursor-pointer active:scale-[0.985]',
           outlined && 'outline outline-2 outline-accent-background-40',
           !bg || bg === 'bg-background-60' ? 'card-surface' : bg,
           shakeHighlight &&
-            velocity > 0.15 &&
-            'border-accent-background-30/90 ring-2 ring-accent-background-30/40 shadow-[0_0_22px_rgba(139,92,246,0.35)]'
+            velocity > 0.18 &&
+            'border-accent-background-20/80 shadow-[0_0_20px_-2px_rgba(10,132,255,0.35)]'
         )}
       >
         {smol && (

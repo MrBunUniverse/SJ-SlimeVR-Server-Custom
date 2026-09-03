@@ -120,16 +120,38 @@ body {
   --special: 191, 90, 242;
   --window-icon-stroke: 161, 161, 166;
 
-  /* Liquid Glass design tokens */
-  --glass-bg: rgba(34, 35, 40, 0.72);
-  --glass-bg-strong: rgba(48, 49, 56, 0.85);
-  --glass-bg-interactive: rgba(255, 255, 255, 0.08);
-  --glass-bg-interactive-hover: rgba(255, 255, 255, 0.14);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-strong: rgba(255, 255, 255, 0.18);
-  --glass-pill-bg: rgba(255, 255, 255, 0.08);
-  --glass-blur: 20px;
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+  /* macOS Sequoia 4-Tier Vibrancy System */
+  --material-canvas: rgba(12, 13, 16, 0.85);
+  --material-primary: rgba(24, 25, 30, 0.72);
+  --material-secondary: rgba(34, 35, 42, 0.58);
+  --material-tertiary: rgba(255, 255, 255, 0.07);
+  --material-tertiary-hover: rgba(255, 255, 255, 0.12);
+  --material-tertiary-active: rgba(255, 255, 255, 0.18);
+
+  --material-border-subtle: rgba(255, 255, 255, 0.08);
+  --material-border-primary: rgba(255, 255, 255, 0.12);
+  --material-border-strong: rgba(255, 255, 255, 0.20);
+
+  /* Specular Rim Lighting */
+  --specular-rim: inset 0 1px 0 0 rgba(255, 255, 255, 0.13);
+  --specular-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.22);
+  --glass-elevation: 0 8px 32px -4px rgba(0, 0, 0, 0.32);
+
+  /* WCAG 2.2 AAA Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #C5C5CE;
+  --text-tertiary: #9898A4;
+
+  /* Legacy Liquid Glass compatibility aliases */
+  --glass-bg: var(--material-primary);
+  --glass-bg-strong: var(--material-secondary);
+  --glass-bg-interactive: var(--material-tertiary);
+  --glass-bg-interactive-hover: var(--material-tertiary-hover);
+  --glass-border: var(--material-border-subtle);
+  --glass-border-strong: var(--material-border-primary);
+  --glass-pill-bg: var(--material-tertiary);
+  --glass-blur: 24px;
+  --glass-shadow: var(--glass-elevation);
 
   --default-color: 245, 245, 247;
 
@@ -560,48 +582,64 @@ a,
   user-select: none;
 }
 
-/* Liquid Glass Utility Classes - Native macOS Vibrancy (Zero Skia FBO Overhead) */
+/* macOS Sequoia Vibrancy Glass Classes */
 .glass-panel {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  background: var(--material-primary);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim), var(--specular-shadow), var(--glass-elevation);
 }
 
 .glass-panel-strong {
-  background: var(--glass-bg-strong);
-  border: 1px solid var(--glass-border-strong);
-  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.35), 0 0 1px 1px rgba(255, 255, 255, 0.08) inset;
+  background: var(--material-secondary);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid var(--material-border-primary);
+  box-shadow: var(--specular-rim), var(--specular-shadow), 0 12px 36px -4px rgba(0, 0, 0, 0.38);
 }
 
 .glass-pill {
-  background: var(--glass-pill-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 9999px;
+  background: var(--material-tertiary);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim);
 }
 
 .glass-interactive {
-  background: var(--glass-bg-interactive);
-  border: 1px solid var(--glass-border);
+  background: var(--material-tertiary);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim);
   transition: background-color 140ms cubic-bezier(0.25, 1, 0.5, 1),
               border-color 140ms cubic-bezier(0.25, 1, 0.5, 1),
-              transform 100ms cubic-bezier(0.2, 0, 0, 1);
+              transform 140ms cubic-bezier(0.25, 1.4, 0.5, 1);
 
   &:hover {
-    background: var(--glass-bg-interactive-hover);
-    border-color: var(--glass-border-strong);
+    background: var(--material-tertiary-hover);
+    border-color: var(--material-border-primary);
   }
 
   &:active {
-    transform: scale(0.975);
+    background: var(--material-tertiary-active);
+    transform: scale(0.98);
   }
 }
 
-/* Card Surface for repeating high-frequency telemetry items (zero FBO blur overhead) */
+/* Card Surface for grouped telemetry items */
 .card-surface {
-  background: rgba(34, 35, 40, 0.85);
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25);
+  background: var(--material-secondary);
+  border: 1px solid var(--material-border-subtle);
+  box-shadow: var(--specular-rim), 0 4px 16px -2px rgba(0, 0, 0, 0.25);
   transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+/* OpenType Tabular Numerals for Telemetry & Spatial HUDs */
+.telemetry-numeral {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv02" 1, "cv05" 1;
+  letter-spacing: -0.01em;
 }
 
 /* Reduced transparency fallback */

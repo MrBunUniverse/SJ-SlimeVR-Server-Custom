@@ -5,6 +5,7 @@ import {
   Menu,
   nativeImage,
   net,
+  powerSaveBlocker,
   protocol,
   screen,
   shell,
@@ -497,8 +498,16 @@ const createFolders = async () => {
 };
 
 let isQuitting = false;
+let powerSaveBlockerId: number | null = null;
 
 app.whenReady().then(async () => {
+  try {
+    powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+    logger.info(`Power save blocker started (id: ${powerSaveBlockerId})`);
+  } catch (err) {
+    logger.warn({ err }, 'Failed to start power save blocker');
+  }
+
   protocol.handle('app', (request) => {
     const { pathname } = new URL(request.url);
     const filePath = path.normalize(join(__dirname, '../renderer', pathname));
@@ -534,6 +543,11 @@ app.whenReady().then(async () => {
     isQuitting = true;
     event.preventDefault();
     logger.info('App quitting, saving...');
+    if (powerSaveBlockerId !== null && powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+      powerSaveBlocker.stop(powerSaveBlockerId);
+      powerSaveBlockerId = null;
+      logger.info('Power save blocker stopped');
+    }
     server?.close();
     await server?.waitForExit();
     await stores.settings.save();
