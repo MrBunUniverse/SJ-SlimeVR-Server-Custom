@@ -44,7 +44,7 @@ export function PresetSelector() {
               className="fixed inset-0 z-40"
               onClick={() => setIsOpen(false)}
             />
-            <div className="absolute left-0 top-9 w-64 p-2 z-50 glass-panel-strong rounded-2xl shadow-2xl flex flex-col gap-1 border border-white/10 animate-fade-in">
+            <div className="absolute left-0 top-9 w-64 p-2 z-50 glass-popover rounded-2xl shadow-2xl flex flex-col gap-1 animate-fade-in">
               <div className="px-2.5 py-1.5 text-[11px] font-semibold text-background-30 uppercase tracking-wider">
                 Tracker Presets
               </div>

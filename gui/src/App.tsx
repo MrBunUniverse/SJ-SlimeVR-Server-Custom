@@ -1,5 +1,5 @@
 import { createContext, useEffect, useState } from 'react';
-import { HashRouter as Router, Outlet, Route, Routes } from 'react-router-dom';
+import { HashRouter as Router, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { Home } from './components/home/Home';
 import { MainLayout } from './components/MainLayout';
 import { AppContextProvider } from './components/providers/AppContext';
@@ -138,6 +138,8 @@ function Layout() {
               </SettingsLayout>
             }
           >
+            <Route index element={<Navigate to="trackers" replace />} />
+            <Route path="vrchat" element={<Navigate to="/settings/osc/vrchat" replace />} />
             <Route path="firmware-tool" element={<FirmwareToolSettings />} />
             <Route path="trackers" element={<GeneralSettings />} />
             <Route path="serial" element={<Serial />} />

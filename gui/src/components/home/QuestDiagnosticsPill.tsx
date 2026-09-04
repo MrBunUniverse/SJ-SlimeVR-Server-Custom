@@ -51,7 +51,7 @@ export function QuestDiagnosticsPill() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-9 w-72 p-3.5 z-50 glass-panel-strong rounded-2xl shadow-2xl flex flex-col gap-2.5 border border-white/10 animate-fade-in">
+          <div className="absolute left-0 top-9 w-72 p-3.5 z-50 glass-popover rounded-2xl shadow-2xl flex flex-col gap-2.5 animate-fade-in">
             <div className="flex justify-between items-center pb-2 border-b border-background-50/30">
               <Typography
                 bold
@@ -95,7 +95,7 @@ export function QuestDiagnosticsPill() {
 
             <div className="pt-2 border-t border-background-50/30 flex justify-between items-center">
               <NavLink
-                to="/settings/vrchat"
+                to="/settings/osc/vrchat"
                 className="text-[11px] text-accent-background-20 hover:text-accent-background-10 font-medium tracking-tight"
                 onClick={() => setIsOpen(false)}
               >

@@ -1,18 +1,16 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { TrackerDataT } from 'solarxr-protocol';
 import { useConfig } from '@/hooks/config';
 import { Typography } from '@/components/commons/Typography';
 import { TrackerCard } from '@/components/tracker/TrackerCard';
 import { TrackersTable } from '@/components/tracker/TrackersTable';
-import { HeadsetIcon } from '@/components/commons/icon/HeadsetIcon';
 import { useAtomValue } from 'jotai';
 import {
   assignedTrackersAtom,
   unassignedTrackersAtom,
 } from '@/store/app-store';
 import { useTrackingChecklist } from '@/hooks/tracking-checklist';
-import { Checklist } from '@/components/commons/icon/ChecklistIcon';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { HomeSettingsModal } from './HomeSettingsModal';
 import { LayoutIcon } from '@/components/commons/icon/LayoutIcon';
 import { PresetSelector } from './PresetSelector';
@@ -29,6 +27,22 @@ export function Home() {
   const { highlightedTrackers } = useTrackingChecklist();
   const navigate = useNavigate();
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const fadeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    const fade = fadeRef.current;
+    if (!el || !fade) return;
+
+    const onScroll = () => {
+      const opacity = Math.min(el.scrollTop / 20, 1);
+      fade.style.opacity = String(opacity);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
   const sendToSettings = (tracker: TrackerDataT) => {
     navigate(
       `/tracker/${tracker.trackerId?.trackerNum}/${tracker.trackerId?.deviceId?.id}`
@@ -44,11 +58,11 @@ export function Home() {
   };
 
   return (
-    <div className="relative h-full p-2 flex flex-col">
+    <div className="relative h-full px-2 pt-3.5 pb-2 flex flex-col">
       <HomeSettingsModal open={settingsOpenState} />
 
       {/* macOS Docked Command Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 mb-2 glass-panel-primary rounded-[14px] border border-white/8 shadow-md">
+      <div className="relative z-30 flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 mb-3 glass-panel-primary rounded-[14px] border border-white/[0.08] shadow-md">
         {/* Left Section: Presets & Quest Telemetry */}
         <div className="flex items-center gap-2">
           <PresetSelector />
@@ -60,24 +74,8 @@ export function Home() {
           <ResetActionsGroup />
         </div>
 
-        {/* Right Section: Utilities & View Layout Toggle */}
+        {/* Right Section: View Layout Toggle */}
         <div className="flex items-center gap-1.5">
-          <NavLink
-            to="/vr-mode"
-            className="apple-interactive flex items-center gap-1 px-2.5 py-1 rounded-[7px] text-[11px] font-medium text-background-20 hover:text-background-10 cursor-pointer"
-            title="Open VR Mode Viewport"
-          >
-            <HeadsetIcon width={13} />
-            <span>VR Mode</span>
-          </NavLink>
-          <NavLink
-            to="/checklist"
-            className="apple-interactive flex items-center gap-1 px-2.5 py-1 rounded-[7px] text-[11px] font-medium text-background-20 hover:text-background-10 cursor-pointer"
-            title="Tracking Checklist"
-          >
-            <Checklist width={13} />
-            <span>Checklist</span>
-          </NavLink>
           <button
             type="button"
             onClick={toggleLayout}
@@ -92,7 +90,24 @@ export function Home() {
         </div>
       </div>
 
-      <div className="overflow-y-auto flex-grow flex flex-col gap-3">
+      {/* Scroll Area Container with Non-blocking Native Momentum & Top Fade Scrim */}
+      <div className="relative flex-grow min-h-0 flex flex-col">
+        {/* Top Fade Gradient Scrim */}
+        <div
+          ref={fadeRef}
+          className="pointer-events-none absolute top-0 left-0 right-0 h-10 z-20 transition-opacity duration-150 ease-out"
+          style={{
+            opacity: 0,
+            background:
+              'linear-gradient(to bottom, rgb(var(--background-80)) 0%, rgba(var(--background-80), 0.8) 40%, rgba(var(--background-80), 0.2) 75%, rgba(var(--background-80), 0) 100%)',
+          }}
+        />
+
+        <div
+          ref={scrollContainerRef}
+          className="overflow-y-auto flex-grow flex flex-col gap-3 relative"
+        >
+
         {/* Live Quest Standalone Telemetry HUD (Quest Mode) */}
         <QuestDiagnosticsCard />
 
@@ -181,6 +196,7 @@ export function Home() {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );

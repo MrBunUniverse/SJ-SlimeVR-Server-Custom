@@ -141,8 +141,8 @@ const DropdownList = forwardRef<HTMLDivElement, DropdownListProps>(function (
   ref
 ) {
   const variantStyles = {
-    primary: 'glass-panel-strong border border-white/12 shadow-2xl',
-    secondary: 'glass-panel-strong border border-white/12 shadow-2xl',
+    primary: 'glass-popover shadow-2xl',
+    secondary: 'glass-popover shadow-2xl',
     tertiary: 'bg-accent-background-30 shadow-2xl border border-white/15',
   };
 

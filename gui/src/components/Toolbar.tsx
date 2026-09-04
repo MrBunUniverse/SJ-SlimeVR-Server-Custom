@@ -1,7 +1,6 @@
 import { Typography } from './commons/Typography';
 import classNames from 'classnames';
-import { ResetType, ResetRequestT, RpcMessage } from 'solarxr-protocol';
-import { useWebsocketAPI } from '@/hooks/websocket-api';
+import { ResetType } from 'solarxr-protocol';
 import {
   BODY_PARTS_GROUPS,
   MountingResetGroup,
@@ -148,12 +147,8 @@ export function BasicResetButton(options: UseResetOptions & { customName?: strin
   );
 }
 
-import { useOperatingMode } from '@/hooks/operating-mode';
-
 export function ResetActionsGroup() {
   const assignedTrackers = useAtomValue(assignedTrackersAtom);
-  const { isQuestStandalone, floorAnchor, triggerFloorCalibration } = useOperatingMode();
-  const { sendRPCPacket } = useWebsocketAPI();
 
   const { groupVisibility } = useMemo(() => {
     const groupVisibility = Object.keys(BODY_PARTS_GROUPS)
@@ -177,12 +172,6 @@ export function ResetActionsGroup() {
     };
   }, [assignedTrackers]);
 
-  const recenterHmd = () => {
-    const req = new ResetRequestT();
-    req.resetType = ResetType.Yaw;
-    sendRPCPacket(RpcMessage.ResetRequest, req);
-  };
-
   return (
     <div className="flex items-center gap-1.5 p-1 glass-panel-strong rounded-2xl border border-white/10 shadow-inner">
       <BasicResetButton type={ResetType.Full} />
@@ -204,50 +193,6 @@ export function ResetActionsGroup() {
           group={'fingers'}
           customName="toolbar-mounting_calibration-fingers"
         />
-      )}
-
-      {isQuestStandalone && (
-        <>
-          <div className="w-[1px] h-4 bg-background-50/40 mx-0.5" />
-          <Tooltip
-            preferedDirection="bottom"
-            spacing={6}
-            content={<Typography className="text-[11.5px] whitespace-nowrap">Recenter Headset & SlimeVR Space</Typography>}
-          >
-            <button
-              type="button"
-              onClick={recenterHmd}
-              className="h-8 px-2.5 rounded-xl bg-background-60 hover:bg-background-50 active:scale-95 text-[12px] font-semibold text-background-10 border border-white/5 flex items-center transition-all shadow-sm"
-            >
-              <span>Recenter</span>
-            </button>
-          </Tooltip>
-
-          <Tooltip
-            preferedDirection="bottom"
-            spacing={6}
-            content={
-              <Typography className="text-[11.5px] whitespace-nowrap">
-                {floorAnchor.isAnchored
-                  ? 'Recalibrate Floor Level (Currently Locked)'
-                  : 'Calibrate & Lock Floor Level (Currently Floating)'}
-              </Typography>
-            }
-          >
-            <button
-              type="button"
-              onClick={triggerFloorCalibration}
-              className={classNames(
-                'h-8 px-2.5 rounded-xl text-[12px] font-semibold border flex items-center transition-all shadow-sm active:scale-95',
-                floorAnchor.isAnchored
-                  ? 'bg-background-60 hover:bg-background-50 text-background-10 border-white/5'
-                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/25'
-              )}
-            >
-              <span>Floor Level</span>
-            </button>
-          </Tooltip>
-        </>
       )}
     </div>
   );

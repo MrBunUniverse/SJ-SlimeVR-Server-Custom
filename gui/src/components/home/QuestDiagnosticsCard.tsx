@@ -22,7 +22,6 @@ export function QuestDiagnosticsCard() {
     setFootPlantStrength,
     setCrouchCompensation,
     setOscRate,
-    selectProfile,
   } = useOperatingMode();
 
   useEffect(() => {
@@ -66,56 +65,14 @@ export function QuestDiagnosticsCard() {
     }, 1200);
   };
 
-  const [showTuning, setShowTuning] = useState(false);
-
-  const PROFILES = [
-    {
-      id: 'STANDING',
-      label: 'Standing',
-      icon: (
-        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-          <circle cx="12" cy="4" r="2" />
-          <path d="M10 8h4v7h-1.5v6h-1v-6H10V8z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'CROUCHING',
-      label: 'Crouching',
-      icon: (
-        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-          <circle cx="12" cy="5" r="2" />
-          <path d="M9 9h6v4h2v5h-2v3h-2v-3h-2v-4H9V9z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'SITTING',
-      label: 'Sitting',
-      icon: (
-        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-          <circle cx="13" cy="4" r="2" />
-          <path d="M10 8h4v5h3v2h-3v6h-2v-6h-2v-7z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'CUSTOM',
-      label: 'Custom',
-      icon: (
-        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-          <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm-1 10h2v3h-2v-3zm-6-7h3v2H5v-2zm11 0h3v2h-3v-2z" />
-        </svg>
-      ),
-    },
-  ] as const;
+  const [showTuning, setShowTuning] = useState(true);
 
   const rates = [30, 50, 60, 90] as const;
 
   return (
-    <div className="w-full rounded-[20px] glass-panel-strong border border-white/10 p-3 flex flex-col gap-2.5 select-none transition-all">
+    <div className="w-full rounded-[18px] glass-panel-strong border border-white/[0.06] p-3 flex flex-col gap-2.5 select-none transition-all">
       {/* Header with Title & Concentric Vector Profile Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/6 pb-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.04] pb-2">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#30D158] shrink-0" />
           <Typography bold variant="standard" className="text-[12.5px] font-semibold text-background-10 tracking-tight">
@@ -123,41 +80,44 @@ export function QuestDiagnosticsCard() {
           </Typography>
         </div>
 
-        {/* Profile Switcher: R_outer = 9px, P = 2px, R_inner = 7px */}
-        <div className="flex items-center p-[2px] rounded-[9px] bg-black/25 border border-white/8 backdrop-blur-md">
-          {PROFILES.map((p) => {
-            const active = floorAnchor.activeProfile === p.id;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => selectProfile(p.id)}
-                className={classNames(
-                  'px-2.5 py-1 rounded-[7px] text-[11px] font-medium transition-all duration-150 flex items-center gap-1.5 cursor-pointer select-none active:scale-[0.98]',
-                  active
-                    ? 'bg-white/15 text-white shadow-sm font-semibold'
-                    : 'text-background-30 hover:text-background-10 hover:bg-white/5'
-                )}
-              >
-                {p.icon}
-                <span>{p.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Header Right: Manual Tweaks Toggle */}
+        <button
+          type="button"
+          onClick={() => setShowTuning(!showTuning)}
+          className={classNames(
+            'px-2.5 py-1 rounded-[8px] text-[11px] font-medium transition-all flex items-center gap-1.5 cursor-pointer select-none active:scale-[0.98]',
+            showTuning
+              ? 'bg-white/[0.08] text-white font-medium border border-white/[0.08]'
+              : 'text-background-20 hover:text-background-10 hover:bg-white/[0.04] border border-transparent'
+          )}
+        >
+          <svg className="w-3 h-3 stroke-current fill-none" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14" />
+            <line x1="4" y1="10" x2="4" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12" y2="3" />
+            <line x1="20" y1="21" x2="20" y2="16" />
+            <line x1="20" y1="12" x2="20" y2="3" />
+            <line x1="1" y1="14" x2="7" y2="14" />
+            <line x1="9" y1="8" x2="15" y2="8" />
+            <line x1="17" y1="16" x2="23" y2="16" />
+          </svg>
+          <span>Manual Tweaks</span>
+          <span className="text-[9px] opacity-70">{showTuning ? '▴' : '▾'}</span>
+        </button>
       </div>
 
       <div className="flex flex-col gap-2.5 pt-0.5">
         {/* Top 4 Metric Tiles: R_inner = 10px, Outer gap = 8px */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {/* Metric 1: Active Preset */}
-          <div className="p-2.5 rounded-[10px] bg-white/[0.03] border border-white/6 flex flex-col justify-between">
+          {/* Metric 1: Trackers Assigned */}
+          <div className="p-2.5 rounded-[10px] bg-white/[0.02] border border-white/[0.04] flex flex-col justify-between">
             <span className="text-[10px] uppercase font-semibold text-background-30 tracking-wide">
-              Active Preset
+              Trackers Assigned
             </span>
             <div className="mt-1 flex flex-col">
               <span className="text-[13px] font-semibold text-background-10 tracking-tight truncate">
-                {activePreset?.name || 'Custom Preset'}
+                {activePreset?.name || 'Custom Setup'}
               </span>
               <span className="text-[11px] tnum font-medium text-background-20 mt-0.5">
                 {activeAssigned} of {activePreset?.targetCount || 5} active
@@ -166,7 +126,7 @@ export function QuestDiagnosticsCard() {
           </div>
 
           {/* Metric 2: Live Tactile Flight / Floor Elevation Scrubber */}
-          <div className="p-2.5 rounded-[10px] bg-white/[0.03] border border-white/6 flex flex-col justify-between">
+          <div className="p-2.5 rounded-[10px] bg-white/[0.02] border border-white/[0.04] flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] uppercase font-semibold text-background-30 tracking-wide">
@@ -235,21 +195,21 @@ export function QuestDiagnosticsCard() {
           </div>
 
           {/* Metric 3: OSC Output Rate */}
-          <div className="p-2.5 rounded-[10px] bg-white/[0.03] border border-white/6 flex flex-col justify-between">
+          <div className="p-2.5 rounded-[10px] bg-white/[0.02] border border-white/[0.04] flex flex-col justify-between">
             <span className="text-[10px] uppercase font-semibold text-background-30 tracking-wide">
               OSC Output Rate
             </span>
-            <div className="mt-1.5 flex items-center justify-between gap-1">
+            <div className="mt-1.5 flex items-center justify-between gap-0.5 p-0.5 rounded-[7px] bg-black/20 border border-white/[0.03]">
               {rates.map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setOscRate(r)}
                   className={classNames(
-                    'flex-1 py-1 rounded-[6px] text-[10.5px] tnum font-medium transition-all cursor-pointer select-none active:scale-[0.98]',
+                    'flex-1 py-1 rounded-[5px] text-[10.5px] tnum font-medium transition-all cursor-pointer select-none active:scale-[0.98]',
                     floorAnchor.oscRate === r
-                      ? 'bg-white/15 text-white font-semibold shadow-sm'
-                      : 'text-background-30 hover:text-background-10 hover:bg-white/5'
+                      ? 'bg-white/[0.12] text-white font-semibold shadow-xs'
+                      : 'text-background-30 hover:text-background-10 hover:bg-white/[0.03]'
                   )}
                 >
                   {r}Hz
@@ -259,7 +219,7 @@ export function QuestDiagnosticsCard() {
           </div>
 
           {/* Metric 4: Floor Anchor & Leveling */}
-          <div className="p-2.5 rounded-[10px] bg-white/[0.03] border border-white/6 flex flex-col justify-between">
+          <div className="p-2.5 rounded-[10px] bg-white/[0.02] border border-white/[0.04] flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-semibold text-background-30 tracking-wide">
                 Floor Anchor
@@ -268,10 +228,10 @@ export function QuestDiagnosticsCard() {
                 type="button"
                 onClick={toggleFloorAnchor}
                 className={classNames(
-                  'px-2 py-0.5 rounded-[5px] text-[10px] font-semibold transition-all active:scale-[0.98] cursor-pointer',
+                  'px-2 py-0.5 rounded-full text-[10px] font-medium transition-all active:scale-[0.98] cursor-pointer',
                   floorAnchor.isAnchored
-                    ? 'bg-[#30D158]/15 text-[#30D158] border border-[#30D158]/30'
-                    : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                    ? 'bg-[#30D158]/12 text-[#30D158] border border-[#30D158]/15'
+                    : 'bg-amber-500/12 text-amber-300 border border-amber-500/15'
                 )}
               >
                 {floorAnchor.isAnchored ? 'Locked' : 'Floating'}
@@ -306,20 +266,9 @@ export function QuestDiagnosticsCard() {
           </div>
         </div>
 
-        {/* Progressive Disclosure: Calibration Tuning Drawer Toggle */}
-        <div className="flex justify-center pt-0.5">
-          <button
-            type="button"
-            onClick={() => setShowTuning(!showTuning)}
-            className="apple-interactive flex items-center gap-1.5 px-3 py-1 rounded-[7px] text-[10.5px] text-background-20 hover:text-background-10 transition-all cursor-pointer"
-          >
-            <span>{showTuning ? '▴ Hide Advanced Calibration' : '▾ Advanced Calibration & Leg Tweaks'}</span>
-          </button>
-        </div>
-
         {/* Expandable Advanced Tuning Drawer */}
         {showTuning && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-black/20 p-2.5 rounded-[10px] border border-white/6 transition-all">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-black/15 p-3 rounded-[12px] border border-white/[0.04] transition-all">
             {/* Slider 1: Correction Strength */}
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between text-[10.5px]">
@@ -366,13 +315,13 @@ export function QuestDiagnosticsCard() {
                 type="button"
                 onClick={() => setCrouchCompensation(!floorAnchor.crouchCompensation)}
                 className={classNames(
-                  'w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-white/10 active:scale-[0.98]',
-                  floorAnchor.crouchCompensation ? 'bg-[#30D158]' : 'bg-white/15'
+                  'w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-white/[0.06] active:scale-[0.98]',
+                  floorAnchor.crouchCompensation ? 'bg-[#30D158]' : 'bg-white/10'
                 )}
               >
                 <div
                   className={classNames(
-                    'w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-150',
+                    'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
                     floorAnchor.crouchCompensation ? 'translate-x-[16px]' : 'translate-x-0'
                   )}
                 />

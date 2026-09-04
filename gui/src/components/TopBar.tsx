@@ -392,8 +392,8 @@ export function TopBar({
         <div className="h-[2px]" />
         <div
           className={classNames(
-            'flex items-center justify-between gap-3 h-[52px] z-40 glass-panel-strong border-b border-background-50/20 px-3 select-none',
-            isMac ? 'pl-[82px]' : 'pl-3'
+            'flex items-center justify-between gap-3 h-[52px] z-40 glass-panel-strong border-b border-background-50/20 pr-3 select-none',
+            isMac ? 'pl-[108px]' : 'pl-3'
           )}
           style={{ WebkitAppRegion: 'drag' } as any}
           data-electron-drag-region
