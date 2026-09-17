@@ -15,6 +15,20 @@ export function ThemeSelector<T extends FieldValues = FieldValues>({
   colors: string | undefined;
   value: string;
 } & React.HTMLProps<HTMLInputElement>) {
+  const themeLabel =
+    {
+      macos: 'Navy, blue-gray, amber',
+      slime: 'Slime',
+      'slime-green': 'Slime green',
+      'slime-yellow': 'Slime yellow',
+      'slime-orange': 'Slime orange',
+      'slime-red': 'Slime red',
+      dark: 'Dark',
+      trans: 'Trans pride',
+      asexual: 'Asexual pride',
+      snep: 'Snep pride',
+    }[String(value)] ?? String(value);
+
   return (
     <Controller
       control={control}
@@ -37,6 +51,8 @@ export function ThemeSelector<T extends FieldValues = FieldValues>({
           value={value}
           checked={value == checked}
           disabled={disabled}
+          aria-label={themeLabel}
+          title={themeLabel}
           {...props}
         />
       )}

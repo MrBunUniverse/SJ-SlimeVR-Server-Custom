@@ -358,9 +358,13 @@ export function Home() {
       <HomeSettingsModal open={settingsOpenState} />
 
       {/* Minimalist Flush Header Bar - No Floating Dock - Spans 100% full width, fixed position */}
-      <div className="relative z-30 flex flex-nowrap items-center justify-between gap-2 sm:gap-3 mx-3 sm:mx-4 pt-2.5 px-2 sm:px-3 py-1.5 border-b border-white/[0.04] select-none shrink-0">
+      <div
+        className="home-command-bar relative z-30 mx-3 flex flex-nowrap items-center gap-2 border-b border-white/[0.04] px-2 py-1.5 pt-2.5 select-none sm:mx-4 sm:gap-3 sm:px-3"
+        role="toolbar"
+        aria-label="Tracking controls"
+      >
         {/* Left Section: Compact tracker status, always visible */}
-        <div className="relative shrink-0">
+        <div className="home-command-bar__group home-command-bar__status relative shrink-0">
           <button
             type="button"
             onClick={() => setIsTrackerSetupOpen((open) => !open)}
@@ -464,14 +468,26 @@ export function Home() {
         </div>
 
         {/* Center Section: Unified Resets & Calibrations */}
-        <div className="flex items-center justify-center shrink-0">
+        <div
+          className="home-command-bar__group home-command-bar__center flex items-center justify-center shrink-0"
+          role="group"
+          aria-label="Calibration and reset actions"
+        >
           <ResetActionsGroup />
         </div>
 
         {/* Right Section: Minimalist View Mode & 3D Skeleton Controls */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div
+          className="home-command-bar__group home-command-bar__views flex items-center gap-2 shrink-0"
+          role="group"
+          aria-label="Workspace view"
+        >
           {/* Card / Table Layout Segmented Control */}
-          <div className="flex items-center p-0.5 rounded-[9px] bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] gap-0.5 overflow-hidden">
+          <div
+            className="home-view-switcher flex items-center gap-0.5 overflow-hidden rounded-[9px] border border-black/[0.06] bg-black/[0.04] p-0.5 dark:border-white/[0.08] dark:bg-white/[0.04]"
+            role="group"
+            aria-label="Tracker layout"
+          >
             <Tooltip
               preferedDirection="bottom"
               content={
@@ -488,7 +504,7 @@ export function Home() {
                 }}
                 style={getViewAnimProps('card').style}
                 className={classNames(
-                  'p-1.5 rounded-[7px] transition-[background-color,color,box-shadow,transform] cursor-pointer select-none flex items-center justify-center',
+                  'home-view-switcher__button flex items-center justify-center rounded-[7px] p-1.5 transition-[background-color,color,box-shadow,transform] cursor-pointer select-none',
                   config?.homeLayout !== 'table'
                     ? 'bg-white dark:bg-white/[0.12] text-background-10 shadow-xs'
                     : 'text-background-30 hover:text-background-10',
@@ -518,7 +534,7 @@ export function Home() {
                 }}
                 style={getViewAnimProps('table').style}
                 className={classNames(
-                  'p-1.5 rounded-[7px] transition-[background-color,color,box-shadow,transform] cursor-pointer select-none flex items-center justify-center',
+                  'home-view-switcher__button flex items-center justify-center rounded-[7px] p-1.5 transition-[background-color,color,box-shadow,transform] cursor-pointer select-none',
                   config?.homeLayout === 'table'
                     ? 'bg-white dark:bg-white/[0.12] text-background-10 shadow-xs'
                     : 'text-background-30 hover:text-background-10',
@@ -542,7 +558,7 @@ export function Home() {
             }}
             style={getViewAnimProps('skeleton').style}
             className={classNames(
-              'p-1.5 rounded-[9px] border transition-[background-color,border-color,color,box-shadow,transform] cursor-pointer select-none flex items-center justify-center',
+              'home-skeleton-toggle flex items-center justify-center rounded-[9px] border p-1.5 transition-[background-color,border-color,color,box-shadow,transform] cursor-pointer select-none',
               showSidebar
                 ? 'bg-[#D97757]/15 text-[#D97757] border-[#D97757]/30 shadow-xs'
                 : 'bg-black/[0.04] dark:bg-white/[0.04] text-background-30 hover:text-background-10 border-black/[0.06] dark:border-white/[0.08]',

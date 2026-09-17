@@ -1,15 +1,26 @@
 import { useConfig } from '@/hooks/config';
 
-export function SlimeVRIcon({ drag }: { drag?: boolean }) {
+export function SlimeVRIcon({
+  drag,
+  width = 38,
+  height = 22,
+  className = 'text-accent-background-20',
+}: {
+  drag?: boolean;
+  width?: number;
+  height?: number;
+  className?: string;
+}) {
   const { config } = useConfig();
   if (config?.theme == 'snep') {
     return (
       <svg
-        width="49"
-        height="29"
-        viewBox="-4 -2 49 33"
+        width={width}
+        height={height}
+        viewBox="-5 -3 60 36"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
         data-electron-drag-region={drag}
       >
         <path
@@ -48,12 +59,12 @@ export function SlimeVRIcon({ drag }: { drag?: boolean }) {
   }
   return (
     <svg
-      width="38"
-      height="22"
-      viewBox="0 0 49 29"
+      width={width}
+      height={height}
+      viewBox="-2 -2 53 33"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="text-[#D97757] drop-shadow-[0_0_12px_rgba(217,119,87,0.35)]"
+      className={className}
       data-electron-drag-region={drag}
     >
       <path

@@ -71,12 +71,12 @@ body {
 @keyframes warning-breathe-glow {
   0%,
   100% {
-    transform: scale(0.82);
-    opacity: 0.85;
+    transform: scale(0.9);
+    opacity: 0.38;
   }
   50% {
-    transform: scale(1.12);
-    opacity: 1;
+    transform: scale(1.04);
+    opacity: 0.62;
   }
 }
 
@@ -89,11 +89,11 @@ body {
   &::before {
     content: '';
     position: absolute;
-    inset: -9px;
+    inset: -6px;
     z-index: -1;
     border-radius: 50%;
-    background: rgba(217, 119, 87, 0.72);
-    filter: blur(9px);
+    background: rgb(var(--accent-background-20) / 0.28);
+    filter: blur(6px);
     animation: warning-breathe-glow 2.8s ease-in-out infinite;
     pointer-events: none;
   }
@@ -671,6 +671,312 @@ body {
   --text-tertiary: #095470;
 }
 
+/* Dark reference theme: navy canvas, blue-gray surfaces, amber actions. */
+:root[data-theme='macos'] {
+  /* #1A3263, #547792, #FAB95B, #E8E2DB plus accessible derived shades. */
+  --background-10: 232, 226, 219; /* #E8E2DB primary text */
+  --background-20: 213, 226, 235; /* #D5E2EB secondary text */
+  --background-30: 185, 204, 218; /* #B9CCDA muted text */
+  --background-40: 107, 139, 164; /* #6B8BA4 quiet structure */
+  --background-50: 84, 119, 146; /* #547792 blue-gray structure */
+  --background-60: 26, 47, 69; /* #1A2F45 elevated surface */
+  --background-70: 18, 34, 61; /* #12223D secondary surface */
+  --background-80: 13, 25, 50; /* #0D1932 deep navy canvas */
+  --background-90: 8, 17, 31; /* #08111F deepest surface */
+
+  --accent-background-10: 250, 185, 91; /* #FAB95B accent foreground */
+  --accent-background-20: 250, 185, 91; /* #FAB95B primary action */
+  --accent-background-30: 255, 216, 135; /* #FFD887 light amber tint */
+  --accent-background-40: 232, 163, 62; /* #E8A33E amber structure */
+  --accent-background-50: 250, 185, 91; /* #FAB95B strongest amber text */
+
+  --success: 39, 107, 75;
+  --warning: 232, 163, 62;
+  --critical: 179, 59, 50;
+  --special: 250, 185, 91;
+  --window-icon-stroke: 232, 226, 219;
+
+  --material-canvas: rgba(13, 25, 50, 0.96);
+  --material-primary: rgba(26, 47, 69, 0.92);
+  --material-secondary: rgba(18, 34, 61, 0.98);
+  --material-tertiary: rgba(232, 226, 219, 0.06);
+  --material-tertiary-hover: rgba(232, 226, 219, 0.1);
+  --material-tertiary-active: rgba(232, 226, 219, 0.16);
+  --material-border-subtle: rgba(232, 226, 219, 0.14);
+  --material-border-primary: rgba(232, 226, 219, 0.22);
+  --material-border-strong: rgba(232, 226, 219, 0.34);
+  --specular-rim: inset 0 1px 0 0 rgba(232, 226, 219, 0.18);
+  --specular-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.24);
+  --glass-elevation: 0 12px 28px -12px rgba(0, 0, 0, 0.42);
+  --glass-bg: var(--material-primary);
+  --glass-bg-strong: var(--material-secondary);
+  --glass-bg-interactive: var(--material-tertiary);
+  --glass-bg-interactive-hover: var(--material-tertiary-hover);
+  --glass-border: var(--material-border-subtle);
+  --glass-border-strong: var(--material-border-primary);
+  --glass-pill-bg: rgba(48, 75, 95, 0.72);
+  --glass-blur: 18px;
+  --glass-shadow: var(--glass-elevation);
+  --default-color: 232, 226, 219;
+  --text-primary: #e8e2db;
+  --text-secondary: #d5e2eb;
+  --text-tertiary: #afc3d1;
+}
+
+:root[data-theme='macos'] body {
+  background-image: none;
+}
+
+:root[data-theme='macos'] .app-button-primary {
+  color: #1a3263;
+}
+
+:root[data-theme='macos'] .app-button-primary:disabled {
+  color: rgba(26, 50, 99, 0.5);
+}
+
+/* Keep older utility classes on the same palette while screens migrate to
+   semantic accent tokens. This is scoped to the reference theme. */
+:root[data-theme='macos'] [class*='text-[#D97757]'],
+:root[data-theme='macos'] [class*='text-[#EB8E70]'],
+:root[data-theme='macos'] [fill='#D97757'] {
+  color: rgb(var(--accent-background-50)) !important;
+  fill: rgb(var(--accent-background-50)) !important;
+}
+
+:root[data-theme='macos'] [class~='bg-[#D97757]'] {
+  background-color: rgb(var(--accent-background-20)) !important;
+}
+
+:root[data-theme='macos'] [class*='bg-[#D97757]/'] {
+  background-color: rgb(var(--accent-background-20) / 0.15) !important;
+}
+
+:root[data-theme='macos'] [class*='bg-[#F4F1E8]'] {
+  background-color: rgb(var(--background-70)) !important;
+}
+
+:root[data-theme='macos'] [class~='border-[#D97757]'],
+:root[data-theme='macos'] [class*='border-[#D97757]/'],
+:root[data-theme='macos'] [class~='ring-[#D97757]'],
+:root[data-theme='macos'] [class*='ring-[#D97757]/'] {
+  border-color: rgb(var(--accent-background-40)) !important;
+  --tw-ring-color: rgb(var(--accent-background-40)) !important;
+}
+
+:root[data-theme='macos'] [class*='stroke-[#D97757]'],
+:root[data-theme='macos'] [stroke='#D97757'] {
+  stroke: rgb(var(--accent-background-40)) !important;
+}
+
+:root[data-theme='macos'] [class*='fill-[#D97757]'] {
+  fill: rgb(var(--accent-background-50)) !important;
+}
+
+:root[data-theme='macos'] [class*='accent-[#D97757]'] {
+  accent-color: rgb(var(--accent-background-20)) !important;
+}
+
+:root[data-theme='macos'] [class*='hover:bg-[#C86646]']:hover {
+  background-color: rgb(var(--accent-background-40)) !important;
+}
+
+:root[data-theme='macos'] .home-tracker-surface {
+  background: rgb(var(--background-60));
+}
+
+:root[data-theme='macos'] .home-tracker-card {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+:root[data-theme='macos'] .home-tracker-card__banner {
+  background: rgb(var(--background-70));
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .remote-card {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+:root[data-theme='macos'] .remote-card__banner {
+  background: rgb(var(--background-70));
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .settings-pane {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme='macos'] .settings-pane__icon {
+  background: rgba(var(--accent-background-30), 0.18);
+  border-color: rgba(var(--accent-background-20), 0.34);
+}
+
+:root[data-theme='macos'] .settings-sidebar {
+  background: rgba(var(--background-70), 0.78);
+  border-color: var(--material-border-primary);
+}
+
+:root[data-theme='macos'] .toolbar-reset-button {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-subtle);
+  color: rgb(var(--background-10));
+  fill: rgb(var(--background-10));
+}
+
+:root[data-theme='macos'] .toolbar-reset-button:hover:not(:disabled) {
+  background: rgb(var(--background-70));
+}
+
+:root[data-theme='macos'] .home-command-bar {
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .home-command-bar__center {
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .home-view-switcher {
+  background: var(--material-tertiary);
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .home-view-switcher__button[aria-label='Card View'],
+:root[data-theme='macos'] .home-view-switcher__button[aria-label='Table View'] {
+  min-width: 30px;
+}
+
+:root[data-theme='macos'] .home-skeleton-toggle {
+  background: var(--material-tertiary);
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .telemetry-strip__toggle {
+  border-radius: 8px;
+}
+
+:root[data-theme='macos'] .telemetry-disclosure {
+  min-height: 26px;
+  color: rgb(var(--background-20));
+}
+
+:root[data-theme='macos'] .telemetry-disclosure:hover {
+  background: var(--material-tertiary);
+  color: rgb(var(--background-10));
+}
+
+:root[data-theme='macos'] .telemetry-tabs {
+  margin: 8px 8px 0;
+  border: 1px solid var(--material-border-subtle);
+  border-radius: 10px;
+  background: var(--material-tertiary);
+}
+
+:root[data-theme='macos'] .telemetry-tab {
+  color: rgb(var(--background-30));
+}
+
+:root[data-theme='macos'] .telemetry-tab:hover {
+  color: rgb(var(--background-10));
+}
+
+:root[data-theme='macos'] .telemetry-tab[aria-selected='true'] {
+  background: rgb(var(--background-60));
+  color: rgb(var(--background-10));
+  box-shadow: 0 1px 3px rgba(26, 50, 99, 0.12);
+}
+
+:root[data-theme='macos'] .liquid-glass-tab-strip,
+:root[data-theme='macos'] .liquid-glass-tab-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+:root[data-theme='macos'] .liquid-glass-tab-strip {
+  background: rgb(var(--background-60));
+}
+
+:root[data-theme='macos'] .liquid-glass-tab-panel {
+  background: rgb(var(--background-70));
+}
+
+:root[data-theme='macos'] .quest-capture-surface {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+}
+
+:root[data-theme='macos'] .quest-capture-callout {
+  background: rgba(var(--accent-background-30), 0.14);
+  border-color: rgba(var(--accent-background-20), 0.32);
+}
+
+:root[data-theme='macos'] .modal-surface,
+:root[data-theme='macos'] .setup-warning-modal {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+}
+
+:root[data-theme='macos'] .setup-warning-modal__banner {
+  background: rgb(var(--background-70));
+  border-color: var(--material-border-subtle);
+}
+
+:root[data-theme='macos'] .preset-popover {
+  background: rgb(var(--background-60));
+  border-color: var(--material-border-primary);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.42);
+}
+
+:root[data-theme='macos'] .tip-box {
+  background: rgba(var(--accent-background-30), 0.14);
+  border-color: rgba(var(--accent-background-20), 0.32);
+}
+
+:root[data-theme='macos'] .warning-box {
+  background: rgba(var(--warning), 0.12);
+  border-color: rgba(var(--warning), 0.3);
+}
+
+/* The reference theme uses motion for state feedback, not decoration. */
+:root[data-theme='macos'] .tracker-card-contours animate,
+:root[data-theme='macos'] .remote-card__banner animate {
+  display: none;
+}
+
+:root[data-theme='macos'] .tracker-accent {
+  color: rgb(var(--accent-background-10));
+  fill: rgb(var(--accent-background-10));
+}
+
+:root[data-theme='macos'] .home-accent {
+  color: rgb(var(--accent-background-10));
+  fill: none;
+}
+
+:root[data-theme='macos'] .home-hero-logo {
+  display: block;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+:root[data-theme='macos'] .tracker-accent-stroke {
+  stroke: rgb(var(--accent-background-20));
+}
+
+:root[data-theme='macos'] .tracker-accent-fill,
+:root[data-theme='macos'] .home-accent-fill {
+  background: rgb(var(--accent-background-30));
+  border-color: rgb(var(--accent-background-20));
+  color: rgb(var(--background-10));
+}
+
 :root[data-theme='slime-green'] {
   --background-10: 255, 255, 255;
   --background-20: 107, 206, 107;
@@ -854,10 +1160,7 @@ body {
 :root[data-theme='dark'] body,
 :root:not([data-theme]) body {
   background-color: #12100e;
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 28px 28px;
+  background-image: none;
 }
 
 :root[data-theme='dark'][data-bg-style='solid'] body,
@@ -1351,6 +1654,73 @@ a,
     animation: none;
     transform: none;
     opacity: 1;
+  }
+}
+
+/* Floating navigation surface. Blur belongs to navigation, not every content card. */
+.floating-dock {
+  pointer-events: none;
+}
+
+.floating-dock__surface {
+  pointer-events: auto;
+  border: 1px solid var(--material-border-primary);
+  border-radius: 20px;
+  background: rgba(var(--background-70), 0.92);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  box-shadow:
+    var(--specular-rim),
+    0 14px 36px -12px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 480px) {
+  .floating-dock__surface {
+    width: 100%;
+    justify-content: space-around;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .floating-dock__surface {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgb(var(--background-70));
+  }
+}
+
+/* The home command bar is a toolbar: stable groups, predictable scan order. */
+.home-command-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.home-command-bar__status {
+  justify-self: start;
+}
+
+.home-command-bar__center {
+  justify-self: center;
+  padding-inline: 10px;
+  border-inline: 1px solid var(--material-border-subtle);
+}
+
+.home-command-bar__views {
+  justify-self: end;
+}
+
+@media (max-width: 640px) {
+  .home-command-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .home-command-bar__center {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+    border-inline: 0;
+    padding-top: 3px;
   }
 }
 

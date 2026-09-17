@@ -82,7 +82,7 @@ export const defaultConfig: Config = {
   feedbackSound: true,
   feedbackSoundVolume: 0.5,
   connectedTrackersWarning: true,
-  theme: 'slime',
+  theme: 'macos',
   textSize: 12,
   fonts: [
     '-apple-system',

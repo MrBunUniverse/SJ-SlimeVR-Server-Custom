@@ -35,9 +35,9 @@ export function SkipSetupWarningModal({
       overlayClassName={props.overlayClassName}
       appendClasses="!p-0 !max-w-[440px] !rounded-[16px] overflow-hidden"
     >
-      <div className="flex w-full flex-col select-none bg-[#FAF9F5] dark:bg-[#1B1915] text-background-10">
+      <div className="setup-warning-modal flex w-full flex-col select-none bg-[#FAF9F5] dark:bg-[#1B1915] text-background-10">
         {/* Card Header Banner with Mock Window & Contour Lines */}
-        <div className="relative h-24 sm:h-25 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-3">
+        <div className="setup-warning-modal__banner relative h-24 sm:h-25 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-3">
           {/* Subtle Curved Topographic Contours */}
           <svg
             className="absolute inset-0 w-full h-full opacity-20 pointer-events-none stroke-[#D97757]"
@@ -47,17 +47,40 @@ export function SkipSetupWarningModal({
             <path
               d="M-20 20 C 60 80, 140 -20, 220 50 C 260 90, 310 30, 340 70"
               strokeWidth="1.2"
-            />
+            >
+              <animate
+                attributeName="d"
+                dur="8s"
+                repeatCount="indefinite"
+                values="M-20 20 C 60 80, 140 -20, 220 50 C 260 90, 310 30, 340 70;M-20 28 C 60 48, 140 14, 220 62 C 260 102, 310 16, 340 58;M-20 20 C 60 80, 140 -20, 220 50 C 260 90, 310 30, 340 70"
+              />
+            </path>
             <path
               d="M-30 60 C 50 110, 130 10, 210 80 C 250 110, 300 60, 330 90"
               strokeWidth="1"
               opacity="0.6"
-            />
+            >
+              <animate
+                attributeName="d"
+                dur="10s"
+                begin="-3s"
+                repeatCount="indefinite"
+                values="M-30 60 C 50 110, 130 10, 210 80 C 250 110, 300 60, 330 90;M-30 52 C 50 86, 130 30, 210 96 C 250 116, 300 44, 330 78;M-30 60 C 50 110, 130 10, 210 80 C 250 110, 300 60, 330 90"
+              />
+            </path>
             <path
               d="M-10 -10 C 70 40, 150 -50, 230 20 C 270 50, 320 0, 350 40"
               strokeWidth="0.8"
               opacity="0.4"
-            />
+            >
+              <animate
+                attributeName="d"
+                dur="12s"
+                begin="-6s"
+                repeatCount="indefinite"
+                values="M-10 -10 C 70 40, 150 -50, 230 20 C 270 50, 320 0, 350 40;M-10 -2 C 70 18, 150 -26, 230 32 C 270 68, 320 -14, 350 28;M-10 -10 C 70 40, 150 -50, 230 20 C 270 50, 320 0, 350 40"
+              />
+            </path>
           </svg>
 
           <div className="relative z-10 flex items-center justify-end">

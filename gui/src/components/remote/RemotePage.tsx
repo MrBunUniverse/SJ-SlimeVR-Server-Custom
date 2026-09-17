@@ -597,7 +597,7 @@ export function RemotePage() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain p-3 pb-8 sm:gap-4 sm:p-5 max-w-5xl mx-auto w-full">
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white dark:bg-[#1B1915] p-3 sm:p-4 rounded-[12px] border border-black/[0.08] dark:border-white/[0.08] shadow-xs shrink-0 w-full">
+      <div className="remote-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white dark:bg-[#1B1915] p-3 sm:p-4 rounded-[12px] border border-black/[0.08] dark:border-white/[0.08] shadow-xs shrink-0 w-full">
         <div className="flex min-w-0 items-center gap-3">
           <div className="w-9 h-9 rounded-[10px] bg-[#D97757]/10 border border-[#D97757]/20 flex items-center justify-center text-[#D97757] shrink-0">
             <RemoteIcon width={22} height={22} />
@@ -739,9 +739,9 @@ export function RemotePage() {
       )}
 
       {/* Device Discovery & Wireless Connection Card (Mock-Window Shell) */}
-      <div className="group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:border-black/[0.18] dark:hover:border-white/[0.18] transition-all duration-200 shrink-0 w-full">
+      <div className="remote-card group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] shadow-xs hover:border-black/[0.18] dark:hover:border-white/[0.18] transition-all duration-200 shrink-0 w-full">
         {/* Mock Window Top Bar */}
-        <div className="relative h-9 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex items-center justify-between px-3 select-none">
+        <div className="remote-card__banner relative h-9 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex items-center justify-between px-3 select-none">
           <svg
             className="absolute inset-0 w-full h-full opacity-15 pointer-events-none stroke-[#D97757]"
             viewBox="0 0 500 44"
@@ -881,9 +881,9 @@ export function RemotePage() {
 
       {/* Audio Demo & Channel Ping Monitor (Active in Demo Mode) */}
       {isDemoMode && (
-        <div className="flex flex-col rounded-[14px] overflow-hidden bg-white dark:bg-[#1B1915] border border-[#D97757]/30 dark:border-[#D97757]/30 shadow-md transition-all shrink-0 w-full">
+        <div className="remote-card flex flex-col rounded-[14px] overflow-hidden bg-white dark:bg-[#1B1915] border border-[#D97757]/30 dark:border-[#D97757]/30 shadow-md transition-all shrink-0 w-full">
           {/* Mock Window Banner */}
-          <div className="relative h-11 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex items-center justify-between px-3.5 select-none">
+          <div className="remote-card__banner relative h-11 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex items-center justify-between px-3.5 select-none">
             <svg
               className="absolute inset-0 w-full h-full opacity-15 pointer-events-none stroke-[#D97757]"
               viewBox="0 0 500 44"
@@ -1112,9 +1112,9 @@ export function RemotePage() {
       {/* Main Streaming Grid: Game Audio & Microphone Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 shrink-0 w-full">
         {/* Card 1: Quest Game Audio */}
-        <div className="group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.18] dark:hover:border-white/[0.18] shadow-xs hover:shadow-lg transition-all duration-200">
+        <div className="remote-card group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.18] dark:hover:border-white/[0.18] shadow-xs hover:shadow-lg transition-all duration-200">
           {/* Mock Window Banner with Contours & Centered Audio Icon */}
-          <div className="relative h-20 sm:h-24 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-2.5 select-none">
+          <div className="remote-card__banner relative h-20 sm:h-24 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-2.5 select-none">
             <svg
               className="absolute inset-0 w-full h-full opacity-20 pointer-events-none stroke-[#D97757]"
               viewBox="0 0 300 120"
@@ -1330,9 +1330,9 @@ export function RemotePage() {
         </div>
 
         {/* Card 2: Quest Headset Microphone */}
-        <div className="group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.18] dark:hover:border-white/[0.18] shadow-xs hover:shadow-lg transition-all duration-200">
+        <div className="remote-card group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.18] dark:hover:border-white/[0.18] shadow-xs hover:shadow-lg transition-all duration-200">
           {/* Mock Window Banner with Contours & Centered Mic Icon */}
-          <div className="relative h-20 sm:h-24 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-2.5 select-none">
+          <div className="remote-card__banner relative h-20 sm:h-24 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-2.5 select-none">
             <svg
               className="absolute inset-0 w-full h-full opacity-20 pointer-events-none stroke-[#D97757]"
               viewBox="0 0 300 120"
@@ -1551,7 +1551,7 @@ export function RemotePage() {
       </div>
 
       {/* Quest Mirror Studio */}
-      <section className="w-full overflow-hidden rounded-[14px] border border-black/[0.08] bg-white shadow-xs dark:border-white/[0.08] dark:bg-[#1B1915]">
+      <section className="remote-card w-full overflow-hidden rounded-[14px] border border-black/[0.08] bg-white shadow-xs dark:border-white/[0.08] dark:bg-[#1B1915]">
         <div className="flex flex-col gap-4 p-4 sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
             <div className="min-w-0">

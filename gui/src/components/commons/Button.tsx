@@ -67,7 +67,7 @@ export function Button({
   const classes = useMemo(() => {
     const variantsMap = {
       primary: classNames({
-        'bg-accent-background-20 hover:bg-accent-background-30 text-white font-medium tracking-tight active:scale-[0.98] shadow-xs transition-all duration-150':
+        'app-button-primary bg-accent-background-20 hover:bg-accent-background-30 text-white font-medium tracking-tight active:scale-[0.98] shadow-xs transition-all duration-150':
           !disabled,
         'bg-accent-background-40/40 hover:bg-accent-background-40/40 cursor-not-allowed text-white/50':
           disabled,

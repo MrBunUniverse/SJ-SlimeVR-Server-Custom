@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { TopBar } from './TopBar';
+import { Navbar } from './Navbar';
 import './EmptyLayout.scss';
 
 export function EmptyLayout({ children }: { children: ReactNode }) {
@@ -8,6 +9,7 @@ export function EmptyLayout({ children }: { children: ReactNode }) {
       <div style={{ gridArea: 't' }}>
         <TopBar />
       </div>
+      <Navbar />
       <div style={{ gridArea: 'c' }} className="mt-2 relative">
         {children}
       </div>

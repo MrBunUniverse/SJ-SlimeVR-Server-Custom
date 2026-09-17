@@ -127,7 +127,7 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
         </div>
         <div
           style={{ gridArea: 'c' }}
-          className="my-2 ml-2 mr-2 mobile:m-0 overflow-y-auto glass-panel rounded-[20px] p-5 border border-background-50/50 dark:border-white/[0.08] shadow-lg"
+          className="my-2 ml-2 mr-2 mobile:m-0 overflow-y-auto glass-panel rounded-[20px] p-5 pb-24 border border-background-50/50 dark:border-white/[0.08] shadow-lg"
         >
           {isMobile && <SettingSelectorMobile />}
           {children}

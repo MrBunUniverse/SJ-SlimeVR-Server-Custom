@@ -17,30 +17,30 @@
 
 ## 1. Dashboard — Home Screen (`/`)
 
-| UI Element                                         | File                                               | Lines                | What's There                                                                     |
-| :------------------------------------------------- | :------------------------------------------------- | :------------------- | :------------------------------------------------------------------------------- |
-| **Home page layout shell**                         | `gui/src/components/home/Home.tsx`                 | L1–L417              | View mode toggle (`default`/`table`), 3D drawer toggle, Quest HUD embed, top bar |
-| ↳ Collapsible preset & active tracker pill toolbar | `gui/src/components/home/Home.tsx`                 | L158–L255            | Collapsible chevron toggle, compact pill badge, and preset/diagnostics pills     |
-| **Grid card ↔ Table switcher buttons**             | `gui/src/components/home/Home.tsx`                 | L262–L330            | Segmented Card/Table icons and 3D Skeleton preview toggle                        |
-| **Tracker Grid Card** (the orange card)            | `gui/src/components/home/HomeEmptyState.tsx`       | L20–L285             | `ClaudeTrackerWindowCard` — entire card component                                |
-| ↳ Battery tag logic (top-right `%` / `0%`)         | `gui/src/components/home/HomeEmptyState.tsx`       | L72–L80              | `tag` variable: offline→`0%`, connected→`XX%`, voltage fallback                  |
-| ↳ Subtitle description items                       | `gui/src/components/home/HomeEmptyState.tsx`       | L82–L91              | `descItems[]` — voltage + "Connected · Steady" or "Sensor offline"               |
-| ↳ 3-ball battery indicator (macOS traffic lights)  | `gui/src/components/home/HomeEmptyState.tsx`       | L93–L131             | `ball1/ball2/ball3` color logic: grey=offline, green/yellow/red by %             |
-| ↳ 3D realtime IMU preview toggle & canvas          | `gui/src/components/home/HomeEmptyState.tsx`       | L203–L244            | 3D cube button + `CardIMUVisualizer` render                                      |
-| ↳ Card header banner (wave + icon area)            | `gui/src/components/home/HomeEmptyState.tsx`       | L144–L248            | `h-30 sm:h-32` banner, SVG contour waves, 3D render + body icon                  |
-| ↳ Body part icon in card                           | `gui/src/components/home/HomeEmptyState.tsx`       | L220, L241           | `<BodyPartIcon width={46} />` (centered) or `width={34}` (when 3D on)            |
-| ↳ Motion glow / scale animation                    | `gui/src/components/home/HomeEmptyState.tsx`       | L216–L240            | `isMoving` → `scale-115 drop-shadow` terracotta glow                             |
-| ↳ Card footer: tracker name + status               | `gui/src/components/home/HomeEmptyState.tsx`       | L250–L285            | Tracker name `<h3>`, status label, `descItems` subtitle                          |
-| **Dashboard controls bar**                         | `gui/src/components/home/HomeEmptyState.tsx`       | L765–L845            | "Trackers" heading, DEMO MODE pill, active count, guide toggle                   |
-| **Empty state / 0 trackers**                       | `gui/src/components/home/HomeEmptyState.tsx`       | L860–L1015           | "Waiting for Tracker" title, description, setup cards grid                       |
-| ↳ Empty state title text                           | `gui/src/components/home/HomeEmptyState.tsx`       | L989                 | `"Waiting for Tracker"` — change string here                                     |
-| ↳ Empty state description text                     | `gui/src/components/home/HomeEmptyState.tsx`       | L992–L995            | `"Power on your trackers nearby to connect."`                                    |
-| **Welcome hero banner** (collapsible)              | `gui/src/components/home/HomeEmptyState.tsx`       | L310–L510, L715–L790 | "Welcome to SirJameSlimeVR" terminal typing, breathing logo, CTA buttons         |
-| **Presets dropdown**                               | `gui/src/components/home/PresetSelector.tsx`       | L1–L140              | Active preset pill, star indicator, quick preset switcher modal                  |
-| **Quest OSC diagnostics card**                     | `gui/src/components/home/QuestDiagnosticsCard.tsx` | L1–L450              | IP badge, OSC port, headset battery, streaming stats, Chatbox HUD                |
-| **Quest diagnostics pill** (compact)               | `gui/src/components/home/QuestDiagnosticsPill.tsx` | L1–L120              | Compact inline pill shown in toolbar area                                        |
-| **Reset button** (Yaw/Full/Mount)                  | `gui/src/components/home/ResetButton.tsx`          | L1–L85               | Countdown reset button component                                                 |
-| **Reset shortcuts bar**                            | `gui/src/components/Toolbar.tsx`                   | L40–L120             | Yaw, Full, Mounting reset countdown buttons                                      |
+| UI Element                                         | File                                               | Lines                | What's There                                                                                         |
+| :------------------------------------------------- | :------------------------------------------------- | :------------------- | :--------------------------------------------------------------------------------------------------- |
+| **Home page layout shell**                         | `gui/src/components/home/Home.tsx`                 | L1–L417              | Three-zone tracking toolbar, view mode toggle (`default`/`table`), 3D drawer toggle, Quest HUD embed |
+| ↳ Collapsible preset & active tracker pill toolbar | `gui/src/components/home/Home.tsx`                 | L158–L255            | Collapsible chevron toggle, compact pill badge, and preset/diagnostics pills                         |
+| **Grid card ↔ Table switcher buttons**             | `gui/src/components/home/Home.tsx`                 | L262–L330            | Segmented Card/Table icons and 3D Skeleton preview toggle                                            |
+| **Tracker Grid Card** (the orange card)            | `gui/src/components/home/HomeEmptyState.tsx`       | L20–L285             | `ClaudeTrackerWindowCard` — entire card component                                                    |
+| ↳ Battery tag logic (top-right `%` / `0%`)         | `gui/src/components/home/HomeEmptyState.tsx`       | L72–L80              | `tag` variable: offline→`0%`, connected→`XX%`, voltage fallback                                      |
+| ↳ Subtitle description items                       | `gui/src/components/home/HomeEmptyState.tsx`       | L82–L91              | `descItems[]` — voltage + "Connected · Steady" or "Sensor offline"                                   |
+| ↳ 3-ball battery indicator (macOS traffic lights)  | `gui/src/components/home/HomeEmptyState.tsx`       | L93–L131             | `ball1/ball2/ball3` color logic: grey=offline, green/yellow/red by %                                 |
+| ↳ 3D realtime IMU preview toggle & canvas          | `gui/src/components/home/HomeEmptyState.tsx`       | L203–L244            | 3D cube button + `CardIMUVisualizer` render                                                          |
+| ↳ Card header banner (wave + icon area)            | `gui/src/components/home/HomeEmptyState.tsx`       | L144–L248            | `h-30 sm:h-32` banner, SVG contour waves, 3D render + body icon                                      |
+| ↳ Body part icon in card                           | `gui/src/components/home/HomeEmptyState.tsx`       | L220, L241           | `<BodyPartIcon width={46} />` (centered) or `width={34}` (when 3D on)                                |
+| ↳ Motion glow / scale animation                    | `gui/src/components/home/HomeEmptyState.tsx`       | L216–L240            | `isMoving` → `scale-115 drop-shadow` terracotta glow                                                 |
+| ↳ Card footer: tracker name + status               | `gui/src/components/home/HomeEmptyState.tsx`       | L250–L285            | Tracker name `<h3>`, status label, `descItems` subtitle                                              |
+| **Dashboard controls bar**                         | `gui/src/components/home/HomeEmptyState.tsx`       | L765–L845            | "Trackers" heading, DEMO MODE pill, active count, guide toggle                                       |
+| **Empty state / 0 trackers**                       | `gui/src/components/home/HomeEmptyState.tsx`       | L860–L1015           | "Waiting for Tracker" title, description, setup cards grid                                           |
+| ↳ Empty state title text                           | `gui/src/components/home/HomeEmptyState.tsx`       | L989                 | `"Waiting for Tracker"` — change string here                                                         |
+| ↳ Empty state description text                     | `gui/src/components/home/HomeEmptyState.tsx`       | L992–L995            | `"Power on your trackers nearby to connect."`                                                        |
+| **Welcome hero banner** (collapsible)              | `gui/src/components/home/HomeEmptyState.tsx`       | L310–L510, L715–L790 | "Welcome to SirJameSlimeVR" terminal typing, breathing logo, CTA buttons                             |
+| **Presets dropdown**                               | `gui/src/components/home/PresetSelector.tsx`       | L1–L140              | Active preset pill, star indicator, quick preset switcher modal                                      |
+| **Quest OSC diagnostics card**                     | `gui/src/components/home/QuestDiagnosticsCard.tsx` | L1–L450              | IP badge, OSC port, headset battery, streaming stats, Chatbox HUD                                    |
+| **Quest diagnostics pill** (compact)               | `gui/src/components/home/QuestDiagnosticsPill.tsx` | L1–L120              | Compact inline pill shown in toolbar area                                                            |
+| **Reset button** (Yaw/Full/Mount)                  | `gui/src/components/home/ResetButton.tsx`          | L1–L85               | Countdown reset button component                                                                     |
+| **Reset shortcuts bar**                            | `gui/src/components/Toolbar.tsx`                   | L40–L120             | Yaw, Full, Mounting reset countdown buttons                                                          |
 
 ---
 
@@ -94,26 +94,26 @@
 
 ## 4. Navigation & App Chrome
 
-| UI Element                           | File                                                      | Lines       | What's There                                                                                                                                                                          |
-| :----------------------------------- | :-------------------------------------------------------- | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Top bar / title bar**              | `gui/src/components/TopBar.tsx`                           | L1666–L2010 | Window traffic lights, collapsible telemetry & controls, brand logo, update pill                                                                                                      |
-| **Quest IP pill** (editable popover) | `gui/src/components/TopBar.tsx`                           | L46–L115    | IP input popover, clickable pill                                                                                                                                                      |
-| **VRChat Chatbox tab & popover**     | `gui/src/components/TopBar.tsx`                           | L343–L1372  | Dedicated navigation tab: in-game text messenger, sticky design text, Apple Music live now playing, Chat-Only mode toggle, auto battery broadcast, instant status, telemetry snapshot |
-| **Settings dropdown**                | `gui/src/components/TopBar.tsx`                           | L1374–L1515 | Popover menu for settings, checklist, and wizards                                                                                                                                     |
-| **Top bar navigation bar**           | `gui/src/components/TopBar.tsx`                           | L1650–L1664 | `TopBarNav`: Home ↔ Remote ↔ Settings                                                                                                                                                 |
-| **Server status indicator**          | `gui/src/components/TopBar.tsx`                           | L1520–L1620 | Connected/disconnected server status pill styling                                                                                                                                     |
-| **Sidebar nav**                      | `gui/src/components/Navbar.tsx`                           | L1–L126     | All nav icons: Home, Assignment, Mounting, Proportions, WiFi, Settings                                                                                                                |
-| **Main layout shell**                | `gui/src/components/MainLayout.tsx`                       | L1–L220     | App shell: sidebar + content area + 3D drawer + draggable skeleton resizer handle                                                                                                     |
-| **3D skeleton drawer**               | `gui/src/components/Sidebar.tsx`                          | L1–L310     | Collapsible right drawer: skeleton viz, height, BVH recording, 360° auto-orbit camera                                                                                                 |
-| **3D skeleton WebGL canvas**         | `gui/src/components/widgets/SkeletonVisualizerWidget.tsx` | L1–L530     | Three.js skeleton renderer, floor grid, auto-orbit camera controls                                                                                                                    |
-| **IMU orientation visualizer**       | `gui/src/components/widgets/IMUVisualizerWidget.tsx`      | L1–L620     | Three.js IMU rotation gizmo & collapsible Tracking data section                                                                                                                       |
-| **Serial detection modal**           | `gui/src/components/SerialDetectionModal.tsx`             | L1–L150     | Auto-detected serial tracker popup                                                                                                                                                    |
-| **Unknown device modal**             | `gui/src/components/UnknownDeviceModal.tsx`               | L1–L90      | Popup for unrecognized hardware                                                                                                                                                       |
-| **Version update modal**             | `gui/src/components/VersionUpdateModal.tsx`               | L1–L130     | In-app update prompt                                                                                                                                                                  |
-| **Trackers still on modal**          | `gui/src/components/TrackersStillOnModal.tsx`             | L1–L50      | Warning when closing with active trackers                                                                                                                                             |
-| **Tray or exit modal**               | `gui/src/components/TrayOrExitModal.tsx`                  | L1–L70      | "Minimize to tray?" dialog on close                                                                                                                                                   |
-| **Pause tracking button**            | `gui/src/components/TrackingPauseButton.tsx`              | L1–L50      | Pause/resume all tracker streaming                                                                                                                                                    |
-| **BVH record button**                | `gui/src/components/BVHButton.tsx`                        | L1–L60      | Start/stop BVH motion capture recording                                                                                                                                               |
+| UI Element                           | File                                                      | Lines       | What's There                                                                                                                                                                        |
+| :----------------------------------- | :-------------------------------------------------------- | :---------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Top bar / title bar**              | `gui/src/components/TopBar.tsx`                           | L1666–L2010 | Window traffic lights, collapsible telemetry & controls, brand logo, update pill                                                                                                    |
+| **Quest IP pill** (editable popover) | `gui/src/components/TopBar.tsx`                           | L46–L115    | IP input popover, clickable pill                                                                                                                                                    |
+| **VRChat Chatbox tab & popover**     | `gui/src/components/TopBar.tsx`                           | L306–L1475  | Broadcast HUD popover with Voice/Sticky/Music/BPM tablist, keyboard navigation, in-game text messenger, Apple Music live now playing, Chat-Only mode toggle, auto battery broadcast |
+| **Settings dropdown**                | `gui/src/components/TopBar.tsx`                           | L1374–L1515 | Popover menu for settings, checklist, and wizards                                                                                                                                   |
+| **Top bar utility navigation**       | `gui/src/components/TopBar.tsx`                           | L1650–L1660 | `TopBarNav`: keeps the always-available VRChat Chatbox utility; primary app navigation lives in the floating dock                                                                   |
+| **Server status indicator**          | `gui/src/components/TopBar.tsx`                           | L1520–L1620 | Connected/disconnected server status pill styling                                                                                                                                   |
+| **Floating dock nav**                | `gui/src/components/Navbar.tsx`                           | L1–L112     | Four task-level destinations: Home, Remote, Setup Wizard, Settings; fixed above content on desktop and mobile                                                                       |
+| **Main layout shell**                | `gui/src/components/MainLayout.tsx`                       | L1–L220     | App shell: sidebar + content area + 3D drawer + draggable skeleton resizer handle                                                                                                   |
+| **3D skeleton drawer**               | `gui/src/components/Sidebar.tsx`                          | L1–L310     | Collapsible right drawer: skeleton viz, height, BVH recording, 360° auto-orbit camera                                                                                               |
+| **3D skeleton WebGL canvas**         | `gui/src/components/widgets/SkeletonVisualizerWidget.tsx` | L1–L530     | Three.js skeleton renderer, floor grid, auto-orbit camera controls                                                                                                                  |
+| **IMU orientation visualizer**       | `gui/src/components/widgets/IMUVisualizerWidget.tsx`      | L1–L620     | Three.js IMU rotation gizmo & collapsible Tracking data section                                                                                                                     |
+| **Serial detection modal**           | `gui/src/components/SerialDetectionModal.tsx`             | L1–L150     | Auto-detected serial tracker popup                                                                                                                                                  |
+| **Unknown device modal**             | `gui/src/components/UnknownDeviceModal.tsx`               | L1–L90      | Popup for unrecognized hardware                                                                                                                                                     |
+| **Version update modal**             | `gui/src/components/VersionUpdateModal.tsx`               | L1–L130     | In-app update prompt                                                                                                                                                                |
+| **Trackers still on modal**          | `gui/src/components/TrackersStillOnModal.tsx`             | L1–L50      | Warning when closing with active trackers                                                                                                                                           |
+| **Tray or exit modal**               | `gui/src/components/TrayOrExitModal.tsx`                  | L1–L70      | "Minimize to tray?" dialog on close                                                                                                                                                 |
+| **Pause tracking button**            | `gui/src/components/TrackingPauseButton.tsx`              | L1–L50      | Pause/resume all tracker streaming                                                                                                                                                  |
+| **BVH record button**                | `gui/src/components/BVHButton.tsx`                        | L1–L60      | Start/stop BVH motion capture recording                                                                                                                                             |
 
 ---
 
@@ -189,24 +189,24 @@
 
 ## 8. Shared UI Primitives (Commons)
 
-| Component                                  | File                                              | Lines   | What's There                                                      |
-| :----------------------------------------- | :------------------------------------------------ | :------ | :---------------------------------------------------------------- |
-| **Button**                                 | `gui/src/components/commons/Button.tsx`           | L1–L140 | `variant`: `primary`, `secondary`, `tertiary`, icon buttons       |
-| **Typography**                             | `gui/src/components/commons/Typography.tsx`       | L1–L90  | Text variants: `main-title`, `bold`, `standard`, colors           |
-| **Input**                                  | `gui/src/components/commons/Input.tsx`            | L1–L155 | Controlled text/password input with label, validation             |
-| **Dropdown**                               | `gui/src/components/commons/Dropdown.tsx`         | L1–L380 | Full dropdown with search, multi-select                           |
-| **Checkbox**                               | `gui/src/components/commons/Checkbox.tsx`         | L1–L150 | Controlled checkbox with label                                    |
-| **Range slider**                           | `gui/src/components/commons/Range.tsx`            | L1–L65  | Horizontal range input                                            |
-| **Number selector**                        | `gui/src/components/commons/NumberSelector.tsx`   | L1–L120 | +/- stepper for numeric values                                    |
-| **Tip box** (info/bulb)                    | `gui/src/components/commons/TipBox.tsx`           | L6–L38  | Blue/neutral info box with lightbulb icon                         |
-| **Warning box** (orange alert)             | `gui/src/components/commons/TipBox.tsx`           | L44–L89 | Orange warning box with triangle icon, `whitespace-pre-wrap` text |
-| **Tooltip**                                | `gui/src/components/commons/Tooltip.tsx`          | L1–L450 | Hover tooltip, `preferredDirection` prop                          |
-| **Modal base**                             | `gui/src/components/commons/BaseModal.tsx`        | L1–L40  | Backdrop + centered card shell                                    |
-| **Progress bar**                           | `gui/src/components/commons/ProgressBar.tsx`      | L1–L50  | Animated progress fill                                            |
-| **Vertical stepper**                       | `gui/src/components/commons/VerticalStepper.tsx`  | L1–L120 | Step-by-step wizard indicator                                     |
-| **Theme selector**                         | `gui/src/components/commons/ThemeSelector.tsx`    | L1–L40  | Dark/light/system toggle                                          |
-| **Body display** (skeleton overview)       | `gui/src/components/commons/BodyDisplay.tsx`      | L1–L160 | Full-body assignment overview SVG                                 |
-| **Body interactions** (clickable skeleton) | `gui/src/components/commons/BodyInteractions.tsx` | L1–L250 | Hover/click zones on body SVG                                     |
+| Component                                  | File                                              | Lines   | What's There                                                                       |
+| :----------------------------------------- | :------------------------------------------------ | :------ | :--------------------------------------------------------------------------------- |
+| **Button**                                 | `gui/src/components/commons/Button.tsx`           | L1–L140 | `variant`: `primary`, `secondary`, `tertiary`, icon buttons                        |
+| **Typography**                             | `gui/src/components/commons/Typography.tsx`       | L1–L90  | Text variants: `main-title`, `bold`, `standard`, colors                            |
+| **Input**                                  | `gui/src/components/commons/Input.tsx`            | L1–L155 | Controlled text/password input with label, validation                              |
+| **Dropdown**                               | `gui/src/components/commons/Dropdown.tsx`         | L1–L380 | Full dropdown with search, multi-select                                            |
+| **Checkbox**                               | `gui/src/components/commons/Checkbox.tsx`         | L1–L150 | Controlled checkbox with label                                                     |
+| **Range slider**                           | `gui/src/components/commons/Range.tsx`            | L1–L65  | Horizontal range input                                                             |
+| **Number selector**                        | `gui/src/components/commons/NumberSelector.tsx`   | L1–L120 | +/- stepper for numeric values                                                     |
+| **Tip box** (info/bulb)                    | `gui/src/components/commons/TipBox.tsx`           | L6–L38  | Blue/neutral info box with lightbulb icon                                          |
+| **Warning box** (orange alert)             | `gui/src/components/commons/TipBox.tsx`           | L44–L89 | Orange warning box with triangle icon, `whitespace-pre-wrap` text                  |
+| **Tooltip**                                | `gui/src/components/commons/Tooltip.tsx`          | L1–L450 | Hover tooltip, `preferredDirection` prop                                           |
+| **Modal base**                             | `gui/src/components/commons/BaseModal.tsx`        | L1–L40  | Backdrop + centered card shell                                                     |
+| **Progress bar**                           | `gui/src/components/commons/ProgressBar.tsx`      | L1–L50  | Animated progress fill                                                             |
+| **Vertical stepper**                       | `gui/src/components/commons/VerticalStepper.tsx`  | L1–L120 | Step-by-step wizard indicator                                                      |
+| **Theme selector**                         | `gui/src/components/commons/ThemeSelector.tsx`    | L1–L55  | Theme selector including the reference-inspired `macos` navy/blue-gray/amber theme |
+| **Body display** (skeleton overview)       | `gui/src/components/commons/BodyDisplay.tsx`      | L1–L160 | Full-body assignment overview SVG                                                  |
+| **Body interactions** (clickable skeleton) | `gui/src/components/commons/BodyInteractions.tsx` | L1–L250 | Hover/click zones on body SVG                                                      |
 
 ---
 
@@ -245,11 +245,11 @@
 
 ## 12. Design System & Global Tokens
 
-| Token / Area                     | File                     | What's There                                                                               |
-| :------------------------------- | :----------------------- | :----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **Global CSS + Tailwind tokens** | `gui/src/index.scss`     | `--material-canvas`, `--material-primary`, `.glass-panel`, `.glass-popover`, `.glass-pill` |
-| **Tailwind color palette**       | `gui/tailwind.config.ts` | Deep orange `#D97757`, warm obsidian bg, `accent-background-*` scale                       |
-| **App routing**                  | `gui/src/App.tsx`        | L1–L220                                                                                    | All route definitions: home, remote, onboarding, settings, tracker detail |
+| Token / Area                     | File                     | What's There                                                                                                                                                                                                            |
+| :------------------------------- | :----------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Global CSS + Tailwind tokens** | `gui/src/index.scss`     | `--material-canvas`, `--material-primary`, `.glass-panel`, `.glass-popover`, `.glass-pill`; `macos` uses a deepened navy derived from `#1A3263`, dark `#547792` blue-gray surfaces, `#E8E2DB` text, and `#FAB95B` amber |
+| **Tailwind color palette**       | `gui/tailwind.config.ts` | Semantic `background-*` and `accent-background-*` scales, with `macos` anchored to `#FAB95B`                                                                                                                            |
+| **App routing**                  | `gui/src/App.tsx`        | L1–L220                                                                                                                                                                                                                 | All route definitions: home, remote, onboarding, settings, tracker detail |
 
 ---
 
@@ -291,7 +291,7 @@
 | WiFi + Dongle page layout                   | `WifiCreds.tsx` L17–L103                                       |
 | Tailwind theme colors                       | `tailwind.config.ts`                                           |
 | Glass tokens / vibrancy effects             | `index.scss`                                                   |
-| Nav sidebar icons / links                   | `Navbar.tsx` L70–L126                                          |
+| Floating dock navigation                    | `Navbar.tsx` L1–L112                                           |
 | Top bar / title bar                         | `TopBar.tsx` L1606–L1950 (Chatbox L340–L1250)                  |
 | Settings sidebar categories                 | `SettingsSidebar.tsx` L390–L535                                |
 | Onboarding flow pages                       | `onboarding/pages/<PageName>.tsx`                              |
