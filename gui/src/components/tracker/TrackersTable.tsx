@@ -1,6 +1,7 @@
 import classNames from 'classnames';
+import './TrackersTable.scss';
 import { IPv4 } from 'ip-num';
-import { createContext, ReactNode, useContext, useMemo } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { useConfig } from '@/hooks/config';
 import { useTracker } from '@/hooks/tracker';
 import { BodyPartIcon } from '@/components/commons/BodyPartIcon';
@@ -48,8 +49,8 @@ export function TrackerNameCell({
   const name = useName();
 
   return (
-    <div className="flex gap-2">
-      <div className="flex flex-col justify-center items-center fill-background-10 relative">
+    <div className="tracker-list-name flex items-center gap-3 min-w-0">
+      <div className="tracker-list-icon flex shrink-0 justify-center items-center relative">
         {warning && (
           <div className="absolute -left-2 -top-1 text-status-warning ">
             <WarningIcon width={16} />
@@ -64,14 +65,21 @@ export function TrackerNameCell({
             }
           )}
         >
-          <BodyPartIcon bodyPart={tracker.info?.bodyPart} />
+          <BodyPartIcon bodyPart={tracker.info?.bodyPart} width={30} />
         </div>
       </div>
-      <div className="flex flex-col flex-grow">
-        <Typography bold whitespace="whitespace-nowrap">
+      <div className="flex flex-col flex-grow min-w-0 gap-1">
+        <span
+          className="font-serif text-[15px] leading-tight text-background-10 truncate"
+          title={name.toString()}
+        >
           {name}
-        </Typography>
-        <TrackerStatus status={tracker.status} />
+        </span>
+        <TrackerStatus
+          status={tracker.status}
+          recovery={tracker.recovery}
+          bodyPart={tracker.info?.bodyPart}
+        />
       </div>
     </div>
   );
@@ -138,30 +146,21 @@ function Cell({
   last?: boolean;
   show?: boolean;
 }) {
-  const { tracker } = useContext(TrackerRowProvider);
-  const { useVelocity } = useTracker(tracker);
-
-  const velocity = useVelocity();
-
   return (
     <div
-      className={classNames('py-2 group overflow-hidden', { hidden: !show })}
+      className={classNames(
+        'tracker-list-cell px-2 py-3 flex items-center min-w-0',
+        {
+          hidden: !show,
+          'pl-3': first,
+          'pr-3': last,
+        }
+      )}
     >
-      <div
-        className={classNames(
-          { 'rounded-l-xl ml-3': first, 'rounded-r-xl mr-3': last },
-          'bg-background-60 group-hover:bg-background-50 hover:cursor-pointer p-2 h-[50px] flex items-center transition-all duration-200',
-          velocity > 0.15 &&
-            'border-accent-background-30/90 ring-1 ring-accent-background-30/60 shadow-[0_0_16px_rgba(139,92,246,0.35)]'
-        )}
-      >
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
-
-const TrackerRowProvider = createContext<FlatDeviceTracker>(undefined as never);
 
 function Row({
   data,
@@ -179,6 +178,10 @@ function Row({
   const moreInfo = config?.devSettings?.moreInfo;
 
   const { tracker, device } = data;
+  const { useVelocity } = useTracker(tracker);
+  const velocity = useVelocity();
+  const isMoving =
+    tracker.status !== TrackerStatusEnum.DISCONNECTED && velocity > 0.18;
 
   const warning =
     !!highlightedTrackers?.trackers.find(
@@ -188,9 +191,9 @@ function Row({
     ) && highlightedTrackers.step;
 
   return (
-    <TrackerRowProvider.Provider value={data}>
+    <>
       <div className="relative z-10">
-        <div className="absolute top-2 left-5">
+        <div className="absolute top-3 left-3">
           <FirmwareIcon tracker={tracker} device={device} />
         </div>
       </div>
@@ -209,7 +212,18 @@ function Row({
       >
         <>
           <div
-            className="group grid items-center"
+            className={classNames('tracker-list-row group grid items-center', {
+              'tracker-list-row-moving': isMoving,
+            })}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                clickedTracker(tracker);
+              }
+            }}
             style={{ gridTemplateColumns }}
             onClick={() => clickedTracker(tracker)}
           >
@@ -297,7 +311,7 @@ function Row({
           </div>
         </>
       </Tooltip>
-    </TrackerRowProvider.Provider>
+    </>
   );
 }
 
@@ -350,9 +364,12 @@ export function TrackersTable({
   }, [config?.devSettings?.preciseRotation, moreInfo]);
 
   return (
-    <div className="w-full overflow-x-auto py-2 px-2">
+    <div className="tracker-list w-full overflow-x-auto p-2">
       <div className="min-w-fit">
-        <div className="grid items-center mb-1" style={{ gridTemplateColumns }}>
+        <div
+          className="tracker-list-header grid items-center mb-2"
+          style={{ gridTemplateColumns }}
+        >
           <Header name={'tracker-table-column-name'} first />
           <Header name={'tracker-table-column-type'} />
           <Header name={'tracker-table-column-battery'} />
@@ -372,15 +389,25 @@ export function TrackersTable({
             last={moreInfo}
           />
         </div>
-        <div className="flex flex-col gap-y-0">
+        <div className="flex flex-col gap-2 overflow-x-hidden">
           {filteredSortedTrackers.map((data, index) => (
-            <Row
-              key={index}
-              clickedTracker={clickedTracker}
-              data={data}
-              highlightedTrackers={highlightedTrackers}
-              gridTemplateColumns={gridTemplateColumns}
-            />
+            <div
+              key={`${data.device?.id?.id ?? 'dev'}_${data.tracker.trackerId?.trackerNum ?? index}_${index}`}
+              style={{ animationDelay: `${Math.min(index * 35, 280)}ms` }}
+              className={classNames(
+                'w-full',
+                index % 2 === 0
+                  ? 'animate-tracker-slide-left'
+                  : 'animate-tracker-slide-right'
+              )}
+            >
+              <Row
+                clickedTracker={clickedTracker}
+                data={data}
+                highlightedTrackers={highlightedTrackers}
+                gridTemplateColumns={gridTemplateColumns}
+              />
+            </div>
           ))}
         </div>
       </div>

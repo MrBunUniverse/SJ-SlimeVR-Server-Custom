@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { DataFeedConfigT, DeviceDataMaskT, TrackerDataMaskT } from 'solarxr-protocol';
 import { useConfig } from './config';
 
@@ -7,35 +8,35 @@ export function useDataFeedConfig() {
   const fastDataFeed = config?.debug && config?.devSettings?.fastDataFeed;
   const feedMaxTps = fastDataFeed ? 90 : 10;
 
-  const trackerData = new TrackerDataMaskT();
-  trackerData.position = true;
-  trackerData.rotation = true;
-  trackerData.info = true;
-  trackerData.status = true;
-  trackerData.temp = true;
-  trackerData.linearAcceleration = true;
-  trackerData.rotationReferenceAdjusted = true;
-  trackerData.rotationIdentityAdjusted = true;
-  trackerData.tps = true;
-  trackerData.rawMagneticVector = true;
-  trackerData.stayAligned = true;
+  return useMemo(() => {
+    const trackerData = new TrackerDataMaskT();
+    trackerData.position = true;
+    trackerData.rotation = true;
+    trackerData.info = true;
+    trackerData.status = true;
+    trackerData.temp = true;
+    trackerData.linearAcceleration = true;
+    trackerData.rotationReferenceAdjusted = true;
+    trackerData.rotationIdentityAdjusted = true;
+    trackerData.tps = true;
+    trackerData.rawMagneticVector = true;
+    trackerData.stayAligned = true;
+    trackerData.recovery = true;
 
-  const dataMask = new DeviceDataMaskT();
-  dataMask.deviceData = true;
-  dataMask.trackerData = trackerData;
+    const dataMask = new DeviceDataMaskT();
+    dataMask.deviceData = true;
+    dataMask.trackerData = trackerData;
 
-  const dataFeedConfig = new DataFeedConfigT();
-  dataFeedConfig.dataMask = dataMask;
-  dataFeedConfig.boneMask = false;
-  dataFeedConfig.minimumTimeSinceLast = 1000 / feedMaxTps;
-  dataFeedConfig.syntheticTrackersMask = trackerData;
-  dataFeedConfig.stayAlignedPoseMask = true;
-  dataFeedConfig.serverGuardsMask = true;
+    const dataFeedConfig = new DataFeedConfigT();
+    dataFeedConfig.dataMask = dataMask;
+    dataFeedConfig.boneMask = false;
+    dataFeedConfig.minimumTimeSinceLast = 1000 / feedMaxTps;
+    dataFeedConfig.syntheticTrackersMask = trackerData;
+    dataFeedConfig.stayAlignedPoseMask = true;
+    dataFeedConfig.serverGuardsMask = true;
 
-  return {
-    dataFeedConfig,
-    feedMaxTps,
-  };
+    return { dataFeedConfig, feedMaxTps };
+  }, [feedMaxTps]);
 }
 
 export function useBonesDataFeedConfig() {
@@ -44,8 +45,10 @@ export function useBonesDataFeedConfig() {
   const fastDataFeed = config?.debug && config?.devSettings?.fastDataFeed;
   const feedMaxTps = fastDataFeed ? 90 : 40;
 
-  const dataFeedConfig = new DataFeedConfigT();
-  dataFeedConfig.boneMask = true;
-  dataFeedConfig.minimumTimeSinceLast = 1000 / feedMaxTps;
-  return dataFeedConfig;
+  return useMemo(() => {
+    const dataFeedConfig = new DataFeedConfigT();
+    dataFeedConfig.boneMask = true;
+    dataFeedConfig.minimumTimeSinceLast = 1000 / feedMaxTps;
+    return dataFeedConfig;
+  }, [feedMaxTps]);
 }

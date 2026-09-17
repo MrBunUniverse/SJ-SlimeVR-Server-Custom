@@ -30,6 +30,7 @@ import dev.slimevr.setup.TapSetupHandler
 import dev.slimevr.status.StatusSystem
 import dev.slimevr.tracking.processor.HumanPoseManager
 import dev.slimevr.tracking.processor.skeleton.HumanSkeleton
+import dev.slimevr.tracking.telemetry.TrackerTelemetryLogger
 import dev.slimevr.tracking.trackers.*
 import dev.slimevr.tracking.trackers.udp.TrackersUDPServer
 import dev.slimevr.trackingchecklist.TrackingChecklistManager
@@ -186,6 +187,10 @@ class VRServer @JvmOverloads constructor(
 			registerTracker(tracker)
 		}
 
+		if (configManager.vrConfig.telemetry.recordTelemetry || configManager.vrConfig.telemetry.autoRecordOnStartup) {
+			TrackerTelemetryLogger.startSession(configManager.vrConfig.telemetry.telemetryPath)
+		}
+
 		instance = this
 	}
 
@@ -267,6 +272,7 @@ class VRServer @JvmOverloads constructor(
 			}
 			vrcOSCHandler.update()
 			vMCHandler.update()
+			TrackerTelemetryLogger.logTick(trackers, configManager.vrConfig.telemetry.sampleIntervalMs)
 			// final long time = System.currentTimeMillis() - start;
 			try {
 				sleep(1) // 1000Hz
@@ -459,7 +465,7 @@ class VRServer @JvmOverloads constructor(
 	fun clearTrackersDriftCompensation() {
 		for (t in allTrackers) {
 			if (t.isImu()) {
-				t.resetsHandler.clearDriftCompensation()
+				t.resetsHandler.resetLearnedDrift()
 			}
 		}
 	}

@@ -58,9 +58,11 @@ export function NumberSelector<T extends FieldValues = FieldValues>({
       control={control}
       name={name}
       render={({ field: { onChange, value } }) => (
-        <div className="flex flex-col gap-1 w-full">
-          <Typography bold>{label}</Typography>
-          <div className="flex gap-5 bg-background-60 p-2 rounded-lg">
+        <div className="flex flex-col gap-1.5 w-full">
+          <Typography className="text-[12.5px] font-medium text-background-10">
+            {label}
+          </Typography>
+          <div className="flex items-center justify-between gap-3 bg-background-60/40 dark:bg-white/[0.03] border border-background-50/50 dark:border-white/[0.06] p-1.5 rounded-[12px]">
             <div className="flex gap-1">
               {doubleStep !== undefined && (
                 <Button
@@ -83,7 +85,7 @@ export function NumberSelector<T extends FieldValues = FieldValues>({
                 -
               </Button>
             </div>
-            <div className="flex flex-grow justify-center text-center items-center w-10 text-standard">
+            <div className="flex flex-grow justify-center text-center items-center w-10 text-[13px] tnum font-semibold text-background-10">
               {valueLabelFormat ? valueLabelFormat(value) : value}
             </div>
             <div className="flex gap-1">

@@ -70,7 +70,7 @@ export function TrackerAssignOptions({
     );
   };
 
-  const { control, watch } = useForm<{
+  const { control, watch, setValue } = useForm<{
     assignMode: AssignMode;
   }>({
     defaultValues: {
@@ -80,7 +80,15 @@ export function TrackerAssignOptions({
   const { assignMode } = watch();
 
   useEffect(() => {
-    setConfig({ assignMode });
+    if (config?.assignMode && config.assignMode !== assignMode) {
+      setValue('assignMode', config.assignMode);
+    }
+  }, [config?.assignMode]);
+
+  useEffect(() => {
+    if (assignMode && config?.assignMode !== assignMode) {
+      setConfig({ assignMode });
+    }
   }, [assignMode]);
 
   if (variant == 'dropdown')

@@ -29,6 +29,24 @@ echo "Project Path: $DIR"
 
 JAR_PATH="$DIR/server/desktop/build/libs/slimevr.jar"
 
+# Stop stale processes from an earlier launch of this exact project. This is
+# intentionally path-scoped so unrelated Electron and Java apps are untouched.
+stop_existing_instances() {
+    EXISTING_PIDS="$(pgrep -f "$DIR/gui/node_modules/.bin/../electron-vite|Electron \. --path $DIR/server/desktop/build/libs|java .* -jar $JAR_PATH run" 2>/dev/null || true)"
+    if [ -n "$EXISTING_PIDS" ]; then
+        echo "Stopping an existing SlimeVR instance..."
+        kill $EXISTING_PIDS 2>/dev/null || true
+        sleep 1
+    fi
+
+    REMAINING_PIDS="$(pgrep -f "java .* -jar $JAR_PATH run" 2>/dev/null || true)"
+    if [ -n "$REMAINING_PIDS" ]; then
+        kill -KILL $REMAINING_PIDS 2>/dev/null || true
+    fi
+}
+
+stop_existing_instances
+
 # Check if the server JAR exists; if not, build it with Gradle
 if [ ! -f "$JAR_PATH" ]; then
     echo "Server JAR not found. Building backend with Gradle..."
@@ -40,34 +58,46 @@ if [ ! -f "$JAR_PATH" ]; then
     fi
 fi
 
-# Trap signals to ensure graceful shutdown
+# Trap signals and terminal closure to stop the complete project process tree.
+CLEANUP_COMPLETE=0
 cleanup() {
+    if [ "$CLEANUP_COMPLETE" -eq 1 ]; then
+        return
+    fi
+    CLEANUP_COMPLETE=1
+    trap - SIGINT SIGTERM SIGHUP EXIT
+
     echo ""
     echo "Shutting down SlimeVR..."
-    if [ -n "$CAFFEINATE_PID" ]; then
-        kill "$CAFFEINATE_PID" 2>/dev/null
+    if [ -n "$GUI_RUNNER_PID" ]; then
+        kill "$GUI_RUNNER_PID" 2>/dev/null || true
     fi
-    # Kill any lingering GUI/Server processes spawned in this session
-    pkill -P $$ 2>/dev/null
-    exit 0
+
+    PROJECT_PIDS="$(pgrep -f "$DIR/gui/node_modules/.bin/../electron-vite|Electron \. --path $DIR/server/desktop/build/libs|java .* -jar $JAR_PATH run" 2>/dev/null || true)"
+    if [ -n "$PROJECT_PIDS" ]; then
+        kill $PROJECT_PIDS 2>/dev/null || true
+        sleep 1
+    fi
+
+    SERVER_PIDS="$(pgrep -f "java .* -jar $JAR_PATH run" 2>/dev/null || true)"
+    if [ -n "$SERVER_PIDS" ]; then
+        kill -KILL $SERVER_PIDS 2>/dev/null || true
+    fi
 }
 
 trap cleanup SIGINT SIGTERM SIGHUP EXIT
 
-# Enable macOS sleep prevention fallback layer
-if command -v caffeinate &> /dev/null; then
-    echo "Enabling macOS sleep prevention fallback (caffeinate)..."
-    caffeinate -i -m -s -u -w $$ &
-    CAFFEINATE_PID=$!
-fi
-
 echo "Launching SlimeVR GUI with embedded server..."
 cd "$DIR/gui"
 if command -v caffeinate &> /dev/null; then
-    caffeinate -i -m -s -u pnpm run gui -- --path "$DIR/server/desktop/build/libs" "$@"
+    caffeinate -i -m -s -u pnpm run gui -- --path "$DIR/server/desktop/build/libs" "$@" &
 else
-    pnpm run gui -- --path "$DIR/server/desktop/build/libs" "$@"
+    pnpm run gui -- --path "$DIR/server/desktop/build/libs" "$@" &
 fi
+GUI_RUNNER_PID=$!
+wait "$GUI_RUNNER_PID"
+RUN_STATUS=$?
 
 # Clean exit
-exit 0
+cleanup
+exit "$RUN_STATUS"

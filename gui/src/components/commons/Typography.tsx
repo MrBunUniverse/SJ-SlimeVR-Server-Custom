@@ -66,21 +66,22 @@ export function Typography({
       className: classNames([
         'transition-colors',
         variant === 'mobile-title' &&
-          'xs:text-main-title mobile:text-section-title font-bold tracking-tight',
-        variant === 'main-title' && 'text-main-title font-bold tracking-tight',
+          'xs:text-main-title mobile:text-section-title font-serif font-normal tracking-tight',
+        variant === 'main-title' &&
+          'text-main-title font-serif font-normal tracking-tight',
         variant === 'section-title' &&
-          'text-section-title font-semibold tracking-tight',
+          'text-section-title font-serif font-medium tracking-tight',
         variant === 'standard' &&
           (bold
-            ? 'text-standard-bold font-semibold tracking-tight'
-            : 'text-standard font-normal leading-normal'),
+            ? 'text-standard-bold font-sans font-semibold tracking-tight'
+            : 'text-standard font-sans font-normal leading-relaxed'),
         variant === 'vr-accessible' &&
           (bold
-            ? 'text-vr-accesible-bold font-semibold tracking-tight'
-            : 'text-vr-accesible font-normal'),
+            ? 'text-vr-accesible-bold font-sans font-semibold tracking-tight'
+            : 'text-vr-accesible font-sans font-normal'),
         color === 'primary' && 'text-background-10',
         color === 'secondary' &&
-          'text-background-30 font-normal leading-relaxed',
+          'text-background-30 font-sans font-normal leading-relaxed',
         typeof color === 'string' && color,
         whitespace,
         textAlign,

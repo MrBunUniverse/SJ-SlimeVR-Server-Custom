@@ -250,7 +250,7 @@ export function MountingSelectionMenu({
         </Typography>
         <div className="flex w-full flex-col flex-grow items-center gap-3 justify-center">
           <svg width="400" viewBox="0 0 250 250" className="fill-background-40">
-            <g transform="translate(80, 0)" className="fill-background-10">
+            <g transform="translate(75, 0)" className="fill-background-10">
               <MountingBodyPartIcon width={100} bodyPart={bodyPart} />
             </g>
             <g strokeWidth="4" className="stroke-background-90">

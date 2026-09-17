@@ -26,6 +26,7 @@ export default defineConfig({
     ...rendererConfig,
     root: '.',
     build: {
+      minify: 'esbuild',
       commonjsOptions: {
         // Force Rollup to treat the protocol directory as CommonJS
         // even though it's not in node_modules

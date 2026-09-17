@@ -35,7 +35,7 @@ object TrackerUtils {
 		val resetTrackers = allTrackers.filter {
 			it.trackerPosition == position &&
 				!it.isInternal &&
-				!it.status.reset
+				(!it.status.reset || it.recovery.activeForSkeleton)
 		}
 		return resetTrackers.firstOrNull { it.status != TrackerStatus.TIMED_OUT } ?: resetTrackers.firstOrNull()
 	}

@@ -45,6 +45,10 @@ class QuestStandaloneConfig {
 	var constraintStrength: Float = 0.8f
 	var predictionEnabled: Boolean = false
 	var oscRate: Int = 60 // 30, 50, 60, 90 Hz
+	var chatboxEnabled: Boolean = true
+	var chatboxIntervalSeconds: Int = 30
+	var chatboxLowBatteryWarning: Boolean = true
+	var chatboxOnlyMode: Boolean = false
 	var profiles: MutableMap<String, TrackingProfile> = mutableMapOf()
 
 	init {

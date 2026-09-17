@@ -10,6 +10,13 @@ class StayAlignedConfig {
 	var enabled = false
 
 	/**
+	 * Adaptive Kinetic Stay Aligned:
+	 * Intelligently handles dynamic dance moves (anti-rubberbanding via kinetic gating),
+	 * sitting posture (relaxed cross-leg lateral constraints), and 6-DoF optical HMD conical anchoring.
+	 */
+	var adaptiveKinetic = true
+
+	/**
 	 * Temporarily hide the yaw correction from Stay Aligned.
 	 *
 	 * Players can enable this to compare to when Stay Aligned is not enabled. Useful to

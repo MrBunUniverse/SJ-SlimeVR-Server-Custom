@@ -46,6 +46,10 @@ export function SettingSelectorMobile() {
         label: l10n.getString('settings-sidebar-firmware-tool'),
         value: { url: '/settings/firmware-tool' },
       },
+      {
+        label: l10n.getString('settings-sidebar-quest-capture'),
+        value: { url: '/settings/quest-capture' },
+      },
       ...(vrcConfigState?.isSupported
         ? [
             {
@@ -115,12 +119,15 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
           <TopBar />
         </div>
         <Navbar />
-        <div style={{ gridArea: 's' }} className="my-2 ml-2 mobile:hidden overflow-hidden">
+        <div
+          style={{ gridArea: 's' }}
+          className="my-2 ml-2 mobile:hidden overflow-hidden"
+        >
           <SettingsSidebar />
         </div>
         <div
           style={{ gridArea: 'c' }}
-          className="my-2 ml-2 mr-2 mobile:m-0 overflow-y-auto glass-panel rounded-2xl p-5 border border-white/10 shadow-2xl"
+          className="my-2 ml-2 mr-2 mobile:m-0 overflow-y-auto glass-panel rounded-[20px] p-5 border border-background-50/50 dark:border-white/[0.08] shadow-lg"
         >
           {isMobile && <SettingSelectorMobile />}
           {children}

@@ -28,9 +28,12 @@ function IncrementButton({
     <div
       onClick={onClick}
       className={classNames(
-        'no-user-drag p-3 rounded-lg xs:w-10 xs:h-10 flex flex-col justify-center items-center cursor-pointer',
-        'hover:bg-opacity-50 active:bg-accent-background-30',
-        { 'bg-background-60': bgDark, 'bg-background-40': !bgDark }
+        'no-user-drag p-2 rounded-xl xs:w-10 xs:h-10 flex flex-col justify-center items-center cursor-pointer select-none transition-all',
+        'border border-[var(--material-border-subtle)] hover:border-accent-background-20/40 hover:bg-accent-background-20/10 active:scale-95',
+        {
+          'bg-[var(--material-tertiary)]': bgDark,
+          'bg-[var(--material-secondary)]': !bgDark,
+        }
       )}
     >
       <Typography variant="vr-accessible" bold>

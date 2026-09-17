@@ -3,15 +3,22 @@ import { useConfig } from './hooks/config';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 export function AppLayout() {
-  const { config } = useConfig();
+  const { config, setConfig } = useConfig();
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
   useLayoutEffect(() => {
     if (!config) return;
     if (config.theme !== undefined) {
-      document.documentElement.dataset.theme = config.theme;
+      // Light mode is intentionally removed; migrate legacy configs to the
+      // default dark Slime theme before applying the document theme.
+      const theme = config.theme === 'light' ? 'slime' : config.theme;
+      document.documentElement.dataset.theme = theme;
+      if (config.theme === 'light') void setConfig({ theme });
     }
+
+    const bgStyle = localStorage.getItem('slimevr-bg-style') || 'grid';
+    document.documentElement.dataset.bgStyle = bgStyle;
 
     if (config.fonts !== undefined) {
       document.documentElement.style.setProperty(
@@ -26,7 +33,7 @@ export function AppLayout() {
         `${config.textSize}rem`
       );
     }
-  }, [config]);
+  }, [config, setConfig]);
 
   useLayoutEffect(() => {
     if (

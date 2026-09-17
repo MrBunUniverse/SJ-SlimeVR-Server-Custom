@@ -1,7 +1,10 @@
 import { useTrackingChecklist } from '@/hooks/tracking-checklist';
 import { TrackingChecklist } from './tracking-checklist/TrackingChecklist';
-import { SkeletonVisualizerWidget } from './widgets/SkeletonVisualizerWidget';
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import {
+  PreviewContext,
+  SkeletonVisualizerWidget,
+} from './widgets/SkeletonVisualizerWidget';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { Typography } from './commons/Typography';
 import { useLocaleConfig } from '@/i18n/config';
@@ -21,8 +24,17 @@ import { useConfig } from '@/hooks/config';
 import { useBHV } from '@/hooks/bvh';
 import { usePauseTracking } from '@/hooks/pause-tracking';
 import { PlayIcon } from './commons/icon/PlayIcon';
+import { Rotate360Icon } from './commons/icon/Rotate360Icon';
 
-export function PreviewControls({ open }: { open: boolean }) {
+export function PreviewControls({
+  open,
+  isOrbiting = false,
+  onToggleOrbit,
+}: {
+  open: boolean;
+  isOrbiting?: boolean;
+  onToggleOrbit?: () => void;
+}) {
   const [userHeight, setUserHeight] = useState('');
   const { currentLocales } = useLocaleConfig();
   const { useRPCPacket, sendRPCPacket } = useWebsocketAPI();
@@ -124,6 +136,34 @@ export function PreviewControls({ open }: { open: boolean }) {
               {paused && <PlayIcon width={25} />}
             </div>
           </Tooltip>
+          {onToggleOrbit && (
+            <Tooltip
+              content={
+                <Typography
+                  variant="section-title"
+                  id={
+                    isOrbiting
+                      ? 'preview-auto_orbit_stop'
+                      : 'preview-auto_orbit'
+                  }
+                />
+              }
+              preferedDirection="top"
+            >
+              <div
+                className="flex justify-center items-center w-10 h-10 rounded-full hover:bg-background-60 cursor-pointer transition-colors text-background-10"
+                onClick={() => onToggleOrbit()}
+              >
+                <div
+                  className={classNames('flex items-center justify-center', {
+                    'animate-[spin_4s_linear_infinite]': isOrbiting,
+                  })}
+                >
+                  <Rotate360Icon width={20} />
+                </div>
+              </div>
+            </Tooltip>
+          )}
           <Tooltip
             content={
               <Typography
@@ -146,9 +186,17 @@ export function PreviewControls({ open }: { open: boolean }) {
 function PreviewSection({ open }: { open: boolean }) {
   const { config, setConfig } = useConfig();
   const [disabledRender, setDisabledRender] = useState(config?.skeletonPreview);
+  const [isOrbiting, setIsOrbiting] = useState(false);
+  const previewContextRef = useRef<PreviewContext | null>(null);
 
   const toggleRender = () => {
     setConfig({ skeletonPreview: disabledRender });
+  };
+
+  const handleToggleOrbit = () => {
+    if (!previewContextRef.current) return;
+    const newState = previewContextRef.current.toggleAutoOrbit();
+    setIsOrbiting(newState);
   };
 
   useLayoutEffect(() => {
@@ -170,6 +218,7 @@ function PreviewSection({ open }: { open: boolean }) {
         disabled={disabledRender}
         toggleDisabled={() => toggleRender()}
         onInit={(context) => {
+          previewContextRef.current = context;
           context.addView({
             left: 0,
             bottom: 0,
@@ -195,7 +244,11 @@ function PreviewSection({ open }: { open: boolean }) {
           <EyeIcon width={18} closed={!disabledRender} />
         </div>
       </Tooltip>
-      <PreviewControls open={open} />
+      <PreviewControls
+        open={open}
+        isOrbiting={isOrbiting}
+        onToggleOrbit={handleToggleOrbit}
+      />
     </div>
   );
 }
@@ -229,9 +282,12 @@ export function Sidebar() {
   }, [completion]);
 
   return (
-    <>
+    <div
+      className="flex h-full min-h-0 flex-col px-1"
+      aria-label="Skeleton detail drawer"
+    >
       <div
-        className="transition-[height] duration-500 rounded-2xl my-2 glass-panel overflow-clip border border-white/10"
+        className="transition-[height] duration-500 rounded-xl my-1 glass-panel overflow-clip border border-white/10"
         style={{ height: checklistSize }}
       >
         <TrackingChecklist
@@ -241,11 +297,11 @@ export function Sidebar() {
         />
       </div>
       <div
-        className="transition-[height] duration-500 rounded-2xl my-2 glass-panel overflow-clip border border-white/10"
+        className="transition-[height] duration-500 rounded-xl my-1 glass-panel overflow-clip border border-white/10 min-h-0"
         style={{ height: previewSize }}
       >
         <PreviewSection open={closed} />
       </div>
-    </>
+    </div>
   );
 }

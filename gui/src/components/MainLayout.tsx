@@ -11,7 +11,6 @@ import { TopBar } from './TopBar';
 import { useWebsocketAPI } from '@/hooks/websocket-api';
 import './MainLayout.scss';
 import { Toolbar } from './Toolbar';
-import { Sidebar } from './Sidebar';
 import { TrackingChecklistMobile } from './tracking-checklist/TrackingChecklist';
 import { useTrackingChecklist } from '@/hooks/tracking-checklist';
 
@@ -64,20 +63,22 @@ export function MainLayout({
 
   return (
     <div
-      className={classNames('main-layout w-full h-screen', full && 'full', {
+      className={classNames('main-layout w-full h-screen', {
         'checklist-ok': completion === 'complete',
       })}
     >
       <div style={{ gridArea: 't' }}>
         <TopBar />
       </div>
-      <Navbar />
+      <div style={{ gridArea: 'n' }}>
+        <Navbar />
+      </div>
 
       <div
         style={{ gridArea: 'c' }}
         className={classNames(
-          'overflow-y-auto mx-2 my-2 mobile:m-0',
-          'flex flex-col rounded-2xl transition-all',
+          'overflow-hidden mx-2 my-2 mobile:m-0 min-w-0 min-h-0',
+          'flex flex-col rounded-2xl transition-[background-color,border-radius,box-shadow] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]',
           background && 'glass-panel'
         )}
       >
@@ -86,9 +87,10 @@ export function MainLayout({
       {full && isMobile && completion !== 'complete' && (
         <TrackingChecklistMobile />
       )}
-      {!isMobile && full && (
-        <div style={{ gridArea: 's' }} className="mr-2">
-          <Sidebar />
+      <div style={{ gridArea: 's' }} className="hidden" />
+      {full && (
+        <div style={{ gridArea: 'b' }}>
+          <Toolbar />
         </div>
       )}
     </div>

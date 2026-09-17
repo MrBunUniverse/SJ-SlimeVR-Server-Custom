@@ -51,7 +51,10 @@ export function InterfaceSettings() {
   const { control, watch, handleSubmit } = useForm<InterfaceSettingsForm>({
     defaultValues: {
       appearance: {
-        theme: config?.theme ?? defaultConfig.theme,
+        theme:
+          config?.theme === 'light'
+            ? defaultConfig.theme
+            : (config?.theme ?? defaultConfig.theme),
         textSize: config?.textSize ?? defaultConfig.textSize,
         fonts: config?.fonts.join(',') ?? defaultConfig.fonts.join(','),
       },
@@ -135,7 +138,10 @@ export function InterfaceSettings() {
       feedbackSoundVolume: values.notifications.feedbackSoundVolume,
       connectedTrackersWarning: values.notifications.connectedTrackersWarning,
 
-      theme: values.appearance.theme,
+      theme:
+        values.appearance.theme === 'light'
+          ? defaultConfig.theme
+          : values.appearance.theme,
       fonts: values.appearance.fonts.split(','),
       textSize: values.appearance.textSize,
 
@@ -473,12 +479,6 @@ export function InterfaceSettings() {
                   name="appearance.theme"
                   value={'dark'}
                   colors="!bg-dark"
-                />
-                <ThemeSelector
-                  control={control}
-                  name="appearance.theme"
-                  value={'light'}
-                  colors="!bg-light"
                 />
                 <ThemeSelector
                   control={control}

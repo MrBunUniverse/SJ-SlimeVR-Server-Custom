@@ -1,7 +1,9 @@
 # Project: SlimeVR macOS Electron/React UI Redesign
 
+> Planning record. Milestone labels below are historical; use current source, package metadata, and the test runner for live status.
+
 ## Architecture
-- **Environment**: Electron 31 + React 18 + TypeScript 5 + Vite 5 + TailwindCSS / SCSS.
+- **Environment**: Electron 40 + React 18 + TypeScript 5 + Vite 5 + TailwindCSS / SCSS.
 - **Window Architecture**: macOS Single-Window Utility (`hiddenInset` title bar, `under-window` vibrancy, min size 380x560, default 960x680).
 - **State Flow**: Binary FlatBuffers `solarxr-protocol` via WebSocket (`ws://localhost:21110`) -> Jotai Reactive Atoms (`datafeedAtom`, `bonesAtom`, `assignedTrackersAtom`, `connectedIMUTrackersAtom`, `serverGuardsAtom`) -> React UI Components.
 - **Design System**: Liquid Glass material system with dynamic theme tokens (`--glass-bg`, `--glass-border`, `--glass-pill-bg`, `--glass-blur: 20px`), SF Pro typography, and 16-24px macOS radiuses.

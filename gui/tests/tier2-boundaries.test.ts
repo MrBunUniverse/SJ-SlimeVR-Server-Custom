@@ -1,5 +1,6 @@
-import test, { describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   calculateLayoutDimensions,
   calculateShakeHighlightGlow,
@@ -8,6 +9,8 @@ import {
   evaluateQuestDiagnostics,
 } from './helpers/test-utils.ts';
 import type { MockTrackerData } from './helpers/test-utils.ts';
+
+const SCSS_PATH = new URL('../src/index.scss', import.meta.url);
 
 describe('Tier 2: Boundary & Corner Cases (B1 - B5)', () => {
   // -------------------------------------------------------------
@@ -109,7 +112,9 @@ describe('Tier 2: Boundary & Corner Cases (B1 - B5)', () => {
         velocity: 1.0,
       }));
       assert.equal(trackers.length, 32);
-      const formattedRotations = trackers.map((t) => formatEulerVector(t.rawRotation, 0));
+      const formattedRotations = trackers.map((t) =>
+        formatEulerVector(t.rawRotation, 0)
+      );
       assert.equal(formattedRotations.length, 32);
       assert.equal(formattedRotations[0], '10°, 20°, 30°');
     });
@@ -244,7 +249,9 @@ describe('Tier 2: Boundary & Corner Cases (B1 - B5)', () => {
     });
 
     it('B4.5: formats floating point numbers with exact configured precision without float artifacts', () => {
-      const floatRot: [number, number, number] = [1.0000000000000002, 2.3456789, 99.999];
+      const floatRot: [number, number, number] = [
+        1.0000000000000002, 2.3456789, 99.999,
+      ];
       const prec0 = formatEulerVector(floatRot, 0);
       const prec2 = formatEulerVector(floatRot, 2);
       const prec4 = formatEulerVector(floatRot, 4);
@@ -256,9 +263,9 @@ describe('Tier 2: Boundary & Corner Cases (B1 - B5)', () => {
   });
 
   // -------------------------------------------------------------
-  // B5: Theme Switching & Material Integrity
+  // B5: Dark Theme & Material Integrity
   // -------------------------------------------------------------
-  describe('B5: Theme Switching & Material Integrity', () => {
+  describe('B5: Dark Theme & Material Integrity', () => {
     it('B5.1: validates dark theme glass token palette in index.scss', () => {
       const darkGlassBg = 'rgba(34, 35, 40, 0.72)';
       const darkGlassBorder = 'rgba(255, 255, 255, 0.10)';
@@ -266,11 +273,9 @@ describe('Tier 2: Boundary & Corner Cases (B1 - B5)', () => {
       assert.equal(darkGlassBorder, 'rgba(255, 255, 255, 0.10)');
     });
 
-    it('B5.2: validates light theme glass token palette specification', () => {
-      const lightGlassBg = 'rgba(255, 255, 255, 0.65)';
-      const lightGlassBorder = 'rgba(0, 0, 0, 0.08)';
-      assert.equal(lightGlassBg, 'rgba(255, 255, 255, 0.65)');
-      assert.equal(lightGlassBorder, 'rgba(0, 0, 0, 0.08)');
+    it('B5.2: keeps the removed light theme out of the stylesheet', () => {
+      const scss = readFileSync(SCSS_PATH, 'utf-8');
+      assert.ok(!scss.includes(":root[data-theme='light']"));
     });
 
     it('B5.3: verifies text contrast preservation in dark mode against glass panel background', () => {
@@ -278,11 +283,25 @@ describe('Tier 2: Boundary & Corner Cases (B1 - B5)', () => {
       const textLuminance = 0.92;
       const bgLuminance = 0.02;
       const contrastRatio = (textLuminance + 0.05) / (bgLuminance + 0.05);
-      assert.ok(contrastRatio >= 4.5, `Contrast ratio ${contrastRatio.toFixed(2)} should be >= 4.5`);
+      assert.ok(
+        contrastRatio >= 4.5,
+        `Contrast ratio ${contrastRatio.toFixed(2)} should be >= 4.5`
+      );
     });
 
     it('B5.4: validates consecutive rapid theme toggles maintain valid token configurations', () => {
-      const themes = ['dark', 'light', 'dark', 'light', 'dark', 'light', 'dark', 'light', 'dark', 'light'];
+      const themes = [
+        'dark',
+        'light',
+        'dark',
+        'light',
+        'dark',
+        'light',
+        'dark',
+        'light',
+        'dark',
+        'light',
+      ];
       let currentTheme = 'dark';
       for (const t of themes) {
         currentTheme = t;

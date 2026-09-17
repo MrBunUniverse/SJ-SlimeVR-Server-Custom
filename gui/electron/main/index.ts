@@ -10,7 +10,9 @@ import {
   protocol,
   screen,
   shell,
+  session,
   Tray,
+  systemPreferences,
 } from 'electron';
 import { IPC_CHANNELS } from '../shared';
 import path, { dirname, join } from 'path';
@@ -32,12 +34,35 @@ import {
 import { initStores } from './store';
 import { closeLogger, logger } from './logger';
 
-import { spawn } from 'node:child_process';
+import { spawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync = promisify(execFile);
 import { discordPresence } from './presence';
 import { options } from './cli';
 import { ServerStatusEvent } from 'electron/preload/interface';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { MenuItem } from 'electron/main';
+import {
+  cleanupQuestAudio,
+  connectAdbWifi,
+  enableWirelessAdb,
+  getAdbDevices,
+  getQuestAudioStatus,
+  installScrcpy,
+  startAudioStream,
+  stopAudioStream,
+} from './quest-audio';
+import { cleanupNativeTestTones, playNativeTestTone } from './channel-test-tone';
+import {
+  cleanupQuestCapture,
+  getQuestCaptureCapabilities,
+  getQuestCaptureStatus,
+  startQuestStudio,
+  startQuestVideo,
+  stopQuestCapture,
+  stopQuestVideo,
+} from './quest-capture';
+import { transcribeWithMacSpeech } from './mac-speech';
 
 type Stores = Awaited<ReturnType<typeof initStores>>;
 let stores: Stores;
@@ -198,6 +223,143 @@ handleIpc(IPC_CHANNELS.IS_STEAM, () => {
   return options.steam;
 });
 
+handleIpc(IPC_CHANNELS.GET_APPLE_MUSIC, async () => {
+  if (process.platform !== 'darwin') {
+    return { running: false, playing: false };
+  }
+  const script = `if application "Music" is running then
+tell application "Music"
+set pState to (player state as string)
+if pState is not "stopped" then
+set trk to name of current track
+set art to artist of current track
+set alb to album of current track
+set pos to (player position as integer)
+set dur to (duration of current track as integer)
+return pState & "||" & trk & "||" & art & "||" & alb & "||" & pos & "||" & dur
+else
+return "STOPPED"
+end if
+end tell
+else
+return "NOT_RUNNING"
+end if`;
+
+  try {
+    const { stdout } = await execFileAsync('osascript', ['-e', script]);
+    const trimmed = stdout.trim();
+
+    if (trimmed === 'NOT_RUNNING') {
+      return { running: false, playing: false };
+    }
+    if (trimmed === 'STOPPED') {
+      return { running: true, playing: false };
+    }
+
+    if (trimmed.includes('||')) {
+      const [pState, track, artist, album, posStr, durStr] = trimmed.split('||');
+      const isPlaying = pState.toLowerCase() === 'playing';
+      const pos = parseInt(posStr, 10) || 0;
+      const dur = parseInt(durStr, 10) || 0;
+      const posM = Math.floor(pos / 60);
+      const posS = String(pos % 60).padStart(2, '0');
+      const durM = Math.floor(dur / 60);
+      const durS = String(dur % 60).padStart(2, '0');
+
+      return {
+        running: true,
+        playing: isPlaying,
+        track: track || 'Unknown Track',
+        artist: artist || 'Unknown Artist',
+        album: album || '',
+        pos,
+        dur,
+        formatted: `${track} • ${artist} [${posM}:${posS} / ${durM}:${durS}]`,
+      };
+    }
+
+    return { running: true, playing: false };
+  } catch (err) {
+    logger.warn({ err }, 'Failed to query Apple Music via osascript');
+    return { running: false, playing: false };
+  }
+});
+
+handleIpc(IPC_CHANNELS.NATIVE_SPEECH_TRANSCRIBE, async (e, data) => {
+  return transcribeWithMacSpeech(data);
+});
+
+handleIpc(IPC_CHANNELS.REQUEST_MICROPHONE_ACCESS, async () => {
+  if (process.platform !== 'darwin') return true;
+
+  const status = systemPreferences.getMediaAccessStatus('microphone');
+  if (status === 'granted') return true;
+  if (status === 'denied' || status === 'restricted') return false;
+
+  // In Electron development mode the temporary Electron bundle does not
+  // contain the app's packaged usage-description keys. Let Chromium's
+  // getUserMedia prompt handle the not-determined state there.
+  if (!app.isPackaged) return true;
+
+  return systemPreferences.askForMediaAccess('microphone');
+});
+
+handleIpc(IPC_CHANNELS.QUEST_AUDIO_DEVICES, async () => {
+  return getAdbDevices();
+});
+
+handleIpc(IPC_CHANNELS.QUEST_AUDIO_CONNECT, async (e, ip) => {
+  return connectAdbWifi(ip);
+});
+
+handleIpc(IPC_CHANNELS.QUEST_AUDIO_ENABLE_WIFI, async (e, serial) => {
+  return enableWirelessAdb(serial);
+});
+
+handleIpc(IPC_CHANNELS.QUEST_AUDIO_START, async (e, options) => {
+  return startAudioStream(options);
+});
+
+handleIpc(IPC_CHANNELS.QUEST_AUDIO_STOP, async (e, source) => {
+  return stopAudioStream(source);
+});
+
+handleIpc(IPC_CHANNELS.QUEST_AUDIO_STATUS, async () => {
+  return getQuestAudioStatus();
+});
+
+handleIpc(IPC_CHANNELS.QUEST_AUDIO_INSTALL, async () => {
+  return installScrcpy();
+});
+
+handleIpc(IPC_CHANNELS.QUEST_AUDIO_TEST_TONE, async (e, channel, volume) => {
+  return playNativeTestTone(channel, volume);
+});
+
+handleIpc(IPC_CHANNELS.QUEST_CAPTURE_CAPABILITIES, async (e, serial) => {
+  return getQuestCaptureCapabilities(serial);
+});
+
+handleIpc(IPC_CHANNELS.QUEST_CAPTURE_VIDEO_START, async (e, options) => {
+  return startQuestVideo(options);
+});
+
+handleIpc(IPC_CHANNELS.QUEST_CAPTURE_VIDEO_STOP, async () => {
+  return stopQuestVideo();
+});
+
+handleIpc(IPC_CHANNELS.QUEST_CAPTURE_STUDIO_START, async (e, options) => {
+  return startQuestStudio(options);
+});
+
+handleIpc(IPC_CHANNELS.QUEST_CAPTURE_STOP_ALL, async () => {
+  return stopQuestCapture();
+});
+
+handleIpc(IPC_CHANNELS.QUEST_CAPTURE_STATUS, async () => {
+  return getQuestCaptureStatus();
+});
+
 const defaultWindowState: {
   width: number;
   height: number;
@@ -260,6 +422,7 @@ function createWindow() {
   const isMac = process.platform === 'darwin';
 
   mainWindow = new BrowserWindow({
+    icon: trayIcon,
     width: validatedState.width,
     height: validatedState.height,
     x: validatedState.x,
@@ -447,7 +610,7 @@ function createWindow() {
   });
 }
 
-const checkEnvironmentVariables = () => {
+const checkEnvironmentVariables = (): boolean => {
   const disallowedVars = ['_JAVA_OPTIONS', 'JAVA_TOOL_OPTIONS'];
 
   const set = disallowedVars.filter((env) => !!process.env[env]);
@@ -457,16 +620,18 @@ const checkEnvironmentVariables = () => {
       `You have environment variables ${set.join(', ')} set, which may cause the SlimeVR Server to fail to launch properly.`
     );
     app.quit();
+    return false;
   }
+  return true;
 };
 
 const isServerRunning = async () => !(await isPortAvailable(21110));
 
 const spawnServer = async () => {
-  if (options.skipServerIfRunning && (await isServerRunning())) {
+  if (await isServerRunning()) {
     logger.info(
-      { skipServerIfRunning: options.skipServerIfRunning },
-      'Server is already running, skipping server start'
+      { port: 21110 },
+      'Server port is already active; reusing the existing server'
     );
     return;
   }
@@ -513,8 +678,15 @@ const spawnServer = async () => {
   });
 
   const sendToWindow = (event: ServerStatusEvent) => {
-    if (mainWindow && !mainWindow.webContents.isDestroyed()) {
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed())
+      return;
+    try {
       mainWindow.webContents.send(IPC_CHANNELS.SERVER_STATUS, event);
+    } catch (err) {
+      logger.debug(
+        { err },
+        'Skipped server status update because the renderer is unavailable'
+      );
     }
   };
 
@@ -533,17 +705,7 @@ const spawnServer = async () => {
 
   serverProcess.on('exit', (code, signal) => {
     if (!isQuitting) {
-      logger.info({ code, signal }, 'Server process exited unexpectedly, auto-respawning in 1500ms...');
-      setTimeout(async () => {
-        if (!isQuitting) {
-          try {
-            await spawnServer();
-            logger.info('Server process auto-respawned successfully');
-          } catch (err) {
-            logger.error({ err }, 'Failed to auto-respawn server process');
-          }
-        }
-      }, 1500);
+      logger.warn({ code, signal }, 'Server process exited unexpectedly');
     }
   });
 
@@ -564,62 +726,101 @@ const createFolders = async () => {
 let isQuitting = false;
 let powerSaveBlockerId: number | null = null;
 
-app.whenReady().then(async () => {
-  try {
-    powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');
-    logger.info(`Power save blocker started (id: ${powerSaveBlockerId})`);
-  } catch (err) {
-    logger.warn({ err }, 'Failed to start power save blocker');
-  }
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
-  protocol.handle('app', (request) => {
-    const { pathname } = new URL(request.url);
-    const filePath = path.normalize(join(__dirname, '../renderer', pathname));
-    return net.fetch(pathToFileURL(filePath).toString(), { headers: request.headers });
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
   });
 
-  try {
-    await createFolders();
-  } catch (err) {
-    logger.error(err, 'Failed to initialize stores');
-    dialog.showErrorBox(
-      'SlimeVR',
-      'Failed to initialize application storage. Please make sure the application has write permissions to its data folder.'
+  app.whenReady().then(async () => {
+    session.defaultSession.setPermissionRequestHandler(
+      (webContents, permission, callback) => {
+        const url = webContents.getURL();
+        const isAppContent =
+          url.startsWith('app://') ||
+          url.startsWith('http://localhost:') ||
+          url.startsWith('http://127.0.0.1:');
+        callback(permission === 'media' && isAppContent);
+      }
     );
-    app.quit();
-    return;
-  }
 
-  stores = await initStores();
-  checkEnvironmentVariables();
-  const server = await spawnServer();
-
-  createWindow();
-
-  logger.info('SlimeVR started!');
-
-  app.on('window-all-closed', () => {
-    app.quit();
-  });
-
-  app.on('before-quit', async (event) => {
-    if (isQuitting) return;
-    isQuitting = true;
-    event.preventDefault();
-    logger.info('App quitting, saving...');
-    globalShortcut.unregisterAll();
-    if (powerSaveBlockerId !== null && powerSaveBlocker.isStarted(powerSaveBlockerId)) {
-      powerSaveBlocker.stop(powerSaveBlockerId);
-      powerSaveBlockerId = null;
-      logger.info('Power save blocker stopped');
+    if (process.platform === 'darwin' && app.dock) {
+      const dockIcon = nativeImage.createFromPath(trayIcon);
+      if (!dockIcon.isEmpty()) {
+        app.dock.setIcon(dockIcon);
+      }
     }
-    server?.close();
-    await server?.waitForExit();
-    await stores.settings.save();
-    await stores.cache.save();
-    discordPresence.destroy();
-    await saveWindowState();
-    await closeLogger();
-    app.exit(0);
+
+    try {
+      powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+      logger.info(`Power save blocker started (id: ${powerSaveBlockerId})`);
+    } catch (err) {
+      logger.warn({ err }, 'Failed to start power save blocker');
+    }
+
+    protocol.handle('app', (request) => {
+      const { pathname } = new URL(request.url);
+      const filePath = path.normalize(join(__dirname, '../renderer', pathname));
+      return net.fetch(pathToFileURL(filePath).toString(), {
+        headers: request.headers,
+      });
+    });
+
+    try {
+      await createFolders();
+    } catch (err) {
+      logger.error(err, 'Failed to initialize stores');
+      dialog.showErrorBox(
+        'SlimeVR',
+        'Failed to initialize application storage. Please make sure the application has write permissions to its data folder.'
+      );
+      app.quit();
+      return;
+    }
+
+    stores = await initStores();
+    if (!checkEnvironmentVariables()) return;
+    const server = await spawnServer();
+
+    createWindow();
+
+    logger.info('SlimeVR started!');
+
+    app.on('window-all-closed', () => {
+      app.quit();
+    });
+
+    app.on('before-quit', async (event) => {
+      if (isQuitting) return;
+      isQuitting = true;
+      event.preventDefault();
+      logger.info('App quitting, saving...');
+      globalShortcut.unregisterAll();
+      await cleanupQuestAudio();
+      await cleanupQuestCapture();
+      await cleanupNativeTestTones();
+      if (
+        powerSaveBlockerId !== null &&
+        powerSaveBlocker.isStarted(powerSaveBlockerId)
+      ) {
+        powerSaveBlocker.stop(powerSaveBlockerId);
+        powerSaveBlockerId = null;
+        logger.info('Power save blocker stopped');
+      }
+      server?.close();
+      await server?.waitForExit();
+      await stores.settings.save();
+      await stores.cache.save();
+      discordPresence.destroy();
+      await saveWindowState();
+      await closeLogger();
+      app.exit(0);
+    });
   });
-});
+}

@@ -1,12 +1,8 @@
-import { ReactNode, useCallback, useMemo, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { AssignTrackerRequestT, BodyPart, RpcMessage } from 'solarxr-protocol';
 import { useOnboarding } from '@/hooks/onboarding';
 import { useWebsocketAPI } from '@/hooks/websocket-api';
-import {
-  MountingOrientationDegreesToQuatT,
-  QuaternionFromQuatT,
-  similarQuaternions,
-} from '@/maths/quaternion';
+import { MountingOrientationDegreesToQuatT } from '@/maths/quaternion';
 import { Button } from '@/components/commons/Button';
 import { TipBox } from '@/components/commons/TipBox';
 import { Typography } from '@/components/commons/Typography';
@@ -16,9 +12,10 @@ import { Localized } from '@fluent/react';
 import { useBreakpoint } from '@/hooks/breakpoint';
 import { Quaternion } from 'three';
 import { AssignMode, defaultConfig, useConfig } from '@/hooks/config';
-import { assignedTrackersAtom, FlatDeviceTracker } from '@/store/app-store';
+import { assignedTrackersAtom } from '@/store/app-store';
 import { useAtomValue } from 'jotai';
 import * as Sentry from '@sentry/react';
+import { useManualMountingTrackers } from '@/hooks/manual-mounting';
 
 export function ManualMountingPage() {
   const { isMobile } = useBreakpoint('mobile');
@@ -32,20 +29,8 @@ export function ManualMountingPage() {
 
   const assignedTrackers = useAtomValue(assignedTrackersAtom);
 
-  const trackerPartGrouped = useMemo(
-    () =>
-      assignedTrackers.reduce<{ [key: number]: FlatDeviceTracker[] }>(
-        (curr, td) => {
-          const key = td.tracker.info?.bodyPart || BodyPart.NONE;
-          return {
-            ...curr,
-            [key]: [...(curr[key] || []), td],
-          };
-        },
-        {}
-      ),
-    [assignedTrackers]
-  );
+  const { trackerPartGrouped, getCurrRotation } =
+    useManualMountingTrackers(assignedTrackers);
 
   const onDirectionSelected = (mountingOrientationDegrees: Quaternion) => {
     (trackerPartGrouped[selectedRole] || []).forEach((td) => {
@@ -69,26 +54,6 @@ export function ManualMountingPage() {
 
     setSelectRole(BodyPart.NONE);
   };
-
-  const getCurrRotation = useCallback(
-    (role: BodyPart) => {
-      if (role === BodyPart.NONE) return undefined;
-
-      const trackers = trackerPartGrouped[role] || [];
-      const [mountingOrientation, ...orientation] = trackers
-        .map((td) => td.tracker.info?.mountingOrientation)
-        .filter((orientation) => !!orientation)
-        .map((orientation) => QuaternionFromQuatT(orientation));
-
-      const identicalOrientations =
-        mountingOrientation !== undefined &&
-        orientation.every((quat) =>
-          similarQuaternions(quat, mountingOrientation)
-        );
-      return identicalOrientations ? mountingOrientation : undefined;
-    },
-    [trackerPartGrouped]
-  );
 
   return (
     <>
@@ -153,20 +118,8 @@ export function ManualMountingPageStayAligned({
 
   const assignedTrackers = useAtomValue(assignedTrackersAtom);
 
-  const trackerPartGrouped = useMemo(
-    () =>
-      assignedTrackers.reduce<{ [key: number]: FlatDeviceTracker[] }>(
-        (curr, td) => {
-          const key = td.tracker.info?.bodyPart || BodyPart.NONE;
-          return {
-            ...curr,
-            [key]: [...(curr[key] || []), td],
-          };
-        },
-        {}
-      ),
-    [assignedTrackers]
-  );
+  const { trackerPartGrouped, getCurrRotation } =
+    useManualMountingTrackers(assignedTrackers);
 
   const onDirectionSelected = (mountingOrientationDegrees: Quaternion) => {
     (trackerPartGrouped[selectedRole] || []).forEach((td) => {
@@ -190,26 +143,6 @@ export function ManualMountingPageStayAligned({
 
     setSelectRole(BodyPart.NONE);
   };
-
-  const getCurrRotation = useCallback(
-    (role: BodyPart) => {
-      if (role === BodyPart.NONE) return undefined;
-
-      const trackers = trackerPartGrouped[role] || [];
-      const [mountingOrientation, ...orientation] = trackers
-        .map((td) => td.tracker.info?.mountingOrientation)
-        .filter((orientation) => !!orientation)
-        .map((orientation) => QuaternionFromQuatT(orientation));
-
-      const identicalOrientations =
-        mountingOrientation !== undefined &&
-        orientation.every((quat) =>
-          similarQuaternions(quat, mountingOrientation)
-        );
-      return identicalOrientations ? mountingOrientation : undefined;
-    },
-    [trackerPartGrouped]
-  );
 
   return (
     <>

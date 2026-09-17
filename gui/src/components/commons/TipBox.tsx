@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import { BulbIcon } from './icon/BulbIcon';
-import { WarningIcon } from './icon/WarningIcon';
 import { Typography } from './Typography';
 import classNames from 'classnames';
 
@@ -18,22 +17,22 @@ export function TipBox({
   return (
     <div
       className={classNames(
-        'flex flex-row gap-4 bg-accent-background-50 p-2 rounded-md',
+        'flex flex-row gap-3 bg-accent-background-50/15 dark:bg-white/[0.03] border border-accent-background-30/20 dark:border-white/[0.08] p-3 rounded-[14px]',
         className
       )}
     >
       <div
         className={classNames(
-          'fill-accent-background-20 flex flex-col justify-center',
+          'fill-[#D97757] text-[#D97757] flex flex-col justify-center shrink-0',
           hideIcon && 'hidden'
         )}
       >
         <BulbIcon />
       </div>
-      <div className="flex flex-col">
+      <div className="flex flex-col justify-center text-[12.5px] leading-relaxed text-background-10 flex-1 min-w-0">
         <Typography
-          color="text-accent-background-10"
           whitespace={whitespace ? 'whitespace-pre' : undefined}
+          className="w-full"
         >
           {children}
         </Typography>
@@ -49,26 +48,41 @@ export function WarningBox({
   children,
   whitespace = true,
   hideIcon = false,
+  className,
 }: {
   children: ReactNode;
   whitespace?: boolean;
   hideIcon?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="flex flex-row gap-4 bg-status-warning p-2 rounded-md">
+    <div
+      className={classNames(
+        'flex flex-row gap-3 bg-[#D97757]/8 dark:bg-[#D97757]/12 border border-[#D97757]/25 dark:border-[#D97757]/30 p-3.5 rounded-[12px] select-none',
+        className
+      )}
+    >
       <div
         className={classNames(
-          'text-background-60 flex flex-col justify-center',
+          'text-[#D97757] flex flex-col justify-center shrink-0',
           hideIcon && 'hidden'
         )}
       >
-        <WarningIcon />
-      </div>
-      <div className="flex flex-col justify-center w-full">
-        <Typography
-          color="text-background-60"
-          whitespace={whitespace ? 'whitespace-pre-line' : undefined}
+        <svg
+          className="w-5 h-5 stroke-[#D97757]"
+          viewBox="0 0 24 24"
+          fill="none"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      </div>
+      <div className="flex flex-col justify-center text-[12.5px] text-background-10 leading-relaxed font-sans min-w-0 break-words">
+        <Typography whitespace={whitespace ? 'whitespace-pre-wrap' : undefined}>
           {children}
         </Typography>
       </div>

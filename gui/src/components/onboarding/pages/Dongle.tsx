@@ -11,17 +11,19 @@ export function DongleSectionContent() {
   const { state } = useOnboarding();
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex gap-2 items-center">
-        <div className="bg-accent-background-30 rounded-full p-2 fill-background-10">
-          <USBIcon size={24} />
+    <div className="flex flex-col gap-6 min-w-0 w-full p-8 rounded-[20px] bg-[var(--material-tertiary)] border border-[var(--material-border-subtle)] shadow-sm overflow-hidden">
+      <div className="flex gap-4 items-center">
+        <div className="bg-accent-background-20/15 border border-accent-background-20/30 rounded-2xl p-3 text-accent-background-30">
+          <USBIcon size={28} />
         </div>
-        <Typography
-          variant="main-title"
-          id="onboarding-wifi_creds-dongle-title"
-        />
+        <div>
+          <Typography
+            variant="main-title"
+            id="onboarding-wifi_creds-dongle-title"
+          />
+        </div>
       </div>
-      <div className={classNames('flex flex-col gap-2 flex-grow p-2')}>
+      <div className={classNames('flex flex-col gap-4 flex-grow')}>
         <Typography
           whitespace="whitespace-pre-wrap"
           id="onboarding-wifi_creds-dongle-description"
@@ -30,7 +32,7 @@ export function DongleSectionContent() {
           <WarningBox whitespace>WARNING</WarningBox>
         </Localized>
       </div>
-      <div className="flex px-2 p-6">
+      <div className="flex pt-2 justify-end">
         {state.alonePage && (
           <Button
             variant="primary"

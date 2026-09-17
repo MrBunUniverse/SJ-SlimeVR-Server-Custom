@@ -20,7 +20,7 @@ class TrackerFilteringHandler {
 	 */
 	fun readFilteringConfig(config: FiltersConfig, currentRotation: Quaternion) {
 		val type = TrackerFilters.getByConfigkey(config.type)
-		if (type == TrackerFilters.SMOOTHING || type == TrackerFilters.PREDICTION) {
+		if (type == TrackerFilters.SMOOTHING || type == TrackerFilters.PREDICTION || type == TrackerFilters.ADAPTIVE_HYBRID) {
 			movingAverage = QuaternionMovingAverage(
 				type,
 				config.amount,

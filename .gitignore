@@ -1,56 +1,45 @@
-# macOS metadata
+# Operating-system metadata
 .DS_Store
 *.DS_Store
-
-# Ignore Gradle project-specific cache directory
-.gradle
-
-# Syncthing ignore file
 .stignore
 
-# Ignore .idea
-.idea
-
-# Ignore .fleet
-.fleet
-
-# Ignore eclipse stuff
+# IDE and editor state
+.idea/
+.fleet/
 .project
 .classpath
-.settings
-
-# VSCode stuff
+.settings/
 /.vscode/settings.json
 /.vscode/launch.json
 
-# Ignore eclipse stuff
-.project
-.classpath
-.settings
-
-# Node Stuff
-/node_modules
-.husky
-
-# kotlin stuff
-/.kotlin
-
-# ignore gradle build folder
-build/
-
-# created by clangd for index cache
-.cache/
-
-# direnv has been claimed for Nix usage
-.direnv/
-.devenv
-
-# Ignore Android local properties
+# Java, Kotlin, Gradle, and Android local state
+/.gradle/
+/.kotlin/
+/build/
 local.properties
 
-# Ignore temporary config
+# JavaScript dependencies and package-manager caches
+/node_modules/
+/.pnpm-store/
+
+# Generated GUI output
+/gui/out/
+/gui/stats.html
+
+# Native tooling caches
+/.cache/
+
+# Nix and direnv local state
+/.direnv/
+/.devenv
+/.bin/
+
+# Runtime and temporary configuration
 vrconfig.yml.tmp
 
-
-# Nixos
-.bin/
+# Local recovery data and generated analysis
+/.backup/
+*.bak
+/.tools/
+/graphify-out/
+/.context-shears/

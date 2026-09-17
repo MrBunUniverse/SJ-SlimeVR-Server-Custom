@@ -1,135 +1,116 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
+import { AssignMode, useConfig } from './config';
+import { useLocalization } from '@fluent/react';
+import { useAtomValue } from 'jotai';
+import { connectedIMUTrackersAtom } from '@/store/app-store';
 
 export interface TrackerPreset {
   id: string;
+  mode: AssignMode;
   name: string;
   description: string;
   targetCount: number;
-  bodyParts: string[];
 }
 
-export const DEFAULT_PRESETS: TrackerPreset[] = [
+export const PRESET_DEFINITIONS: {
+  mode: AssignMode;
+  count: number;
+  labelKey: string;
+  defaultName: string;
+  defaultDesc: string;
+}[] = [
   {
-    id: 'minimal',
-    name: 'Minimal (Core)',
-    description: 'Waist & Hip tracking for basic seated/standing motion',
-    targetCount: 3,
-    bodyParts: ['waist', 'left_foot', 'right_foot'],
+    mode: AssignMode.LowerBody,
+    count: 5,
+    labelKey: 'lower-body',
+    defaultName: 'Lower-Body Set',
+    defaultDesc: 'Minimum for VR full-body tracking',
   },
   {
-    id: 'five-tracker',
-    name: 'Standard (5-Tracker)',
-    description: 'Waist, Knees, Feet set for full leg tracking',
-    targetCount: 5,
-    bodyParts: [
-      'waist',
-      'left_lower_leg',
-      'right_lower_leg',
-      'left_foot',
-      'right_foot',
-    ],
+    mode: AssignMode.Core,
+    count: 6,
+    labelKey: 'core',
+    defaultName: 'Core Set',
+    defaultDesc: '+ Enhanced spine tracking',
   },
   {
-    id: 'full-body',
-    name: 'Full Body (Enhanced)',
-    description: 'Chest, Waist, Upper/Lower Legs & Feet',
-    targetCount: 8,
-    bodyParts: [
-      'chest',
-      'waist',
-      'left_upper_leg',
-      'right_upper_leg',
-      'left_lower_leg',
-      'right_lower_leg',
-      'left_foot',
-      'right_foot',
-    ],
+    mode: AssignMode.EnhancedCore,
+    count: 8,
+    labelKey: 'enhanced-core',
+    defaultName: 'Enhanced Core Set',
+    defaultDesc: '+ Foot rotation',
   },
   {
-    id: 'sitting',
-    name: 'Sitting Mode',
-    description: 'Optimized orientation for seated desktop & chair usage',
-    targetCount: 4,
-    bodyParts: ['chest', 'waist', 'left_foot', 'right_foot'],
+    mode: AssignMode.FullBody,
+    count: 10,
+    labelKey: 'full-body',
+    defaultName: 'Full-Body Set',
+    defaultDesc: '+ Elbow tracking',
+  },
+  {
+    mode: AssignMode.All,
+    count: 20,
+    labelKey: 'all',
+    defaultName: 'All Trackers',
+    defaultDesc: 'All available tracker assignments',
   },
 ];
 
-const STORAGE_KEY = 'slimevr_user_presets';
-const ACTIVE_PRESET_KEY = 'slimevr_active_preset_id';
-
 export function useTrackerPresets() {
-  const [presets, setPresets] = useState<TrackerPreset[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_PRESETS;
-    } catch {
-      return DEFAULT_PRESETS;
-    }
-  });
+  const { config, setConfig } = useConfig();
+  const { l10n } = useLocalization();
+  const connectedTrackers = useAtomValue(connectedIMUTrackersAtom);
 
-  const [activePresetId, setActivePresetId] = useState<string>(() => {
-    return localStorage.getItem(ACTIVE_PRESET_KEY) || 'five-tracker';
-  });
+  const presets: TrackerPreset[] = useMemo(() => {
+    return PRESET_DEFINITIONS.map((def) => {
+      const name = l10n
+        ? l10n.getString('onboarding-assign_trackers-option-label', {
+            mode: def.labelKey,
+          }) || def.defaultName
+        : def.defaultName;
+      const description = l10n
+        ? l10n.getString('onboarding-assign_trackers-option-description', {
+            mode: def.labelKey,
+          }) || def.defaultDesc
+        : def.defaultDesc;
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
-    } catch {
-      // Ignore localStorage write/quota errors
-    }
-  }, [presets]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(ACTIVE_PRESET_KEY, activePresetId);
-    } catch {
-      // Ignore localStorage write/quota errors
-    }
-  }, [activePresetId]);
-
-  const activePreset = presets.find((p) => p.id === activePresetId) || presets[0];
-
-  const createPreset = (name: string, description: string, bodyParts: string[]) => {
-    const newPreset: TrackerPreset = {
-      id: `custom-${Date.now()}`,
-      name,
-      description,
-      targetCount: bodyParts.length,
-      bodyParts,
-    };
-    setPresets((prev) => [...prev, newPreset]);
-    setActivePresetId(newPreset.id);
-  };
-
-  const duplicatePreset = (presetId: string) => {
-    const source = presets.find((p) => p.id === presetId);
-    if (!source) return;
-    const duplicated: TrackerPreset = {
-      ...source,
-      id: `copy-${Date.now()}`,
-      name: `${source.name} (Copy)`,
-    };
-    setPresets((prev) => [...prev, duplicated]);
-    setActivePresetId(duplicated.id);
-  };
-
-  const deletePreset = (presetId: string) => {
-    setPresets((prev) => {
-      const filtered = prev.filter((p) => p.id !== presetId);
-      if (activePresetId === presetId) {
-        setActivePresetId(filtered[0]?.id || 'five-tracker');
-      }
-      return filtered.length > 0 ? filtered : DEFAULT_PRESETS;
+      return {
+        id: def.mode,
+        mode: def.mode,
+        name,
+        description,
+        targetCount: def.count,
+      };
     });
+  }, [l10n]);
+
+  // Determine active preset mode:
+  // If config.assignMode is set, use it; otherwise pick preferred based on connected tracker count or fallback to LowerBody
+  const activeMode: AssignMode = useMemo(() => {
+    if (config?.assignMode) return config.assignMode;
+    const found = PRESET_DEFINITIONS.find(
+      (def) => def.count >= connectedTrackers.length
+    );
+    return found ? found.mode : AssignMode.LowerBody;
+  }, [config?.assignMode, connectedTrackers.length]);
+
+  const activePreset = useMemo(() => {
+    return presets.find((p) => p.mode === activeMode) || presets[0];
+  }, [presets, activeMode]);
+
+  const setActivePresetId = (idOrMode: string | AssignMode) => {
+    const target = PRESET_DEFINITIONS.find(
+      (def) => def.mode === idOrMode || def.labelKey === idOrMode
+    );
+    if (target) {
+      setConfig({ assignMode: target.mode });
+    }
   };
 
   return {
     presets,
     activePreset,
-    activePresetId,
+    activePresetId: activeMode,
     setActivePresetId,
-    createPreset,
-    duplicatePreset,
-    deletePreset,
   };
 }

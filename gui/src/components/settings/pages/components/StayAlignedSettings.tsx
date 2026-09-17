@@ -39,7 +39,7 @@ export type StayAlignedSettingsForm = {
 
 export const defaultStayAlignedSettings: StayAlignedSettingsForm = {
   enabled: false,
-  extraYawCorrection: false,
+  extraYawCorrection: true,
   hideYawCorrection: false,
   standingEnabled: false,
   standingUpperLegAngle: 0.0,
@@ -107,7 +107,7 @@ Stay Aligned
 GENERAL
 =======
 Enabled: ${config.enabled ? 'true' : 'false'}
-Extra yaw correction: ${boolify(config.extraYawCorrection)}
+Adaptive kinetic realignment: ${boolify(config.extraYawCorrection)}
 Setup complete: ${boolify(config.setupComplete)}
 
 RELAXED POSES
@@ -209,7 +209,7 @@ export function StayAlignedSettings({
               control={control}
               name="stayAligned.enabled"
               label={l10n.getString('settings-stay_aligned-enabled-label')}
-              disabled={!config.setupComplete}
+              disabled={!config.setupComplete && !config.extraYawCorrection}
             />
             <CheckBox
               variant="toggle"
@@ -219,8 +219,38 @@ export function StayAlignedSettings({
               label={l10n.getString(
                 'settings-stay_aligned-hide_yaw_correction-label'
               )}
-              disabled={!config.setupComplete}
+              disabled={!config.setupComplete && !config.extraYawCorrection}
             />
+          </div>
+        </div>
+        <div className="mt-6">
+          <Typography variant="section-title">
+            Adaptive Kinetic Realignment
+          </Typography>
+          <div className="mt-2 bg-background-70/60 backdrop-blur-md rounded-xl p-4 border border-background-60/80">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex-1">
+                <Typography bold>Smart Motion & Posture Adaptation</Typography>
+                <Typography
+                  color="secondary"
+                  className="text-xs sm:text-sm mt-1"
+                >
+                  Tailored for active VR: pauses drift correction during rapid
+                  dance turns to eliminate rubber-banding, anchors torso to
+                  optical 6-DoF HMD, and relaxes leg constraints when sitting
+                  cross-legged or laying down without requiring rigid
+                  calibration wizards.
+                </Typography>
+              </div>
+              <div className="shrink-0">
+                <CheckBox
+                  variant="toggle"
+                  control={control}
+                  name="stayAligned.extraYawCorrection"
+                  label="Adaptive Kinetic"
+                />
+              </div>
+            </div>
           </div>
         </div>
         <div className="mt-6">
@@ -250,7 +280,7 @@ export function StayAlignedSettings({
               <Localized id="settings-stay_aligned-relaxed_poses-save_pose">
                 <Button
                   variant="primary"
-                  className="w-full max-w-32"
+                  className="shrink-0 min-w-[100px]"
                   disabled={!config.setupComplete}
                   onClick={() => openStanding[1](true)}
                 />
@@ -271,7 +301,7 @@ export function StayAlignedSettings({
               <Localized id="settings-stay_aligned-relaxed_poses-save_pose">
                 <Button
                   variant="primary"
-                  className="w-full max-w-32"
+                  className="shrink-0 min-w-[100px]"
                   disabled={!config.setupComplete}
                   onClick={() => openSitting[1](true)}
                 />
@@ -292,7 +322,7 @@ export function StayAlignedSettings({
               <Localized id="settings-stay_aligned-relaxed_poses-save_pose">
                 <Button
                   variant="primary"
-                  className="w-full max-w-32"
+                  className="shrink-0 min-w-[100px]"
                   disabled={!config.setupComplete}
                   onClick={() => openFlat[1](true)}
                 />

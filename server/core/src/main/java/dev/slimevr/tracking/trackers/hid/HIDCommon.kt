@@ -172,10 +172,8 @@ class HIDCommon {
 			}
 
 			if (tracker.status == TrackerStatus.TIMED_OUT) {
-				// If tracker was previously sleeping/shutdown, reset the sleep time and status
-				// If there is some other error, the relevant packet should set it a little later
+				// The next valid rotation sample restores status through Tracker.dataTick().
 				tracker.setSleepTime(Long.MAX_VALUE)
-				tracker.status = TrackerStatus.OK
 			}
 
 			// Packet data

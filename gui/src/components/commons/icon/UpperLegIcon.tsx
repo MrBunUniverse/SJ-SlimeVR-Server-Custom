@@ -11,7 +11,7 @@ export function UpperLegIcon({
       x="1.25px"
       y="1.25px"
       width={width}
-      viewBox="0 0 55 55"
+      viewBox="11 0 33 52"
     >
       <path
         transform={flipped ? 'scale(-1,1) translate(-50,0)' : undefined}

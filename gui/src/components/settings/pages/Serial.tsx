@@ -351,8 +351,8 @@ export function Serial() {
           </Button>
         </div>
       </BaseModal>
-      <div className="flex flex-col bg-background-70 h-full p-4 mobile:p-2 rounded-md">
-        <div className="flex flex-col pb-2 mobile:pt-4">
+      <div className="flex flex-col bg-[var(--material-tertiary)] border border-[var(--material-border-subtle)] h-full p-6 mobile:p-4 rounded-[20px] shadow-sm">
+        <div className="flex flex-col pb-4 mobile:pt-2">
           <Typography variant="main-title">
             {l10n.getString('settings-serial')}
           </Typography>
@@ -365,20 +365,20 @@ export function Serial() {
               ))}
           </>
         </div>
-        <div className="bg-background-80 rounded-lg flex-grow h-0 flex flex-col p-2">
+        <div className="bg-[#100E0B] border border-[var(--material-border-subtle)] rounded-[16px] flex-grow h-0 flex flex-col p-3.5 shadow-inner">
           <div
             className="flex-grow overflow-x-auto overflow-y-auto"
             ref={consoleRef}
           >
             <div className="flex select-text">
-              <pre>
+              <pre className="font-mono text-xs leading-relaxed text-[#E6E4DD]/90">
                 {openedSerialDevice !== null
                   ? consoleContent
                   : l10n.getString('settings-serial-connection_lost')}
               </pre>
             </div>
           </div>
-          <div className="border-t-2 pt-2 border-background-60 border-solid gap-2 flex flex-row">
+          <div className="border-t border-[var(--material-border-subtle)] pt-3 mt-2 gap-2 flex flex-row">
             <div className="xs:flex flex-grow xs:flex-wrap gap-2 grid grid-cols-2">
               {openedSerialDevice !== null && (
                 <>

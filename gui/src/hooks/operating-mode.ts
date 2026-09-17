@@ -1,7 +1,7 @@
-import { atom, useAtom, useAtomValue } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
-import { useMemo } from 'react';
-import { useWebsocketAPI } from '@/hooks/websocket-api';
+import { useMemo, useCallback } from 'react';
+import { useWebsocketAPI } from './websocket-api';
 import { bonesAtom } from '@/store/app-store';
 import {
   RpcMessage,
@@ -38,6 +38,11 @@ export interface QuestStandaloneState {
   crouchStrength: number;
   hmdVerticalOffset: number; // in meters
   oscRate: number; // 30, 50, 60, 90 Hz
+  chatboxEnabled: boolean;
+  chatboxOnlyMode: boolean;
+  chatboxCustomPinnedEnabled: boolean;
+  chatboxCustomPinnedText: string;
+  chatboxAppleMusicEnabled: boolean;
   recenterBehavior: RecenterBehaviorMode;
   activeProfile: TrackingProfileName;
   lastCalibrated: number | null;
@@ -61,6 +66,11 @@ export const questStandaloneStateAtom = atomWithStorage<QuestStandaloneState>(
     crouchStrength: 0.5,
     hmdVerticalOffset: 0.0,
     oscRate: 60,
+    chatboxEnabled: true,
+    chatboxOnlyMode: false,
+    chatboxCustomPinnedEnabled: false,
+    chatboxCustomPinnedText: '',
+    chatboxAppleMusicEnabled: false,
     recenterBehavior: 'REANCHOR_ON_FULL_RESET',
     activeProfile: 'STANDING',
     lastCalibrated: null,
@@ -78,7 +88,8 @@ export function useOperatingMode() {
   const isPCVR = useMemo(() => mode === 'pcvr', [mode]);
 
   const toggleMode = () => {
-    const nextMode: OperatingMode = mode === 'quest_standalone' ? 'pcvr' : 'quest_standalone';
+    const nextMode: OperatingMode =
+      mode === 'quest_standalone' ? 'pcvr' : 'quest_standalone';
     setMode(nextMode);
 
     const settingsRequest = new ChangeSettingsRequestT();
@@ -116,11 +127,43 @@ export function useOperatingMode() {
     const skeletonHeight = new SkeletonHeightT();
     skeletonHeight.floorHeight = next.floorOffset;
     skeletonHeight.oscRate = next.oscRate;
+    skeletonHeight.chatboxEnabled = next.chatboxEnabled;
+    skeletonHeight.chatboxOnly = next.chatboxOnlyMode;
     modelSettings.skeletonHeight = skeletonHeight;
 
     settingsRequest.modelSettings = modelSettings;
     sendRPCPacket(RpcMessage.ChangeSettingsRequest, settingsRequest);
   };
+
+  const triggerChatboxStatus = useCallback(() => {
+    const settingsRequest = new ChangeSettingsRequestT();
+    const modelSettings = new ModelSettingsT();
+    const skeletonHeight = new SkeletonHeightT();
+    skeletonHeight.floorHeight = state.floorOffset;
+    skeletonHeight.oscRate = state.oscRate;
+    skeletonHeight.chatboxEnabled = state.chatboxEnabled;
+    skeletonHeight.chatboxTrigger = true;
+    modelSettings.skeletonHeight = skeletonHeight;
+    settingsRequest.modelSettings = modelSettings;
+    sendRPCPacket(RpcMessage.ChangeSettingsRequest, settingsRequest);
+  }, [sendRPCPacket, state.floorOffset, state.oscRate, state.chatboxEnabled]);
+
+  const sendChatboxCustomMessage = useCallback(
+    (message: string) => {
+      if (!message || !message.trim()) return;
+      const settingsRequest = new ChangeSettingsRequestT();
+      const modelSettings = new ModelSettingsT();
+      const skeletonHeight = new SkeletonHeightT();
+      skeletonHeight.floorHeight = state.floorOffset;
+      skeletonHeight.oscRate = state.oscRate;
+      skeletonHeight.chatboxEnabled = state.chatboxEnabled;
+      skeletonHeight.chatboxMessage = message.trim();
+      modelSettings.skeletonHeight = skeletonHeight;
+      settingsRequest.modelSettings = modelSettings;
+      sendRPCPacket(RpcMessage.ChangeSettingsRequest, settingsRequest);
+    },
+    [sendRPCPacket, state.floorOffset, state.oscRate, state.chatboxEnabled]
+  );
 
   const toggleFloorAnchor = () => {
     const nextState = !state.isAnchored;
@@ -154,32 +197,27 @@ export function useOperatingMode() {
   const triggerFloorCalibration = () => {
     let calculatedOffset = 0;
     const leftFoot = bones.find(
-      (b) =>
-        b.bodyPart === BodyPart.LEFT_FOOT ||
-        b.bodyPart === BodyPart.LEFT_LOWER_LEG
+      (b) => b.bodyPart === BodyPart.LEFT_FOOT || b.bodyPart === BodyPart.LEFT_LOWER_LEG
     );
     const rightFoot = bones.find(
       (b) =>
-        b.bodyPart === BodyPart.RIGHT_FOOT ||
-        b.bodyPart === BodyPart.RIGHT_LOWER_LEG
+        b.bodyPart === BodyPart.RIGHT_FOOT || b.bodyPart === BodyPart.RIGHT_LOWER_LEG
     );
 
     if (
       leftFoot?.headPositionG?.y !== undefined &&
       rightFoot?.headPositionG?.y !== undefined
     ) {
-      calculatedOffset = Math.min(
-        leftFoot.headPositionG.y,
-        rightFoot.headPositionG.y
-      );
+      calculatedOffset = Math.min(leftFoot.headPositionG.y, rightFoot.headPositionG.y);
     }
 
-    syncToServer({ isAnchored: true, floorOffset: Math.max(0, calculatedOffset), anchorStatus: 'CALIBRATED' });
+    syncToServer({
+      isAnchored: true,
+      floorOffset: Math.max(0, calculatedOffset),
+      anchorStatus: 'CALIBRATED',
+    });
 
-    sendRPCPacket(
-      RpcMessage.SkeletonResetAllRequest,
-      new SkeletonResetAllRequestT()
-    );
+    sendRPCPacket(RpcMessage.SkeletonResetAllRequest, new SkeletonResetAllRequestT());
 
     setState((prev) => ({
       ...prev,
@@ -266,6 +304,28 @@ export function useOperatingMode() {
     setState((prev) => ({ ...prev, ...profileSettings }));
   };
 
+  const setChatboxEnabled = (val: boolean) => {
+    setState((prev) => ({ ...prev, chatboxEnabled: val }));
+    syncToServer({ chatboxEnabled: val });
+  };
+
+  const setChatboxOnlyMode = (val: boolean) => {
+    setState((prev) => ({ ...prev, chatboxOnlyMode: val }));
+    syncToServer({ chatboxOnlyMode: val });
+  };
+
+  const setChatboxCustomPinnedEnabled = (val: boolean) => {
+    setState((prev) => ({ ...prev, chatboxCustomPinnedEnabled: val }));
+  };
+
+  const setChatboxCustomPinnedText = (text: string) => {
+    setState((prev) => ({ ...prev, chatboxCustomPinnedText: text }));
+  };
+
+  const setChatboxAppleMusicEnabled = (val: boolean) => {
+    setState((prev) => ({ ...prev, chatboxAppleMusicEnabled: val }));
+  };
+
   const resetToDefaults = () => {
     selectProfile('STANDING');
   };
@@ -286,6 +346,13 @@ export function useOperatingMode() {
     setCrouchCompensation,
     setHmdVerticalOffset,
     setOscRate,
+    setChatboxEnabled,
+    setChatboxOnlyMode,
+    setChatboxCustomPinnedEnabled,
+    setChatboxCustomPinnedText,
+    setChatboxAppleMusicEnabled,
+    triggerChatboxStatus,
+    sendChatboxCustomMessage,
     setRecenterBehavior,
     selectProfile,
     resetToDefaults,

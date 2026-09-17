@@ -22,6 +22,12 @@ class TrackerConfig {
 	 */
 	var shouldHaveMagEnabled: Boolean? = null
 
+	// Adaptive Drift Profile & Persistent IMU Memory
+	var learnedDriftRateDegPerMin: Float = 0.0f
+	var totalDriftObservations: Int = 0
+	var autoLearnDrift: Boolean = true
+	var imuProfileOverride: String? = null
+
 	constructor()
 
 	constructor(tracker: Tracker) {
@@ -46,4 +52,8 @@ class TrackerConfig {
 }
 
 val Tracker.config: TrackerConfig
-	get() = VRServer.instance.configManager.vrConfig.getTracker(this)
+	get() = if (VRServer.instanceInitialized) {
+		VRServer.instance.configManager.vrConfig.getTracker(this)
+	} else {
+		configFallback ?: TrackerConfig(this).also { configFallback = it }
+	}

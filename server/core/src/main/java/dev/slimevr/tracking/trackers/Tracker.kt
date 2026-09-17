@@ -114,6 +114,7 @@ class Tracker @JvmOverloads constructor(
 ) {
 	private val timer = BufferedTimer(1f)
 	private var timeAtLastUpdate: Long = System.currentTimeMillis()
+	private var timeAtLastRotationUpdate: Long = timeAtLastUpdate
 	private var timeScheduledSleep: Long = Long.MAX_VALUE
 	private var _rotation = Quaternion.IDENTITY
 
@@ -122,6 +123,7 @@ class Tracker @JvmOverloads constructor(
 	private var _acceleration = Vector3.NULL
 	private var _velocity = Vector3.NULL
 	private var _magVector = Vector3.NULL
+	var configFallback: TrackerConfig? = null
 
 	/**
 	 * Velocity state server-side differentiation based on sent poses
@@ -135,6 +137,7 @@ class Tracker @JvmOverloads constructor(
 
 	var position = Vector3.NULL
 	val resetsHandler: TrackerResetsHandler = TrackerResetsHandler(this)
+	val recovery: TrackerRecoveryHandler = TrackerRecoveryHandler(this)
 	val filteringHandler: TrackerFilteringHandler = TrackerFilteringHandler()
 	val trackerFlexHandler: TrackerFlexHandler = TrackerFlexHandler(this)
 	var batteryVoltage: Float? = null
@@ -191,6 +194,7 @@ class Tracker @JvmOverloads constructor(
 			// Set default mounting orientation for that body part
 			new?.let { resetsHandler.mountingOrientation = it.defaultMounting() }
 		}
+		recovery.cancel()
 	}
 
 	// Computed value to simplify availability checks
@@ -237,12 +241,17 @@ class Tracker @JvmOverloads constructor(
 		if (this.isImu() && config.allowDriftCompensation == null) {
 			// If value didn't exist, default to true and save
 			resetsHandler.allowDriftCompensation = true
-			VRServer.instance.configManager.vrConfig.getTracker(this).allowDriftCompensation = true
-			VRServer.instance.configManager.saveConfig()
+			if (VRServer.instanceInitialized) {
+				VRServer.instance.configManager.vrConfig.getTracker(this).allowDriftCompensation = true
+				VRServer.instance.configManager.saveConfig()
+			}
 		} else {
 			config.allowDriftCompensation?.let {
 				resetsHandler.allowDriftCompensation = it
 			}
+		}
+		if (this.isImu()) {
+			resetsHandler.readAdaptiveProfile(config)
 		}
 	}
 
@@ -258,6 +267,7 @@ class Tracker @JvmOverloads constructor(
 		}
 		if (this.isImu()) {
 			config.allowDriftCompensation = resetsHandler.allowDriftCompensation
+			resetsHandler.writeAdaptiveProfile(config)
 		}
 	}
 
@@ -275,19 +285,24 @@ class Tracker @JvmOverloads constructor(
 	 * Saves the mounting reset quaternion to disk
 	 */
 	fun saveMountingResetOrientation(quat: Quaternion?) {
-		val configManager = VRServer.instance.configManager
-		configManager.vrConfig.getTracker(this).mountingResetOrientation = quat?.toObject()
-		configManager.saveConfig()
+		if (VRServer.instanceInitialized) {
+			val configManager = VRServer.instance.configManager
+			configManager.vrConfig.getTracker(this).mountingResetOrientation = quat?.toObject()
+			configManager.saveConfig()
+		}
 	}
 
 	/**
 	 * Synchronized with the VRServer's 1000hz while loop
 	 */
 	fun tick(deltaTime: Float) {
+		val now = System.currentTimeMillis()
+		val connectionAgeMs = now - timeAtLastUpdate
+		val sampleAgeMs = now - timeAtLastRotationUpdate
 		if (usesTimeout) {
-			if (System.currentTimeMillis() - timeAtLastUpdate > DISCONNECT_MS) {
+			if (connectionAgeMs > DISCONNECT_MS) {
 				status = TrackerStatus.DISCONNECTED
-			} else if (System.currentTimeMillis() - timeAtLastUpdate > TIMEOUT_MS) {
+			} else if (connectionAgeMs > TIMEOUT_MS) {
 				status = TrackerStatus.TIMED_OUT
 			}
 		}
@@ -305,6 +320,7 @@ class Tracker @JvmOverloads constructor(
 		filteringHandler.update()
 		yawResetSmoothing.tick(deltaTime)
 		stayAligned.update()
+		recovery.tick(now, sampleAgeMs)
 	}
 
 	/**
@@ -312,10 +328,20 @@ class Tracker @JvmOverloads constructor(
 	 * NOTE: Use only when rotation is received
 	 */
 	fun dataTick() {
+		val now = System.currentTimeMillis()
+		val gapMs = now - timeAtLastRotationUpdate
 		timer.update()
-		timeAtLastUpdate = System.currentTimeMillis()
+		timeAtLastUpdate = now
+		timeAtLastRotationUpdate = now
+		stayAligned.onNewData(_rotation)
 		if (trackRotDirection) {
 			filteringHandler.dataTick(getAdjustedRotation())
+		}
+		val recovering = recovery.onRotationSample(getRotationBase(), gapMs, now)
+		if (recovering) {
+			status = TrackerStatus.BUSY
+		} else if (status == TrackerStatus.TIMED_OUT || status == TrackerStatus.DISCONNECTED) {
+			status = TrackerStatus.OK
 		}
 	}
 
@@ -430,6 +456,10 @@ class Tracker @JvmOverloads constructor(
 	 * and reset smoothing if applicable
 	 */
 	fun getRotation(): Quaternion {
+		return recovery.applyTo(getRotationBase())
+	}
+
+	internal fun getRotationBase(): Quaternion {
 		var rot = getRotationNoResetSmooth()
 
 		if (yawResetSmoothing.remainingTime > 0f) {

@@ -29,7 +29,8 @@ import { useConfig } from '@/hooks/config';
 import { Tween } from '@tweenjs/tween.js';
 import { EyeIcon } from '@/components/commons/icon/EyeIcon';
 
-const GROUND_COLOR = '#2c2c6b';
+const GROUND_COLOR = '#3C3832';
+const GROUND_CENTER_COLOR = '#4E483F';
 
 // Just need to know the length of the total body, so don't need right legs
 const Y_PARTS = [
@@ -73,7 +74,9 @@ function initializePreview(
     stencil: false,
     depth: true,
   });
-  renderer.setPixelRatio(Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 1.5));
+  renderer.setPixelRatio(
+    Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 1.5)
+  );
   renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
   let dirtyFrames = 20;
@@ -81,8 +84,12 @@ function initializePreview(
     dirtyFrames = Math.max(dirtyFrames, frames);
   };
 
-  const grid = new GridHelper(10, 50, GROUND_COLOR, GROUND_COLOR);
+  const grid = new GridHelper(10, 20, GROUND_CENTER_COLOR, GROUND_COLOR);
   grid.position.set(0, 0, 0);
+  if (!Array.isArray(grid.material)) {
+    grid.material.transparent = true;
+    grid.material.opacity = 0.5;
+  }
   scene.add(grid);
 
   const skeletonGroup = new Group();
@@ -154,15 +161,36 @@ function initializePreview(
     return (yLength as BoneT[]).reduce((prev, cur) => prev + cur.boneLength, 0);
   };
 
-  const render = (delta: number) => {
+  let autoOrbit = false;
+
+  const setAutoOrbit = (enable?: boolean) => {
+    autoOrbit = typeof enable === 'boolean' ? enable : !autoOrbit;
+    views.forEach((v) => {
+      v.controls.autoRotate = autoOrbit;
+      // 1.0 gives a calm, smooth ~60-second 360-degree rotation
+      v.controls.autoRotateSpeed = 1.0;
+    });
+    markDirty(10);
+    return autoOrbit;
+  };
+
+  const isAutoOrbiting = () => autoOrbit;
+
+  const render = (deltaSeconds?: number) => {
     views.forEach((v) => {
       if (v.hidden || !renderer) return;
-      v.controls.update(delta);
+      // Pass delta in seconds if available so OrbitControls updates smoothly and predictably
+      if (typeof deltaSeconds === 'number' && deltaSeconds > 0) {
+        v.controls.update(deltaSeconds);
+      } else {
+        v.controls.update();
+      }
 
       const left = Math.floor(resolution.x * v.left);
       const bottom = Math.floor(resolution.y * v.bottom);
       const width = Math.floor(resolution.x * v.width);
       const height = Math.floor(resolution.y * v.height);
+      if (width <= 0 || height <= 0) return;
 
       renderer.setViewport(left, bottom, width, height);
       renderer.setScissor(left, bottom, width, height);
@@ -177,8 +205,35 @@ function initializePreview(
     });
   };
 
-  const animate = (currentTime: number) => {
+  let previousFrameTime = 0;
+
+  const syncCanvasSize = () => {
+    if (!renderer) return;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (
+      width <= 0 ||
+      height <= 0 ||
+      (width === resolution.x && height === resolution.y)
+    ) {
+      return;
+    }
+    resolution.set(width, height);
+    skeletonHelper.resolution.copy(resolution);
+    renderer.setSize(width, height);
+    markDirty(8);
+  };
+
+  const animate = () => {
     animationFrameId = requestAnimationFrame(animate);
+
+    // ResizeObserver can miss the final frame of the drawer width transition.
+    // Sync here so reopening a zero-width preview always restores rendering.
+    syncCanvasSize();
+
+    if (autoOrbit) {
+      markDirty(2);
+    }
 
     const isHidden = typeof document !== 'undefined' && document.hidden;
     const isFocused =
@@ -186,26 +241,42 @@ function initializePreview(
       document.hasFocus &&
       document.hasFocus();
 
-    // Dynamic Framerate Caps:
-    // - If hidden/minimized: drop to 1 FPS (1000ms)
-    // - If unfocused/different monitor: drop to 30 FPS (33.3ms)
-    // - If focused & active: cap at 60 FPS (16.6ms)
-    const adaptiveBaseInterval = isHidden ? 1000 : (!isFocused ? 33.3 : 16.6);
-    const effectiveInterval = Math.max(adaptiveBaseInterval, frameInterval);
+    // When auto-orbiting is active, run at smooth 60 FPS (16.6ms) without stuttering
+    const adaptiveBaseInterval = isHidden
+      ? 1000
+      : autoOrbit
+        ? 16.6
+        : !isFocused
+          ? 33.3
+          : 16.6;
+    const effectiveInterval = Math.max(
+      adaptiveBaseInterval,
+      autoOrbit ? 0 : frameInterval
+    );
 
     const now = performance.now();
     const elapsed = now - lastRenderTimeRef;
     if (elapsed < effectiveInterval) return;
-    if (dirtyFrames <= 0) return;
+    if (dirtyFrames <= 0) {
+      previousFrameTime = now;
+      return;
+    }
     dirtyFrames--;
-    render(currentTime);
+
+    const deltaSeconds =
+      previousFrameTime > 0
+        ? Math.min((now - previousFrameTime) / 1000, 0.1)
+        : 0.016;
+    previousFrameTime = now;
+
+    render(deltaSeconds);
     lastRenderTimeRef = now - (elapsed % effectiveInterval);
   };
 
   animationFrameId = requestAnimationFrame(animate);
 
   // Make sure orbit controls works only on the current view
-  canvas.addEventListener('pointermove', (event) => {
+  const handlePointerMove = (event: PointerEvent) => {
     const x = event.offsetX / resolution.x;
     const y = 1 - event.offsetY / resolution.y;
     views.forEach((v) => {
@@ -220,10 +291,12 @@ function initializePreview(
         v.controls.enabled = false;
       }
     });
-  });
+  };
+  canvas.addEventListener('pointermove', handlePointerMove);
 
   return {
     resize: (width: number, height: number) => {
+      if (width <= 0 || height <= 0) return;
       resolution.set(width, height);
       skeletonHelper.resolution.copy(resolution);
       if (!renderer) return;
@@ -256,12 +329,15 @@ function initializePreview(
     },
     destroy: () => {
       cancelAnimationFrame(animationFrameId);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      views.forEach((view) => view.controls.dispose());
+      views.length = 0;
       skeletonHelper.dispose();
       grid.geometry.dispose();
       (grid.material as any)?.dispose?.();
       if (!renderer) return;
       renderer.dispose();
-      renderer = null; // Very important for js to free the WebGL context. dispose does not to it alone
+      renderer = null;
     },
     addView: ({
       left,
@@ -324,13 +400,16 @@ function initializePreview(
 
       return view;
     },
+    toggleAutoOrbit: (enable?: boolean) => setAutoOrbit(enable),
+    isAutoOrbiting,
+    getViews: () => views,
   };
 }
 
 const BASE_FRAMERATE = 60;
 const LOW_FRAMERATE = 30;
 
-type PreviewContext = ReturnType<typeof initializePreview>;
+export type PreviewContext = ReturnType<typeof initializePreview>;
 
 function SkeletonVisualizer({
   onInit,

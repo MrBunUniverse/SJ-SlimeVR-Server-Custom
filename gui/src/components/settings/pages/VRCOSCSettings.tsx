@@ -1,5 +1,5 @@
 import { Localized, useLocalization } from '@fluent/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   ChangeSettingsRequestT,
@@ -21,6 +21,8 @@ import {
 } from '@/components/settings/SettingsPageLayout';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { boolean, object } from 'yup';
+import { useOperatingMode } from '@/hooks/operating-mode';
+import classNames from 'classnames';
 import {
   OSCSettings,
   useOscSettingsValidator,
@@ -67,6 +69,15 @@ export function VRCOSCSettings() {
   const { l10n } = useLocalization();
   const { sendRPCPacket, useRPCPacket } = useWebsocketAPI();
   const { oscValidator } = useOscSettingsValidator();
+  const { floorAnchor, setChatboxEnabled, triggerChatboxStatus } =
+    useOperatingMode();
+  const [chatboxSent, setChatboxSent] = useState(false);
+
+  const handleSendChatbox = () => {
+    setChatboxSent(true);
+    triggerChatboxStatus();
+    setTimeout(() => setChatboxSent(false), 2000);
+  };
 
   const { reset, control, watch, handleSubmit } = useForm<VRCOSCSettingsForm>({
     defaultValues,
@@ -317,6 +328,61 @@ export function VRCOSCSettings() {
                   'settings-osc-vrchat-network-trackers-elbows'
                 )}
               />
+            </div>
+            <Typography variant="section-title">
+              VRChat Chatbox Status HUD
+            </Typography>
+            <div className="flex flex-col pb-2">
+              <Typography>
+                Broadcast live SlimeVR tracker battery levels and low-battery
+                alerts directly to the in-game VRChat Chatbox (/chatbox/input)
+                for standalone Quest.
+              </Typography>
+            </div>
+            <div className="p-4 rounded-[12px] bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.08] flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[13px] font-semibold text-background-10">
+                  Automatic Periodic Broadcast
+                </span>
+                <span className="text-[11px] text-background-30 mt-0.5">
+                  Sends updated battery percentages every 30 seconds into VRChat
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSendChatbox}
+                  className={classNames(
+                    'px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all active:scale-[0.98] cursor-pointer',
+                    chatboxSent
+                      ? 'bg-[#30D158]/20 text-[#30D158] border border-[#30D158]/30 font-semibold'
+                      : 'bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/[0.08] text-background-10 border border-black/[0.08] dark:border-white/[0.1]'
+                  )}
+                  title="Test broadcast to VRChat chatbox now"
+                >
+                  {chatboxSent ? '✓ Broadcasted' : 'Test Broadcast'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChatboxEnabled(!floorAnchor.chatboxEnabled)}
+                  className={classNames(
+                    'w-[42px] h-[24px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-black/[0.1] dark:border-white/[0.1] active:scale-[0.98]',
+                    floorAnchor.chatboxEnabled
+                      ? 'bg-[#30D158]'
+                      : 'bg-black/10 dark:bg-white/10'
+                  )}
+                  title="Toggle chatbox battery status"
+                >
+                  <div
+                    className={classNames(
+                      'w-[20px] h-[20px] rounded-full bg-white shadow-xs transition-transform duration-150',
+                      floorAnchor.chatboxEnabled
+                        ? 'translate-x-[18px]'
+                        : 'translate-x-0'
+                    )}
+                  />
+                </button>
+              </div>
             </div>
           </>
         </SettingsPagePaneLayout>

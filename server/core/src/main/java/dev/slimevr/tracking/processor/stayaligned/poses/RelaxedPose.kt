@@ -34,6 +34,8 @@ class RelaxedPose(
 						Angle.ofDeg(poseConfig.lowerLegAngleInDeg),
 						Angle.ofDeg(poseConfig.footAngleInDeg),
 					)
+				} else if (config.adaptiveKinetic) {
+					RelaxedPose(Angle.ZERO, Angle.ZERO, Angle.ofDeg(5.0f))
 				} else {
 					null
 				}
@@ -47,6 +49,8 @@ class RelaxedPose(
 						Angle.ofDeg(poseConfig.lowerLegAngleInDeg),
 						Angle.ofDeg(poseConfig.footAngleInDeg),
 					)
+				} else if (config.adaptiveKinetic) {
+					RelaxedPose.ZERO
 				} else {
 					null
 				}
@@ -62,6 +66,8 @@ class RelaxedPose(
 						Angle.ofDeg(poseConfig.lowerLegAngleInDeg),
 						Angle.ofDeg(poseConfig.footAngleInDeg),
 					)
+				} else if (config.adaptiveKinetic) {
+					RelaxedPose.ZERO
 				} else {
 					null
 				}
@@ -71,7 +77,11 @@ class RelaxedPose(
 				StayAlignedDefaults.RELAXED_POSE_KNEELING
 
 			else ->
-				null
+				if (config.adaptiveKinetic) {
+					RelaxedPose.ZERO
+				} else {
+					null
+				}
 		}
 
 		/**

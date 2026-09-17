@@ -33,10 +33,8 @@ export const WebSocketApiContext = createContext<WebSocketApi>(undefined as neve
 export type RPCPacketType = RpcMessageHeaderT['message'];
 export type PubSubPacketType = PubSubHeaderT['u'];
 export type DataFeedPacketType = DataFeedMessageHeaderT['message'];
-// export type OutboundPacketType = OutboundPacketT['packet'];
 
 export function useProvideWebsocketApi(): WebSocketApi {
-  const rpcPacketCounterRef = useRef<number>(0);
   const webSocketRef = useRef<WebSocket | null>(null);
   const rpclistenerRef = useRef<EventTarget>(new EventTarget());
   const pubsublistenerRef = useRef<EventTarget>(new EventTarget());
@@ -65,14 +63,11 @@ export function useProvideWebsocketApi(): WebSocketApi {
 
   const onConnectionClose = () => {
     setConnected(false);
-    rpcPacketCounterRef.current = 0;
   };
 
-  const onMessage = async (event: { data: Blob }) => {
-    if (!event.data.arrayBuffer) return;
-    const buffer = await event.data.arrayBuffer();
-
-    const fbb = new ByteBuffer(new Uint8Array(buffer));
+  const onMessage = (event: MessageEvent) => {
+    if (!(event.data instanceof ArrayBuffer)) return;
+    const fbb = new ByteBuffer(new Uint8Array(event.data));
 
     const message = MessageBundle.getRootAsMessageBundle(fbb).unpack();
 
@@ -115,8 +110,6 @@ export function useProvideWebsocketApi(): WebSocketApi {
     fbb.finish(message.pack(fbb));
 
     webSocketRef.current.send(fbb.asUint8Array());
-
-    rpcPacketCounterRef.current++;
   };
 
   const sendDataFeedPacket = (
@@ -156,6 +149,8 @@ export function useProvideWebsocketApi(): WebSocketApi {
 
   const connect = () => {
     webSocketRef.current = new WebSocket(`ws://${targetIp}:${targetPort}`);
+    // Decode binary packets synchronously, preserving arrival order without Blob copies.
+    webSocketRef.current.binaryType = 'arraybuffer';
 
     // Connection opened
     webSocketRef.current.addEventListener('open', onConnected);

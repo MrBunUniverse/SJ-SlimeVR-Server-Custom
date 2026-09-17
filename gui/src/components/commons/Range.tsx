@@ -23,13 +23,10 @@ export function Range<T extends FieldValues = FieldValues>({
       control={control}
       name={name}
       render={({ field: { onChange, ref, name, value } }) => (
-        <label className="text-standard w-full text-center flex items-center flex-col">
+        <label className="text-[12px] font-medium w-full text-center flex items-center flex-col gap-1.5">
           <input
             type="range"
-            className=" text-background-10 border-accent-background-30"
-            style={{
-              width: 'calc(88% - 0.5vw)',
-            }}
+            className="w-[90%] accent-[#D97757] cursor-pointer h-1.5 bg-background-50/50 dark:bg-white/10 rounded-full appearance-none focus:outline-none"
             name={name}
             ref={ref}
             value={value}
@@ -45,7 +42,7 @@ export function Range<T extends FieldValues = FieldValues>({
               <option key={i}>{value}</option>
             ))}
           </datalist>
-          <div className="w-full flex flex-nowrap overflow-clip">
+          <div className="w-full flex flex-nowrap overflow-clip text-[11px] tnum font-medium text-background-30">
             {Array((max - min) / step + 1)
               .fill(0)
               .map((_v, i) => {
@@ -57,7 +54,7 @@ export function Range<T extends FieldValues = FieldValues>({
                     key={i}
                     className={classNames(
                       'flex-1',
-                      value?.defaultValue && 'text-status-success'
+                      value?.defaultValue && 'text-[#D97757] font-semibold'
                     )}
                   >
                     {value?.label}

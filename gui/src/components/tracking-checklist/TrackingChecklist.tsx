@@ -58,13 +58,13 @@ function Step({
   return (
     <div
       className={classNames(
-        'flex flex-col pr-2 ml-6 last:pb-0 pb-3 border-l-[2px] border-background-50',
+        'flex flex-col pr-2 ml-6 last:pb-0 pb-3 border-l-[1.5px] border-[var(--material-border-subtle)]',
         status !== 'complete' || (firstRequired && 'border-dashed')
       )}
     >
       <div
         className={classNames(
-          'flex w-full gap-2 ',
+          'flex w-full gap-2.5 items-center',
           canBeOpened && 'group cursor-pointer'
         )}
         onClick={() => {
@@ -73,12 +73,19 @@ function Step({
       >
         <div
           className={classNames(
-            'p-1 rounded-full fill-background-10 flex items-center justify-center z-10 h-[25px] w-[25px] -ml-[13px]',
-            status === 'complete' && 'bg-accent-background-20',
-            status === 'blocked' && 'bg-background-50',
-            status === 'skipped' && 'bg-background-50 fill-background-30',
-            status === 'invalid' && !optional && 'bg-background-50',
-            status === 'invalid' && optional && 'bg-background-50'
+            'p-1 rounded-full flex items-center justify-center z-10 h-[22px] w-[22px] -ml-[11.5px] transition-all shadow-xs',
+            status === 'complete' &&
+              'bg-accent-background-20 text-white fill-white',
+            status === 'blocked' &&
+              'bg-[var(--material-tertiary)] border border-[var(--material-border-subtle)]',
+            status === 'skipped' &&
+              'bg-[var(--material-tertiary)] border border-[var(--material-border-subtle)] fill-background-30',
+            status === 'invalid' &&
+              !optional &&
+              'bg-[var(--material-tertiary)] border border-[var(--material-border-subtle)]',
+            status === 'invalid' &&
+              optional &&
+              'bg-[var(--material-tertiary)] border border-[var(--material-border-subtle)]'
           )}
         >
           {status === 'skipped' && <CheckIcon size={10} />}
@@ -86,18 +93,17 @@ function Step({
           {(status === 'invalid' || status === 'blocked') && (
             <div
               className={classNames(
-                'h-[12px] w-[12px] rounded-full',
+                'h-[8px] w-[8px] rounded-full',
                 optional && 'bg-background-40',
-                !optional &&
-                  'bg-accent-background-10 animate-pulse brightness-75'
+                !optional && 'bg-accent-background-20 animate-pulse'
               )}
             />
           )}
         </div>
-        <div className="flex items-center justify-between w-full group-hover:text-background-20 text-section-title">
+        <div className="flex items-center justify-between w-full group-hover:text-accent-background-30 transition-colors text-section-title">
           <Localized id={trackingchecklistIdtoLabel[id]} />
           {canBeOpened && (
-            <div className="fill-background-30 group-hover:scale-125 group-hover:fill-background-20 transition-transform">
+            <div className="fill-background-30 group-hover:scale-110 group-hover:fill-accent-background-30 transition-all">
               <ArrowDownIcon size={20} />
             </div>
           )}

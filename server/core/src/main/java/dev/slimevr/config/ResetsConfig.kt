@@ -64,6 +64,12 @@ class ResetsConfig {
 	// Reset the HMD's pitch upon full reset
 	var resetHmdPitch = false
 
+	// Keep the skeleton usable while an assigned IMU is offline and realign it on return.
+	var deadTrackerRecoveryEnabled = true
+
+	// Announce recovery results through the already configured VRChat chatbox output.
+	var recoveryChatboxNotifications = true
+
 	var lastMountingMethod = MountingMethods.AUTOMATIC
 
 	var yawResetDelay = 0.0f

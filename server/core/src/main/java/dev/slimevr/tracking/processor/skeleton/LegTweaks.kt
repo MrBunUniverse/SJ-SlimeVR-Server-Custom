@@ -124,6 +124,8 @@ class LegTweaks(private val skeleton: HumanSkeleton) {
 		private set
 	private var bufferInvalid = true
 
+	val zeroSlideClamp = ZeroSlideFootClamp(skeleton)
+
 	constructor(skeleton: HumanSkeleton, config: LegTweaksConfig) : this(skeleton) {
 		this.config = config
 		updateConfig()
@@ -131,6 +133,7 @@ class LegTweaks(private val skeleton: HumanSkeleton) {
 
 	fun resetFloorLevel() {
 		initialized = false
+		zeroSlideClamp.reset()
 	}
 
 	fun setFloorClipEnabled(floorClipEnabled: Boolean) {
@@ -156,6 +159,7 @@ class LegTweaks(private val skeleton: HumanSkeleton) {
 
 	fun resetBuffer() {
 		bufferInvalid = true
+		zeroSlideClamp.reset()
 	}
 
 	fun setConfig(config: LegTweaksConfig) {
@@ -447,6 +451,39 @@ class LegTweaks(private val skeleton: HumanSkeleton) {
 	// based on the data from the last frame compute a new position that reduces
 	// ice skating
 	private fun correctSkating() {
+		if (config?.zeroSlideEnabled != false) {
+			val leftOffset = getFootOffset(leftFootRotation)
+			val rightOffset = getFootOffset(rightFootRotation)
+			val clampResult = zeroSlideClamp.update(
+				leftFootPosition,
+				rightFootPosition,
+				leftFootRotation,
+				rightFootRotation,
+				if (skeleton.leftFootTracker != null) leftFootAcceleration else leftLowerLegAcceleration,
+				if (skeleton.rightFootTracker != null) rightFootAcceleration else rightLowerLegAcceleration,
+				floorLevel,
+				footLength,
+				leftOffset,
+				rightOffset,
+				active,
+				currentCorrectionStrength,
+			)
+			leftFootPosition = clampResult.leftFootPosition
+			rightFootPosition = clampResult.rightFootPosition
+
+			if (clampResult.leftState == StanceState.STANCE_LOCKED) {
+				bufferHead.leftLegState = LegTweaksBuffer.LOCKED
+			}
+			if (clampResult.rightState == StanceState.STANCE_LOCKED) {
+				bufferHead.rightLegState = LegTweaksBuffer.LOCKED
+			}
+			return
+		}
+
+		correctSkatingLegacy()
+	}
+
+	private fun correctSkatingLegacy() {
 		// for either foot that is locked get its position (x and z only we let
 		// y move freely) and set it to be there
 		val bufPrev = bufferHead.parent ?: return

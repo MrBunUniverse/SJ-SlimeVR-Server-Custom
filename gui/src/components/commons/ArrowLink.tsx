@@ -9,12 +9,14 @@ export function ArrowLink({
   state,
   direction = 'left',
   variant = 'flat',
+  onClick,
 }: {
   to: string;
   children: ReactNode;
   state?: any;
   direction?: 'left' | 'right';
   variant?: 'flat' | 'boxed' | 'boxed-2';
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const classes = useMemo(() => {
     const variantsMap = {
@@ -33,7 +35,7 @@ export function ArrowLink({
   }, [variant]);
 
   return (
-    <NavLink to={to} state={state} className={classes}>
+    <NavLink to={to} state={state} className={classes} onClick={onClick}>
       {direction === 'left' && (
         <div className="flex flex-col justify-center">
           <ArrowLeftIcon />

@@ -1,11 +1,10 @@
-import test, { describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   calculateLayoutDimensions,
   calculateSidebarHeights,
   calculateShakeHighlightGlow,
   formatEulerVector,
-  getBatteryStatus,
   evaluateQuestDiagnostics,
   ResetCountdownController,
 } from './helpers/test-utils.ts';
@@ -50,18 +49,18 @@ describe('Tier 3: Cross-Feature Combinations (C1 - C5)', () => {
   });
 
   // -------------------------------------------------------------
-  // C2: Theme Switch + Liquid Glass Tracker Cards + Shake Glow
+  // C2: Dark Theme + Liquid Glass Tracker Cards + Shake Glow
   // -------------------------------------------------------------
-  describe('C2: Theme Switch + Liquid Glass Tracker Cards + Shake Glow', () => {
-    it('C2.1: updates shake glow dynamically across velocities during theme transitions', () => {
+  describe('C2: Dark Theme + Liquid Glass Tracker Cards + Shake Glow', () => {
+    it('C2.1: updates shake glow dynamically across velocities', () => {
       const velocities = [0.0, 1.2, 3.5, 8.0, 20.0];
-      const themes = ['dark', 'light'];
+      const themes = ['slime', 'dark'];
 
       for (const theme of themes) {
         const glowRadii = velocities.map((v) => calculateShakeHighlightGlow(v));
         assert.deepEqual(glowRadii, [0, 9, 28, 64, 160]);
-        // Glow radius calculation is invariant to theme but uses theme accent variable
-        assert.ok(theme === 'dark' || theme === 'light');
+        // Glow radius calculation is invariant across supported dark themes.
+        assert.ok(theme === 'slime' || theme === 'dark');
       }
     });
 
@@ -70,13 +69,8 @@ describe('Tier 3: Cross-Feature Combinations (C1 - C5)', () => {
         bg: 'rgba(34, 35, 40, 0.72)',
         border: 'rgba(255, 255, 255, 0.10)',
       };
-      const lightTokens = {
-        bg: 'rgba(255, 255, 255, 0.65)',
-        border: 'rgba(0, 0, 0, 0.08)',
-      };
-
       assert.ok(darkTokens.bg.includes('0.72'));
-      assert.ok(lightTokens.bg.includes('0.65'));
+      assert.ok(darkTokens.border.includes('0.10'));
     });
   });
 
@@ -129,13 +123,55 @@ describe('Tier 3: Cross-Feature Combinations (C1 - C5)', () => {
   describe('C4: Preset Switching + Unassigned Tracker Detection + Table View', () => {
     it('C4.1: filters trackers dynamically when switching presets from Full Body to Upper Body', () => {
       const allTrackers: MockTrackerData[] = [
-        { id: { trackerNum: 0, deviceId: { id: 1 } }, bodyPart: 1, status: 2, rawRotation: [0, 0, 0], velocity: 0 }, // Head
-        { id: { trackerNum: 1, deviceId: { id: 1 } }, bodyPart: 2, status: 2, rawRotation: [0, 0, 0], velocity: 0 }, // Chest
-        { id: { trackerNum: 2, deviceId: { id: 1 } }, bodyPart: 3, status: 2, rawRotation: [0, 0, 0], velocity: 0 }, // Waist
-        { id: { trackerNum: 3, deviceId: { id: 2 } }, bodyPart: 4, status: 2, rawRotation: [0, 0, 0], velocity: 0 }, // L Thigh
-        { id: { trackerNum: 4, deviceId: { id: 2 } }, bodyPart: 5, status: 2, rawRotation: [0, 0, 0], velocity: 0 }, // R Thigh
-        { id: { trackerNum: 5, deviceId: { id: 3 } }, bodyPart: 6, status: 2, rawRotation: [0, 0, 0], velocity: 0 }, // L Foot
-        { id: { trackerNum: 6, deviceId: { id: 3 } }, bodyPart: 7, status: 2, rawRotation: [0, 0, 0], velocity: 0 }, // R Foot
+        {
+          id: { trackerNum: 0, deviceId: { id: 1 } },
+          bodyPart: 1,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        }, // Head
+        {
+          id: { trackerNum: 1, deviceId: { id: 1 } },
+          bodyPart: 2,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        }, // Chest
+        {
+          id: { trackerNum: 2, deviceId: { id: 1 } },
+          bodyPart: 3,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        }, // Waist
+        {
+          id: { trackerNum: 3, deviceId: { id: 2 } },
+          bodyPart: 4,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        }, // L Thigh
+        {
+          id: { trackerNum: 4, deviceId: { id: 2 } },
+          bodyPart: 5,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        }, // R Thigh
+        {
+          id: { trackerNum: 5, deviceId: { id: 3 } },
+          bodyPart: 6,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        }, // L Foot
+        {
+          id: { trackerNum: 6, deviceId: { id: 3 } },
+          bodyPart: 7,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        }, // R Foot
       ];
 
       // Preset 1: Full Body (all 7 assigned)
@@ -155,7 +191,13 @@ describe('Tier 3: Cross-Feature Combinations (C1 - C5)', () => {
 
     it('C4.2: preserves unassigned trackers list during preset changes', () => {
       const unassigned: MockTrackerData[] = [
-        { id: { trackerNum: 99, deviceId: { id: 10 } }, bodyPart: 0, status: 2, rawRotation: [0, 0, 0], velocity: 0 },
+        {
+          id: { trackerNum: 99, deviceId: { id: 10 } },
+          bodyPart: 0,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        },
       ];
       assert.equal(unassigned.length, 1);
       assert.equal(unassigned[0].bodyPart, 0);

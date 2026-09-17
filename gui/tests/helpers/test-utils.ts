@@ -1,6 +1,6 @@
 /**
  * Test Utilities and Simulation Harness for SlimeVR E2E Test Suite
- * 
+ *
  * Provides mock data generators, FlatBuffers protocol simulators,
  * CSS token validators, and layout dimension calculators.
  */
@@ -85,7 +85,10 @@ export function calculateLayoutDimensions(
   const marginY = isMobile ? 0 : 16; // 2 * 8px
 
   const contentWidth = Math.max(0, windowWidth - navbarWidth - sidebarWidth - marginX);
-  const contentHeight = Math.max(0, windowHeight - topbarHeight - navbarHeight - marginY);
+  const contentHeight = Math.max(
+    0,
+    windowHeight - topbarHeight - navbarHeight - marginY
+  );
 
   return {
     windowWidth,
@@ -138,7 +141,10 @@ export function formatEstimatedHeight(userHeightMeters: number): string {
 /**
  * Formats 3D rotation vector to string with given precision
  */
-export function formatEulerVector(vector: [number, number, number], precision: number = 0): string {
+export function formatEulerVector(
+  vector: [number, number, number],
+  precision: number = 0
+): string {
   const [x, y, z] = vector.map((v) => {
     if (Object.is(v, -0)) v = 0;
     return v.toFixed(precision);
@@ -167,8 +173,9 @@ export function getBatteryStatus(hardware?: TrackerHardwareStatus): {
   }
 
   const pct = Math.max(0, Math.min(100, Math.round(hardware.batteryPctEstimate)));
-  const voltage = hardware.batteryVoltage != null ? `${hardware.batteryVoltage.toFixed(2)} V` : '--';
-  
+  const voltage =
+    hardware.batteryVoltage != null ? `${hardware.batteryVoltage.toFixed(2)} V` : '--';
+
   let runtimeFormatted = '--';
   if (hardware.batteryRuntimeEstimate != null && hardware.batteryRuntimeEstimate > 0) {
     const hours = Math.floor(hardware.batteryRuntimeEstimate / 3600);

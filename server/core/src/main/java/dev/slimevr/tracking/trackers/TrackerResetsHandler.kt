@@ -5,6 +5,8 @@ import dev.slimevr.VRServer
 import dev.slimevr.config.ArmsResetModes
 import dev.slimevr.config.DriftCompensationConfig
 import dev.slimevr.config.ResetsConfig
+import dev.slimevr.config.TrackerConfig
+import dev.slimevr.config.config
 import dev.slimevr.filtering.CircularArrayList
 import dev.slimevr.tracking.trackers.udp.TrackerDataType
 import io.github.axisangles.ktmath.EulerAngles
@@ -32,7 +34,7 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	private var totalDriftTime: Long = 0
 	private var driftSince: Long = 0
 	private var timeAtLastReset: Long = 0
-	private var compensateDrift = false
+	var compensateDrift = false
 	private var driftPrediction = false
 	private var driftCompensationEnabled = false
 	private var armsResetMode = ArmsResetModes.BACK
@@ -40,12 +42,18 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	var saveMountingReset = false
 	var resetHmdPitch = false
 	var allowDriftCompensation = false
+		set(value) {
+			field = value
+			refreshDriftCompensationEnabled()
+		}
 	var lastResetQuaternion: Quaternion? = null
+	var recoveryYawFix = Quaternion.IDENTITY
 
 	// Manual mounting orientation
 	var mountingOrientation = HalfHorizontal
 		set(value) {
 			field = value
+			clearRecovery()
 			// Clear the mounting reset now that it's been set manually
 			clearMounting()
 		}
@@ -120,18 +128,87 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * Reads/loads drift compensation settings from given config
 	 */
 	fun readDriftCompensationConfig(config: DriftCompensationConfig) {
-		compensateDrift = false
 		driftPrediction = config.prediction
 		driftAmount = config.amount
 		val maxResets = config.maxResets
 
-		if (compensateDrift && maxResets != driftQuats.capacity()) {
+		if (maxResets != driftQuats.capacity()) {
 			driftQuats = CircularArrayList<Quaternion>(maxResets)
 			driftTimes = CircularArrayList<Long>(maxResets)
 		}
 
+		seedLearnedDriftIfEmpty()
+		val isBno = tracker.config.imuProfileOverride?.equals("bno085", ignoreCase = true) == true ||
+			(tracker.imuType?.name?.contains("BNO") == true && (tracker.config.imuProfileOverride.isNullOrEmpty() || tracker.config.imuProfileOverride.equals("auto", ignoreCase = true)))
+		compensateDrift = !isBno && (config.enabled || (tracker.config.autoLearnDrift && tracker.config.learnedDriftRateDegPerMin != 0.0f))
 		refreshDriftCompensationEnabled()
 	}
+
+	fun seedLearnedDriftIfEmpty() {
+		if (driftQuats.isEmpty() && tracker.isImu()) {
+			var effectiveRate = tracker.config.learnedDriftRateDegPerMin
+			val override = tracker.config.imuProfileOverride ?: "auto"
+			if (override.equals("bno085", ignoreCase = true)) {
+				effectiveRate = 0.0f
+				compensateDrift = false
+			} else if (effectiveRate == 0.0f) {
+				// Seed baseline if a known profile preset or IMU is active
+				effectiveRate = when (override.lowercase()) {
+					"mpu6050" -> 4.5f
+					"bmi160" -> 3.15f
+					"lsm6_icm" -> 0.85f
+					else -> {
+						val imuName = tracker.imuType?.name ?: ""
+						when {
+							imuName.contains("6050") || imuName.contains("6500") -> 4.5f
+							imuName.contains("160") -> 3.15f
+							imuName.contains("270") || imuName.contains("LSM") || imuName.contains("42688") -> 0.85f
+							imuName.contains("BNO") -> 0.0f
+							else -> 0.0f
+						}
+					}
+				}
+				if (effectiveRate != 0.0f) {
+					tracker.config.learnedDriftRateDegPerMin = effectiveRate
+				}
+			}
+
+			if (effectiveRate != 0.0f) {
+				val baselineMinutes = 5.0f
+				val seedAngleRad = Math.toRadians((effectiveRate * baselineMinutes).toDouble()).toFloat()
+				val seedQuat = EulerAngles(EulerOrder.YZX, 0f, seedAngleRad, 0f).toQuaternion()
+				if (driftQuats.capacity() == 0) {
+					driftQuats = CircularArrayList(6)
+					driftTimes = CircularArrayList(6)
+				}
+				driftQuats.add(seedQuat)
+				val baselineMs = (baselineMinutes * 60000L).toLong()
+				driftTimes.add(baselineMs)
+				totalDriftTime = baselineMs
+				averagedDriftQuat = seedQuat
+				driftSince = System.currentTimeMillis()
+			}
+		}
+	}
+
+	fun readAdaptiveProfile(config: TrackerConfig) {
+		seedLearnedDriftIfEmpty()
+		val isBno = tracker.config.imuProfileOverride?.equals("bno085", ignoreCase = true) == true ||
+			(tracker.imuType?.name?.contains("BNO") == true && (tracker.config.imuProfileOverride.isNullOrEmpty() || tracker.config.imuProfileOverride.equals("auto", ignoreCase = true)))
+		if (isBno) {
+			compensateDrift = false
+		} else if (tracker.config.autoLearnDrift && tracker.config.learnedDriftRateDegPerMin != 0.0f) {
+			compensateDrift = true
+		}
+		refreshDriftCompensationEnabled()
+	}
+
+	fun writeAdaptiveProfile(config: TrackerConfig) {
+		// Preserved via tracker.config mutations directly
+	}
+
+	fun getDriftSinceDurationSeconds(): Float =
+		if (driftSince > 0) (System.currentTimeMillis() - driftSince) / 1000.0f else 0.0f
 
 	/**
 	 * Clears drift compensation data
@@ -145,12 +222,25 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	}
 
 	/**
+	 * Resets persistent learned drift and clears active drift compensation buffers.
+	 */
+	fun resetLearnedDrift() {
+		tracker.config.learnedDriftRateDegPerMin = 0.0f
+		tracker.config.totalDriftObservations = 0
+		clearDriftCompensation()
+		if (VRServer.instanceInitialized) {
+			VRServer.instance.configManager.saveConfig()
+		}
+	}
+
+	/**
 	 * Checks for compensateDrift, allowDriftCompensation, and if
 	 * a computed head tracker exists.
 	 */
 	fun refreshDriftCompensationEnabled() {
 		driftCompensationEnabled = compensateDrift &&
 			allowDriftCompensation &&
+			VRServer.instanceInitialized &&
 			TrackerUtils.getNonInternalNonImuTrackerForBodyPosition(
 				VRServer.instance.allTrackers,
 				TrackerPosition.HEAD,
@@ -165,6 +255,11 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		yawResetSmoothTime = config.yawResetSmoothTime
 		saveMountingReset = config.saveMountingReset
 		resetHmdPitch = config.resetHmdPitch
+	}
+
+	fun clearRecovery() {
+		recoveryYawFix = Quaternion.IDENTITY
+		tracker.recovery.cancel()
 	}
 
 	fun trySetMountingReset(quat: Quaternion) {
@@ -219,6 +314,7 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		rot *= tposeDownFix
 		// More heading correction
 		rot = yawFix * rot
+		rot = recoveryYawFix * rot
 		rot = constraintFix * rot
 		return rot
 	}
@@ -234,6 +330,7 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		rot = gyroFixNoMounting * rot
 		rot *= attachmentFixNoMounting
 		rot = yawFixZeroReference * rot
+		rot = recoveryYawFix * rot
 		rot = constraintFix * rot
 		return rot
 	}
@@ -258,6 +355,7 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * 0). This allows the tracker to be strapped to body at any pitch and roll.
 	 */
 	fun resetFull(reference: Quaternion) {
+		clearRecovery()
 		constraintFix = Quaternion.IDENTITY
 
 		if (tracker.trackerDataType == TrackerDataType.FLEX_RESISTANCE) {
@@ -354,6 +452,7 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * position should be corrected in the source.
 	 */
 	fun resetYaw(reference: Quaternion) {
+		clearRecovery()
 		// TODO HMD doesn't get yaw reset, which makes it so tracker.resetFilteringQuats() doesn't get called
 
 		constraintFix = Quaternion.IDENTITY
@@ -398,6 +497,7 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * and stores it in mountRotFix, and adjusts yawFix
 	 */
 	fun resetMounting(reference: Quaternion) {
+		clearRecovery()
 		if (tracker.trackerDataType == TrackerDataType.FLEX_RESISTANCE) {
 			tracker.trackerFlexHandler.resetMax()
 			tracker.resetFilteringQuats(reference)
@@ -506,9 +606,37 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * driftQuat and timeAtLastReset
 	 */
 	private fun calculateDrift(beforeQuat: Quaternion) {
-		if (driftCompensationEnabled) {
-			val rotQuat = adjustToReference(tracker.getRawRotation())
+		val rotQuat = adjustToReference(tracker.getRawRotation())
 
+		// Auto-learn persistent drift rate across sessions if interval is valid (>30s)
+		if (tracker.isImu() && driftSince > 0) {
+			val elapsedMs = System.currentTimeMillis() - driftSince
+			val elapsedMin = elapsedMs / 60000.0f
+
+			if (tracker.config.autoLearnDrift && elapsedMin >= 0.5f) {
+				val deltaQuat = getYawQuaternion(rotQuat) / getYawQuaternion(beforeQuat)
+				val deltaEuler = deltaQuat.toEulerAngles(EulerOrder.YZX)
+				var deltaYawDeg = Math.toDegrees(deltaEuler.y.toDouble()).toFloat()
+				while (deltaYawDeg > 180f) deltaYawDeg -= 360f
+				while (deltaYawDeg < -180f) deltaYawDeg += 360f
+
+				val observedRate = deltaYawDeg / elapsedMin
+				// Filter out extreme resets (> 20 deg/min, likely posture re-calibration or manual turns)
+				if (abs(observedRate) <= 20.0f) {
+					val currentLearned = tracker.config.learnedDriftRateDegPerMin
+					val obsCount = tracker.config.totalDriftObservations
+					val alpha = if (obsCount < 3) 0.5f else 0.2f
+					val newLearned = (1f - alpha) * currentLearned + alpha * observedRate
+					tracker.config.learnedDriftRateDegPerMin = newLearned
+					tracker.config.totalDriftObservations = obsCount + 1
+					if (VRServer.instanceInitialized) {
+						VRServer.instance.configManager.saveConfig()
+					}
+				}
+			}
+		}
+
+		if (driftCompensationEnabled) {
 			if (driftSince > 0 && System.currentTimeMillis() - timeAtLastReset > DRIFT_COOLDOWN_MS) {
 				// Check and remove from lists to keep them under the reset limit
 				if (driftQuats.size == driftQuats.capacity()) {
@@ -577,9 +705,9 @@ class TrackerResetsHandler(val tracker: Tracker) {
 			} else {
 				timeAtLastReset = System.currentTimeMillis()
 			}
-
-			driftSince = System.currentTimeMillis()
 		}
+
+		driftSince = System.currentTimeMillis()
 	}
 
 	/**

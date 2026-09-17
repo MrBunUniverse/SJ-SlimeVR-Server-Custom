@@ -2,9 +2,12 @@ package dev.slimevr.tracking.processor.stayaligned.adjust
 
 import dev.slimevr.config.StayAlignedConfig
 import dev.slimevr.math.Angle
+import dev.slimevr.tracking.processor.stayaligned.AdaptiveKineticPostureDetector
+import dev.slimevr.tracking.processor.stayaligned.KineticPosture
 import dev.slimevr.tracking.processor.stayaligned.StayAlignedDefaults.YAW_ERRORS_CENTER_ERROR_WEIGHT
 import dev.slimevr.tracking.processor.stayaligned.StayAlignedDefaults.YAW_ERRORS_LOCKED_ERROR_WEIGHT
 import dev.slimevr.tracking.processor.stayaligned.StayAlignedDefaults.YAW_ERRORS_NEIGHBOR_ERROR_WEIGHT
+import dev.slimevr.tracking.processor.stayaligned.adjust.TrackerYaw.trackerYaw
 import dev.slimevr.tracking.processor.stayaligned.poses.PlayerPose
 import dev.slimevr.tracking.processor.stayaligned.poses.RelaxedPose
 import dev.slimevr.tracking.processor.stayaligned.trackers.RestDetector
@@ -81,13 +84,30 @@ object AdjustTrackerYaw {
 		val state = tracker.stayAligned
 		state.yawErrors = YawErrors()
 
+		// Kinetic Motion-Gating (Anti-Fighting & Anti-Rubberbanding for dancing)
+		val effectiveYawCorrection = if (config.adaptiveKinetic) {
+			val angVel = tracker.stayAligned.angularVelocity
+			// Below 0.15 rad/s: full correction. Above 0.35 rad/s: paused during dance moves/fast spins.
+			val motionScale = when {
+				angVel >= 0.35f -> 0.0f
+				angVel <= 0.15f -> 1.0f
+				else -> (0.35f - angVel) / 0.20f
+			}
+			if (motionScale <= 0.01f) {
+				return
+			}
+			yawCorrection * motionScale
+		} else {
+			yawCorrection
+		}
+
 		val restDetector = state.restDetector
 		when (restDetector.state) {
 			RestDetector.State.MOVING ->
-				adjustMovingTracker(tracker, trackers, yawCorrection, config)
+				adjustMovingTracker(tracker, trackers, effectiveYawCorrection, config)
 
 			RestDetector.State.AT_REST ->
-				adjustLockedTracker(tracker, trackers, yawCorrection)
+				adjustLockedTracker(tracker, trackers, effectiveYawCorrection)
 
 			RestDetector.State.RECENTLY_AT_REST -> {
 				// Do not adjust trackers that were recently at rest, to support play
@@ -122,15 +142,49 @@ object AdjustTrackerYaw {
 		yawCorrection: Angle,
 		config: StayAlignedConfig,
 	) {
-		val centerYaw = CenterYaw.ofSkeleton(trackers) ?: return
+		val centerYaw = CenterYaw.ofSkeleton(trackers, config) ?: return
 
 		val pose = PlayerPose.ofTrackers(trackers)
 		val relaxedPose = RelaxedPose.forPose(pose, config) ?: return
 
+		val isAdaptive = config.adaptiveKinetic
+		val posture = if (isAdaptive) {
+			AdaptiveKineticPostureDetector.detectPosture(trackers)
+		} else {
+			KineticPosture.STANDING_OR_DANCING
+		}
+		val head = trackers.head
+
 		adjustByError(tracker, yawCorrection) {
 			YawErrors().also {
 				trackers.visit(tracker, CenterErrorVisitor(centerYaw, relaxedPose, it.centerError))
-				trackers.visit(tracker, NeighborErrorVisitor(relaxedPose, it.neighborError))
+
+				// If sitting in adaptive mode, decouple leg neighbor cross-coupling
+				// so sitting cross-legged or relaxed never twists legs
+				val isLeg = tracker == trackers.leftUpperLeg || tracker == trackers.rightUpperLeg ||
+					tracker == trackers.leftLowerLeg || tracker == trackers.rightLowerLeg ||
+					tracker == trackers.leftFoot || tracker == trackers.rightFoot
+
+				if (!(isAdaptive && posture == KineticPosture.SITTING && isLeg)) {
+					trackers.visit(tracker, NeighborErrorVisitor(relaxedPose, it.neighborError))
+				}
+
+				// HMD Conical Limit Guard: if upper body tracker yaw deviates by > 70 deg from HMD forward,
+				// apply progressive restorative pull to prevent backwards torso or twisted spine glitches.
+				if (isAdaptive && head != null && (head.isHmd || !head.isImu()) &&
+					TrackerYaw.hasTrackerYaw(head) && trackers.upperBody.contains(tracker) &&
+					TrackerYaw.hasTrackerYaw(tracker)
+				) {
+					val hmdYaw = trackerYaw(head)
+					val trkYaw = trackerYaw(tracker)
+					val yawDelta = hmdYaw - trkYaw
+					val absDiffRad = kotlin.math.abs(yawDelta.toRad())
+					val limitRad = Angle.ofDeg(70.0f).toRad()
+					if (absDiffRad > limitRad) {
+						val excess = (absDiffRad - limitRad) / Angle.ofDeg(20.0f).toRad()
+						it.centerError.add(yawDelta * (1.5f + excess * 2.5f))
+					}
+				}
 			}
 		}
 	}

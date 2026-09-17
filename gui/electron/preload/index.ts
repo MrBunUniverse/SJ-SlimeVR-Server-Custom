@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setPresence: (options) => ipcRenderer.invoke(IPC_CHANNELS.DISCORD_PRESENCE, options),
   getInstallDir: () => ipcRenderer.invoke(IPC_CHANNELS.GET_FOLDER, 'exe'),
   isSteam: () => ipcRenderer.invoke(IPC_CHANNELS.IS_STEAM),
+  getAppleMusic: () => ipcRenderer.invoke(IPC_CHANNELS.GET_APPLE_MUSIC),
   onTrayReset: (cb) => {
     const sub = (_: IpcRendererEvent, type: string) => cb(type);
     ipcRenderer.on('tray-reset', sub);
@@ -63,4 +64,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('tray-elevation-reset', sub);
     return () => ipcRenderer.removeListener('tray-elevation-reset', sub);
   },
+  questAudio: {
+    getDevices: () => ipcRenderer.invoke(IPC_CHANNELS.QUEST_AUDIO_DEVICES),
+    connectWifi: (ip) => ipcRenderer.invoke(IPC_CHANNELS.QUEST_AUDIO_CONNECT, ip),
+    enableWirelessFromUsb: (serial) =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUEST_AUDIO_ENABLE_WIFI, serial),
+    startStream: (options) =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUEST_AUDIO_START, options),
+    stopStream: (source) => ipcRenderer.invoke(IPC_CHANNELS.QUEST_AUDIO_STOP, source),
+    getStatus: () => ipcRenderer.invoke(IPC_CHANNELS.QUEST_AUDIO_STATUS),
+    installScrcpy: () => ipcRenderer.invoke(IPC_CHANNELS.QUEST_AUDIO_INSTALL),
+    playTestTone: (channel, volume) =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUEST_AUDIO_TEST_TONE, channel, volume),
+  },
+  questCapture: {
+    getCapabilities: (serial) =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUEST_CAPTURE_CAPABILITIES, serial),
+    startVideo: (options) =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUEST_CAPTURE_VIDEO_START, options),
+    stopVideo: () => ipcRenderer.invoke(IPC_CHANNELS.QUEST_CAPTURE_VIDEO_STOP),
+    startStudio: (options) =>
+      ipcRenderer.invoke(IPC_CHANNELS.QUEST_CAPTURE_STUDIO_START, options),
+    stopAll: () => ipcRenderer.invoke(IPC_CHANNELS.QUEST_CAPTURE_STOP_ALL),
+    getStatus: () => ipcRenderer.invoke(IPC_CHANNELS.QUEST_CAPTURE_STATUS),
+  },
+  requestMicrophoneAccess: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.REQUEST_MICROPHONE_ACCESS),
+  transcribeNativeSpeech: (data) =>
+    ipcRenderer.invoke(IPC_CHANNELS.NATIVE_SPEECH_TRANSCRIBE, data),
 } satisfies IElectronAPI);

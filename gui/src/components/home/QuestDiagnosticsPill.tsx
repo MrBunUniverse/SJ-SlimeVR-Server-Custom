@@ -23,8 +23,8 @@ export function QuestDiagnosticsPill() {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={classNames(
-          'flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all duration-150',
-          'glass-pill glass-interactive active:scale-[0.97]'
+          'flex items-center gap-1.5 px-2 py-1 rounded-lg text-[13px] font-normal transition-colors select-none cursor-pointer active:scale-[0.97]',
+          'text-background-20 hover:text-background-10'
         )}
       >
         <div
@@ -37,12 +37,14 @@ export function QuestDiagnosticsPill() {
               : 'bg-status-critical'
           )}
         />
-        <Typography className="text-[12px] font-medium tracking-tight">
+        <span className="text-[13px] font-medium tracking-normal text-background-10">
           {isConnected
             ? `${connectedTrackers.length} Trackers Active`
             : 'Backend Disconnected'}
-        </Typography>
-        <span className="text-background-30 text-[10px] font-normal">▼</span>
+        </span>
+        <span className="text-[11px] text-background-30 -ml-0.5 leading-none">
+          ⌄
+        </span>
       </button>
 
       {isOpen && (
@@ -51,8 +53,8 @@ export function QuestDiagnosticsPill() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute left-0 top-9 w-72 p-3.5 z-50 glass-popover rounded-2xl shadow-2xl flex flex-col gap-2.5 animate-fade-in">
-            <div className="flex justify-between items-center pb-2 border-b border-background-50/30">
+          <div className="absolute left-0 top-8 w-72 p-3.5 z-50 rounded-[14px] bg-[#262421] dark:bg-[#262421] border border-[#3C3A35] dark:border-[#3C3A35] shadow-2xl flex flex-col gap-2.5 animate-fade-in">
+            <div className="flex justify-between items-center pb-2 border-b border-[#3C3A35]">
               <Typography
                 bold
                 className="text-[13px] font-semibold tracking-tight text-background-10"
@@ -93,7 +95,7 @@ export function QuestDiagnosticsPill() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-background-50/30 flex justify-between items-center">
+            <div className="pt-2 border-t border-[#3C3A35] flex justify-between items-center">
               <NavLink
                 to="/settings/osc/vrchat"
                 className="text-[11px] text-accent-background-20 hover:text-accent-background-10 font-medium tracking-tight"

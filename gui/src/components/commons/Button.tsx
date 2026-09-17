@@ -67,36 +67,36 @@ export function Button({
   const classes = useMemo(() => {
     const variantsMap = {
       primary: classNames({
-        'bg-accent-background-30 hover:bg-accent-background-20 text-standard-bold font-semibold tracking-tight text-background-10 active:scale-[0.98] shadow-md hover:shadow-lg transition-all duration-150':
+        'bg-accent-background-20 hover:bg-accent-background-30 text-white font-medium tracking-tight active:scale-[0.98] shadow-xs transition-all duration-150':
           !disabled,
-        'bg-accent-background-40/50 hover:bg-accent-background-40/50 cursor-not-allowed text-accent-background-10/60':
+        'bg-accent-background-40/40 hover:bg-accent-background-40/40 cursor-not-allowed text-white/50':
           disabled,
       }),
       secondary: classNames({
-        'glass-interactive text-standard-bold font-semibold tracking-tight text-background-10 active:scale-[0.98] shadow-sm':
+        'bg-background-60/60 hover:bg-background-60/90 text-background-10 border border-background-50/50 dark:border-white/[0.08] font-medium tracking-tight active:scale-[0.98] shadow-xs transition-all duration-150':
           !disabled,
-        'bg-background-60/40 hover:bg-background-60/40 cursor-not-allowed text-background-40 border border-white/5':
+        'bg-background-60/20 hover:bg-background-60/20 cursor-not-allowed text-background-40 border border-background-50/20':
           disabled,
       }),
       tertiary: classNames({
-        'bg-background-50/70 hover:bg-background-40/90 text-standard-bold font-medium tracking-tight text-background-10 active:scale-[0.98] border border-white/5 transition-all duration-150':
+        'bg-background-50/50 hover:bg-background-50/80 text-background-10 font-medium tracking-tight active:scale-[0.98] border border-background-50/40 dark:border-white/[0.04] transition-all duration-150':
           !disabled,
-        'bg-background-50/30 hover:bg-background-50/30 cursor-not-allowed text-background-40':
+        'bg-background-50/20 hover:bg-background-50/20 cursor-not-allowed text-background-40':
           disabled,
       }),
       quaternary: classNames({
-        'hover:bg-background-60/50 text-standard-bold font-medium tracking-tight text-background-20 hover:text-background-10 active:scale-[0.98] transition-all duration-150':
+        'hover:bg-background-60/50 font-medium tracking-tight text-background-20 hover:text-background-10 active:scale-[0.98] transition-all duration-150':
           !disabled,
         'cursor-not-allowed text-background-40': disabled,
       }),
     };
     return classNames(
       variantsMap[variant],
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-30/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background-80 focus:outline-none text-center relative flex items-center justify-center',
+      'font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-30/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background-80 focus:outline-none text-center relative flex items-center justify-center text-[12px] font-medium tracking-normal whitespace-nowrap leading-none select-none',
       {
-        'rounded-full p-2 text-center min-h-[35px] min-w-[35px] active:scale-[0.96]':
+        'rounded-full p-2 text-center min-h-[34px] min-w-[34px] active:scale-[0.96]':
           rounded,
-        'rounded-xl px-5 py-2.5': !rounded,
+        'rounded-full px-5 sm:px-6 py-2.5 min-h-[36px]': !rounded,
       },
       props.className
     );

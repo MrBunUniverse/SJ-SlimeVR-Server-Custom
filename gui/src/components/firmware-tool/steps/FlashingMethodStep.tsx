@@ -236,20 +236,31 @@ function OTADevicesList({
       // filter out devices we can't update
       if (!hardwareInfo?.officialBoardType) return false;
 
-      // if the device has no trackers it is prob misconfigured so we skip for safety
-      if (trackers.length <= 0) return false;
-
-      // We make sure that the tracker is in working condition before doing ota as an error (that could be hardware)
-      // could cause an error during the update
-      if (!trackers.every(({ status }) => status === TrackerStatus.OK))
+      // Allow devices even if they have 0 trackers so misconfigured/unrecognized sensor boards can be updated
+      if (
+        trackers.length > 0 &&
+        !trackers.every(
+          ({ status }) =>
+            status === TrackerStatus.OK ||
+            status === TrackerStatus.ERROR ||
+            status === TrackerStatus.BUSY
+        )
+      )
         return false;
       return true;
     }) || [];
 
-  const deviceNames = ({ trackers }: DeviceDataT) =>
-    trackers
+  const deviceNames = ({ trackers, id, hardwareInfo }: DeviceDataT) => {
+    const names = trackers
       .map(({ info }) => getTrackerName(l10n, info))
       .filter((i): i is string => !!i);
+    if (names.length > 0) return names;
+    return [
+      hardwareInfo?.boardType
+        ? `Tracker (${hardwareInfo.boardType})`
+        : `Tracker ${id?.id ?? ''}`,
+    ];
+  };
 
   const selectedDevices = watch('ota.selectedDevices');
 
@@ -334,7 +345,7 @@ export function FlashingMethodStep({
   isActive: boolean;
 }) {
   const { l10n } = useLocalization();
-  const { selectedDevices, selectedDefault } = useFirmwareTool();
+  const { selectedDevices } = useFirmwareTool();
 
   const {
     control,
@@ -437,16 +448,7 @@ export function FlashingMethodStep({
           </div>
           <div className="flex justify-between">
             <Localized id="firmware_tool-previous_step">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (selectedDefault?.flashingRules.shouldOnlyUseDefaults) {
-                    goTo('SelectSource');
-                  } else {
-                    goTo('Defaults');
-                  }
-                }}
-              />
+              <Button variant="secondary" onClick={() => goTo('Defaults')} />
             </Localized>
             <Localized id="firmware_tool-next_step">
               <Button

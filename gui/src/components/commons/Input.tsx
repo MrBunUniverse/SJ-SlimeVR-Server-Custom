@@ -50,30 +50,30 @@ export const InputInside = forwardRef<
   const classes = useMemo(() => {
     const variantsMap = {
       primary: classNames({
-        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-60/80 backdrop-blur-md border border-white/10':
+        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-60/50 backdrop-blur-md border border-background-50/60 dark:border-white/10':
           !disabled,
-        'text-background-30 placeholder:text-background-30 border-background-70/50 bg-background-70/50 cursor-not-allowed':
+        'text-background-30 placeholder:text-background-30 border-background-50/30 bg-background-70/30 cursor-not-allowed':
           disabled,
       }),
       secondary: classNames({
-        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-50/80 backdrop-blur-md border border-white/10':
+        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-50/50 backdrop-blur-md border border-background-50/60 dark:border-white/10':
           !disabled,
-        'text-background-40 placeholder:text-background-40 border-background-70/50 bg-background-70/50 cursor-not-allowed':
+        'text-background-40 placeholder:text-background-40 border-background-50/30 bg-background-70/30 cursor-not-allowed':
           disabled,
       }),
       tertiary: classNames({
-        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-40/80 backdrop-blur-md border border-white/10':
+        'placeholder:text-background-30 placeholder:not-italic placeholder:font-normal bg-background-40/50 backdrop-blur-md border border-background-50/60 dark:border-white/10':
           !disabled,
-        'text-background-30 placeholder:text-background-30 border-background-70/50 bg-background-70/50 cursor-not-allowed':
+        'text-background-30 placeholder:text-background-30 border-background-50/30 bg-background-70/30 cursor-not-allowed':
           disabled,
       }),
     };
 
     return classNames(
       variantsMap[variant],
-      'w-full min-h-[42px] z-10 rounded-xl px-3.5 py-2',
-      'focus:outline-none focus:border-accent-background-30 focus:ring-2 focus:ring-accent-background-30/30 focus-visible:outline-none',
-      'text-standard text-background-10 relative transition-all duration-150',
+      'w-full min-h-[40px] z-10 rounded-[12px] px-3.5 py-2',
+      'focus:outline-none focus:border-accent-background-20 focus:ring-2 focus:ring-accent-background-30/25 focus-visible:outline-none',
+      'text-[13px] text-background-10 relative transition-all duration-150 shadow-2xs',
       error &&
         'border-status-critical focus:border-status-critical focus:ring-status-critical/30'
     );

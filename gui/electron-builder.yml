@@ -73,6 +73,9 @@ mac:
   artifactName: "SlimeVR-mac.${ext}"
   x64ArchFiles: "**/register-protocol-handler.node"
   icon: "./electron/resources/icons/icon.icns"
+  extendInfo:
+    NSMicrophoneUsageDescription: "SlimeVR uses your microphone for voice dictation and translation."
+    NSSpeechRecognitionUsageDescription: "SlimeVR uses speech recognition to turn dictation into chatbox messages."
   extraFiles:
     - from: "../server/desktop/build/libs/slimevr.jar"
       to: "Resources/slimevr.jar"

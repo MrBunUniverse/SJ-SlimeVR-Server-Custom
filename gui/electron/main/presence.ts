@@ -48,7 +48,9 @@ export const richPresence = () => {
       logger.info('Destroying Discord RPC');
       try {
         client.destroy();
-      } catch {}
+      } catch (e) {
+        logger.debug(e, 'Failed to destroy Discord RPC client');
+      }
       Object.assign(state, initialState());
     },
   };

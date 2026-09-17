@@ -22,8 +22,12 @@ import { useConfig } from '@/hooks/config';
 import { useWebsocketAPI } from '@/hooks/websocket-api';
 import { useLocaleConfig } from '@/i18n/config';
 import { CheckBox } from '@/components/commons/Checkbox';
+import { Button } from '@/components/commons/Button';
+import { useElectron } from '@/hooks/electron';
 import { SteamIcon } from '@/components/commons/icon/SteamIcon';
 import { WrenchIcon } from '@/components/commons/icon/WrenchIcons';
+import { RecordIcon } from '@/components/commons/icon/RecordIcon';
+import { FolderIcon } from '@/components/commons/icon/FolderIcon';
 import { NumberSelector } from '@/components/commons/NumberSelector';
 import { Radio } from '@/components/commons/Radio';
 import { Typography } from '@/components/commons/Typography';
@@ -118,6 +122,9 @@ export type SettingsForm = {
   velocitySettings: {
     sendDerivedVelocity: boolean;
   };
+  telemetry: {
+    recordTelemetry: boolean;
+  };
 };
 
 const defaultValues: SettingsForm = {
@@ -178,6 +185,7 @@ const defaultValues: SettingsForm = {
   stayAligned: defaultStayAlignedSettings,
   hidSettings: { trackersOverHID: false },
   velocitySettings: { sendDerivedVelocity: false },
+  telemetry: { recordTelemetry: false },
 };
 
 const settingsAtom = atom(new SettingsResponseT());
@@ -188,6 +196,7 @@ const settingsValueAtom = selectAtom(
 );
 
 export function GeneralSettings() {
+  const electron = useElectron();
   const setSettings = useSetAtom(settingsAtom);
   const settings = useAtomValue(settingsValueAtom);
   const { l10n } = useLocalization();
@@ -229,7 +238,30 @@ export function GeneralSettings() {
 
   const {
     trackers: { automaticTrackerToggle },
+    telemetry,
   } = watch();
+
+  const openTelemetryFolder = async () => {
+    if (electron.isElectron && electron.api?.openLogsFolder) {
+      try {
+        await electron.api.openLogsFolder();
+      } catch (err) {
+        console.error('Failed to open telemetry logs folder:', err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (
+      telemetry?.recordTelemetry !== undefined &&
+      typeof window !== 'undefined'
+    ) {
+      localStorage.setItem(
+        'slimevr-telemetry-recording',
+        String(telemetry.recordTelemetry)
+      );
+    }
+  }, [telemetry?.recordTelemetry]);
 
   const onSubmit = (values: SettingsForm) => {
     const settingsReq = new ChangeSettingsRequestT();
@@ -497,6 +529,14 @@ export function GeneralSettings() {
       };
     }
 
+    const storedTelemetry =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('slimevr-telemetry-recording') === 'true'
+        : false;
+    formData.telemetry = {
+      recordTelemetry: storedTelemetry,
+    };
+
     reset({ ...getValues(), ...formData });
   }, [settings]);
 
@@ -690,7 +730,7 @@ export function GeneralSettings() {
                 'settings-general-tracker_mechanics-filtering-type'
               )}
             </Typography>
-            <div className="flex md:flex-row flex-col gap-3 pt-2">
+            <div className="grid sm:grid-cols-2 gap-3 pt-2">
               <Radio
                 control={control}
                 name="filtering.type"
@@ -724,6 +764,17 @@ export function GeneralSettings() {
                 )}
                 value={FilteringType.PREDICTION.toString()}
               />
+              <Radio
+                control={control}
+                name="filtering.type"
+                label={l10n.getString(
+                  'settings-general-tracker_mechanics-filtering-type-adaptive_hybrid'
+                )}
+                description={l10n.getString(
+                  'settings-general-tracker_mechanics-filtering-type-adaptive_hybrid-description'
+                )}
+                value={(FilteringType.ADAPTIVE_HYBRID ?? 3).toString()}
+              />
             </div>
             <div className="flex gap-5 pt-5 md:flex-row flex-col">
               <NumberSelector
@@ -749,6 +800,36 @@ export function GeneralSettings() {
                 min={0.0}
                 max={0.5}
                 step={0.05}
+              />
+            </div>
+            <div className="flex flex-col pt-5 pb-3">
+              <Typography variant="section-title">
+                {l10n.getString('settings-general-dead-tracker-recovery')}
+              </Typography>
+              <Typography>
+                {l10n.getString(
+                  'settings-general-dead-tracker-recovery-description'
+                )}
+              </Typography>
+            </div>
+            <div className="flex flex-col gap-3">
+              <CheckBox
+                variant="toggle"
+                outlined
+                control={control}
+                name="resetsSettings.deadTrackerRecoveryEnabled"
+                label={l10n.getString(
+                  'settings-general-dead-tracker-recovery-enabled'
+                )}
+              />
+              <CheckBox
+                variant="toggle"
+                outlined
+                control={control}
+                name="resetsSettings.recoveryChatboxNotifications"
+                label={l10n.getString(
+                  'settings-general-dead-tracker-recovery-chatbox'
+                )}
               />
             </div>
             <div className="flex flex-col pt-5 pb-3">
@@ -807,11 +888,16 @@ export function GeneralSettings() {
               {l10n.getString('settings-general-fk_settings')}
             </Typography>
             <div className="flex flex-col pt-2 pb-4 gap-2">
-              <Typography variant="section-title">
-                {l10n.getString(
-                  'settings-general-fk_settings-leg_tweak-skating_correction'
-                )}
-              </Typography>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Typography variant="section-title">
+                  {l10n.getString(
+                    'settings-general-fk_settings-leg_tweak-skating_correction'
+                  )}
+                </Typography>
+                <span className="px-2 py-0.5 text-[11px] font-medium tracking-wide rounded-full bg-[#D97757]/15 text-[#D97757] border border-[#D97757]/30">
+                  Zero-Slide & Ground Clamp
+                </span>
+              </div>
               <Typography>
                 {l10n.getString(
                   'settings-general-fk_settings-leg_tweak-skating_correction-description'
@@ -1468,6 +1554,69 @@ export function GeneralSettings() {
                 max={20}
                 step={1}
               />
+            </div>
+          </>
+        </SettingsPagePaneLayout>
+        <SettingsPagePaneLayout icon={<RecordIcon />} id="telemetry">
+          <>
+            <div className="flex justify-between items-center">
+              <Typography variant="main-title">
+                Session Telemetry & Drift Logging
+              </Typography>
+              {telemetry?.recordTelemetry && (
+                <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-status-critical/20 text-status-critical font-medium animate-pulse">
+                  <span className="w-2 h-2 rounded-full bg-status-critical" />
+                  Recording Active
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col pt-2 pb-4 gap-1">
+              <Typography variant="section-title">
+                Background Telemetry Export
+              </Typography>
+              <Typography color="secondary">
+                Continuously logs high-rate IMU orientations, angular
+                velocities, reset intervals, and learned drift metrics to CSV
+                for offline analysis, calibration tuning, or research.
+              </Typography>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between bg-background-80 p-4 rounded-lg">
+                <div className="flex flex-col gap-1 max-w-[70%]">
+                  <Typography bold>Record Tracker Telemetry</Typography>
+                  <Typography color="secondary">
+                    When enabled, logs per-tracker IMU rotation, drift duration,
+                    and learning rates to logs/telemetry/.
+                  </Typography>
+                </div>
+                <CheckBox
+                  variant="toggle"
+                  outlined
+                  control={control}
+                  name="telemetry.recordTelemetry"
+                  label=""
+                />
+              </div>
+
+              <div className="flex items-center justify-between bg-background-80 p-4 rounded-lg">
+                <div className="flex flex-col gap-1">
+                  <Typography bold>Session Export Directory</Typography>
+                  <Typography color="secondary">
+                    View generated CSV telemetry files and historical drift
+                    session logs.
+                  </Typography>
+                </div>
+                <Button
+                  variant="secondary"
+                  className="flex items-center gap-2 self-start"
+                  onClick={openTelemetryFolder}
+                >
+                  <FolderIcon />
+                  Open Telemetry Folder
+                </Button>
+              </div>
             </div>
           </>
         </SettingsPagePaneLayout>

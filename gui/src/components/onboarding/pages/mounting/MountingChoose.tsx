@@ -10,7 +10,6 @@ import * as Sentry from '@sentry/react';
 export function MountingChoose() {
   const { l10n } = useLocalization();
   const { applyProgress, skipSetup, state } = useOnboarding();
-  const [animated, setAnimated] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
 
   applyProgress(0.55);
@@ -29,25 +28,23 @@ export function MountingChoose() {
           </div>
           <div
             className={classNames(
-              'grid xs:grid-cols-2 w-full xs:flex-row mobile:flex-col gap-4 [&>div]:grow'
+              'grid xs:grid-cols-2 w-full xs:flex-row mobile:flex-col gap-6 [&>div]:grow'
             )}
           >
             <div
               className={classNames(
-                'rounded-lg p-4 flex relative',
-                !state.alonePage && 'bg-background-70',
-                state.alonePage && 'bg-background-60'
+                'rounded-[20px] p-6 flex flex-col relative border border-[var(--material-border-subtle)] bg-[var(--material-tertiary)] shadow-sm hover:border-[var(--material-border-focus)] transition-all'
               )}
             >
-              <div className="bg-accent-background-30 absolute -left-4 -top-5 p-1.5 rounded-lg">
-                <Typography variant="vr-accessible" italic>
+              <div className="bg-accent-background-20/15 border border-accent-background-20/30 text-accent-background-30 self-start px-3 py-1 rounded-full text-xs font-mono font-medium tracking-wide uppercase mb-3">
+                <Typography variant="vr-accessible">
                   {l10n.getString(
                     'onboarding-choose_mounting-auto_mounting-label-v2'
                   )}
                 </Typography>
               </div>
-              <div className="flex flex-col gap-4 ">
-                <div className="flex flex-grow flex-col gap-4 max-w-sm">
+              <div className="flex flex-col gap-4 flex-grow">
+                <div className="flex flex-grow flex-col gap-2 max-w-sm">
                   <div>
                     <Typography variant="main-title" bold>
                       {l10n.getString(
@@ -80,23 +77,12 @@ export function MountingChoose() {
             </div>
             <div
               className={classNames(
-                'rounded-lg p-4 flex flex-row relative',
-                !state.alonePage && 'bg-background-70',
-                state.alonePage && 'bg-background-60'
+                'rounded-[20px] p-6 flex flex-col relative border border-[var(--material-border-subtle)] bg-[var(--material-tertiary)] shadow-sm hover:border-[var(--material-border-focus)] transition-all'
               )}
             >
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-grow flex-col gap-4 max-w-sm">
+              <div className="flex flex-col gap-4 flex-grow">
+                <div className="flex flex-grow flex-col gap-2 max-w-sm">
                   <div>
-                    <img
-                      onMouseEnter={() => setAnimated(() => true)}
-                      onAnimationEnd={() => setAnimated(() => false)}
-                      src="/images/boxslime.webp"
-                      className={classNames(
-                        'absolute w-[100px] -right-2 -top-10',
-                        animated && 'animate-[bounce_1s_1]'
-                      )}
-                    />
                     <Typography variant="main-title" bold>
                       {l10n.getString(
                         'onboarding-choose_mounting-manual_mounting'
@@ -113,7 +99,7 @@ export function MountingChoose() {
                 </div>
 
                 <Button
-                  variant={!state.alonePage ? 'secondary' : 'tertiary'}
+                  variant="secondary"
                   to="/onboarding/mounting/manual"
                   className="self-start mt-auto"
                   state={{ alonePage: state.alonePage }}

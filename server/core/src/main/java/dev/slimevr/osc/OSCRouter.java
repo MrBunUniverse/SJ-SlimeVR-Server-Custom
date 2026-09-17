@@ -96,22 +96,8 @@ public class OSCRouter {
 			} catch (UnknownHostException e) {
 				throw new RuntimeException(e);
 			}
-			// Check if another OSC sender with same port and address exists
-			for (OSCHandler oscHandler : oscHandlers) {
-				if (oscHandler.getPortOut() == portOut && oscHandler.getAddress() == address) {
-					if (oscHandler.getOscSender().isConnected()) {
-						oscSender = oscHandler.getOscSender();
-						LogManager
-							.info(
-								"[OSCRouter] Sending to port "
-									+ portOut
-									+ " at address "
-									+ address.toString()
-							);
-					}
-				}
-			}
-			// Else, create our own OSC sender
+			// Sender implementations reuse an internal serialization buffer and are
+			// not safe to share across the router and a handler's worker thread.
 			if (oscSender == null) {
 				try {
 					oscSender = new OSCPortOut(new InetSocketAddress(address, portOut));
@@ -176,4 +162,3 @@ public class OSCRouter {
 		}
 	}
 }
-

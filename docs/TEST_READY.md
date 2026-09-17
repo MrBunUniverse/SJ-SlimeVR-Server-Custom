@@ -1,8 +1,8 @@
 # SlimeVR UI Redesign — Test Readiness Declaration
 
-## Status: READY FOR MILESTONE VERIFICATION
+## Status: READY FOR AUTOMATED REGRESSION CHECKS
 
-All 4 tiers of opaque-box E2E tests for the SlimeVR macOS Electron/React UI redesign have been authored, implemented, and verified to execute cleanly with a 100% pass rate.
+All 4 feature tiers and 3 support suites for the SlimeVR macOS Electron/React UI redesign have been authored, implemented, and verified to execute cleanly with a 100% pass rate. They are source-contract and simulation tests, not a substitute for browser, packaged-Electron, or connected-headset verification.
 
 ### Test Execution Command
 ```bash
@@ -16,11 +16,14 @@ cd gui && node --experimental-strip-types tests/e2e-runner.ts
 ### Test Suite Metrics
 | Tier | Description | Files | Tests | Pass Rate | Execution Time |
 |---|---|---|---|---|---|
-| **Tier 1** | Feature Coverage (F1 - F8) | `gui/tests/tier1-features.test.ts` | 40 | 100% (40/40) | ~20ms |
+| **Tier 1** | Feature Coverage (F1 - F8) | `gui/tests/tier1-features.test.ts` | 57 | 100% (57/57) | varies |
 | **Tier 2** | Boundary & Corner Cases (B1 - B5) | `gui/tests/tier2-boundaries.test.ts` | 25 | 100% (25/25) | ~10ms |
 | **Tier 3** | Cross-Feature Combinations (C1 - C5) | `gui/tests/tier3-combinations.test.ts` | 10 | 100% (10/10) | ~11ms |
 | **Tier 4** | Real-World Application Scenarios (S1 - S4) | `gui/tests/tier4-scenarios.test.ts` | 8 | 100% (8/8) | ~7ms |
-| **Total** | Full E2E Suite | 4 Test Suites | **83** | **100% (83/83)** | **~750ms** |
+| **Adaptive BPM** | Adaptive calibration contracts | `gui/tests/adaptive-bpm.test.ts` | 6 | 100% (6/6) | varies |
+| **Quest Capture** | Quest capture and diagnostics | `gui/tests/quest-capture.test.ts` | 5 | 100% (5/5) | varies |
+| **Runtime** | Data-feed and WebSocket regressions | `gui/tests/runtime-efficiency.test.ts` | 3 | 100% (3/3) | varies |
+| **Total** | Full automated suite | 26 nested suites | **114** | **100% (114/114)** | varies |
 
 ### Verified Feature & Boundary Coverage
 - [x] **F1: Liquid Glass Tokens & Material Polish**: `--glass-bg`, `--glass-blur: 20px`, frosted borders, `.glass-panel`, `.glass-pill`, `.glass-interactive`, 16px (`rounded-2xl`) & 24px (`rounded-3xl`) macOS radiuses.

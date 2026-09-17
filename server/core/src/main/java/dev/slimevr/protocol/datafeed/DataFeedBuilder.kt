@@ -21,6 +21,7 @@ import solarxr_protocol.data_feed.stay_aligned.StayAlignedTracker
 import solarxr_protocol.data_feed.tracker.TrackerData
 import solarxr_protocol.data_feed.tracker.TrackerDataMaskT
 import solarxr_protocol.data_feed.tracker.TrackerInfo
+import solarxr_protocol.data_feed.tracker.TrackerRecovery
 import solarxr_protocol.datatypes.DeviceId
 import solarxr_protocol.datatypes.Ipv4Address
 import solarxr_protocol.datatypes.Temperature
@@ -197,6 +198,17 @@ fun createTrackerData(
 		stayAlignedOffset =
 			createTrackerStayAlignedTracker(fbb, tracker.stayAligned)
 	}
+	val recoveryOffset = if (mask.recovery && tracker.recovery.state != dev.slimevr.tracking.trackers.TrackerRecoveryState.NONE) {
+		TrackerRecovery.createTrackerRecovery(
+			fbb,
+			tracker.recovery.state.id,
+			tracker.recovery.progress,
+			tracker.recovery.confidence,
+			tracker.recovery.reason.id,
+		)
+	} else {
+		0
+	}
 
 	TrackerData.startTrackerData(fbb)
 
@@ -204,6 +216,7 @@ fun createTrackerData(
 
 	if (trackerInfosOffset != 0) TrackerData.addInfo(fbb, trackerInfosOffset)
 	if (mask.status) TrackerData.addStatus(fbb, tracker.status.id + 1)
+	if (recoveryOffset != 0) TrackerData.addRecovery(fbb, recoveryOffset)
 	if (mask.position && tracker.hasPosition) {
 		TrackerData.addPosition(
 			fbb,
@@ -315,45 +328,45 @@ fun createDeviceData(
 ): Int {
 	if (!mask.deviceData) return 0
 
-	if (device.trackers.isEmpty()) return 0
+	var hardwareDataOffset = 0
+	if (device.trackers.isNotEmpty()) {
+		var firstTracker = device.trackers[0]
+		if (firstTracker == null) {
+			// Not actually the "first" tracker, but do we care?
+			firstTracker = device.trackers.entries.iterator().next().value
+		}
 
-	var firstTracker = device.trackers[0]
-	if (firstTracker == null) {
-		// Not actually the "first" tracker, but do we care?
-		firstTracker = device.trackers.entries.iterator().next().value
-	}
+		val tracker: Tracker = firstTracker
 
-	val tracker: Tracker = firstTracker
+		HardwareStatus.startHardwareStatus(fbb)
+		HardwareStatus.addErrorStatus(fbb, tracker.status.id)
 
-	HardwareStatus.startHardwareStatus(fbb)
-	HardwareStatus.addErrorStatus(fbb, tracker.status.id)
-
-	if (tracker.batteryVoltage != null) {
-		HardwareStatus.addBatteryVoltage(fbb, tracker.batteryVoltage!!)
+		if (tracker.batteryVoltage != null) {
+			HardwareStatus.addBatteryVoltage(fbb, tracker.batteryVoltage!!)
+		}
+		if (tracker.batteryLevel != null) {
+			HardwareStatus.addBatteryPctEstimate(fbb, tracker.batteryLevel!!.toInt())
+		}
+		if (tracker.ping != null) {
+			HardwareStatus.addPing(fbb, tracker.ping!!)
+		}
+		if (tracker.signalStrength != null) {
+			HardwareStatus.addRssi(fbb, tracker.signalStrength!!.toShort())
+		}
+		if (tracker.packetLoss != null) {
+			HardwareStatus.addPacketLoss(fbb, tracker.packetLoss!!)
+		}
+		if (tracker.packetsLost != null) {
+			HardwareStatus.addPacketsLost(fbb, tracker.packetsLost!!)
+		}
+		if (tracker.packetsReceived != null) {
+			HardwareStatus.addPacketsReceived(fbb, tracker.packetsReceived!!)
+		}
+		if (tracker.batteryRemainingRuntime != null) {
+			HardwareStatus.addBatteryRuntimeEstimate(fbb, tracker.batteryRemainingRuntime!!)
+		}
+		hardwareDataOffset = HardwareStatus.endHardwareStatus(fbb)
 	}
-	if (tracker.batteryLevel != null) {
-		HardwareStatus.addBatteryPctEstimate(fbb, tracker.batteryLevel!!.toInt())
-	}
-	if (tracker.ping != null) {
-		HardwareStatus.addPing(fbb, tracker.ping!!)
-	}
-	if (tracker.signalStrength != null) {
-		HardwareStatus.addRssi(fbb, tracker.signalStrength!!.toShort())
-	}
-	if (tracker.packetLoss != null) {
-		HardwareStatus.addPacketLoss(fbb, tracker.packetLoss!!)
-	}
-	if (tracker.packetsLost != null) {
-		HardwareStatus.addPacketsLost(fbb, tracker.packetsLost!!)
-	}
-	if (tracker.packetsReceived != null) {
-		HardwareStatus.addPacketsReceived(fbb, tracker.packetsReceived!!)
-	}
-	if (tracker.batteryRemainingRuntime != null) {
-		HardwareStatus.addBatteryRuntimeEstimate(fbb, tracker.batteryRemainingRuntime!!)
-	}
-
-	val hardwareDataOffset = HardwareStatus.endHardwareStatus(fbb)
 	val hardwareInfoOffset = createHardwareInfo(fbb, device)
 	val trackersOffset = createTrackersData(fbb, mask, device)
 

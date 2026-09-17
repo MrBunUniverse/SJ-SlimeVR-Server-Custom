@@ -5,7 +5,6 @@ import com.illposed.osc.OSCMessage
 import com.illposed.osc.OSCMessageEvent
 import com.illposed.osc.OSCMessageListener
 import com.illposed.osc.OSCPacketEvent
-import com.illposed.osc.OSCSerializeException
 import com.illposed.osc.OSCSerializerAndParserBuilder
 import com.illposed.osc.messageselector.OSCPatternAddressMessageSelector
 import com.illposed.osc.transport.OSCPortIn
@@ -54,9 +53,17 @@ class VRCOSCHandler(
 		"/tracking/trackers/*/position",
 		"/tracking/trackers/*/rotation",
 	)
+	private val vrchatInboundAddresses = arrayOf(
+		"/avatar/*",
+		"/avatar/parameters/*",
+		"/avatar/change",
+		"/chatbox/*",
+		"/input/*",
+	)
 	private var oscReceiver: OSCPortIn? = null
 	private var oscSender: OSCPortOut? = null
 	private var oscQuerySender: OSCPortOut? = null
+	private val senderLock = Any()
 	private var oscMessage: OSCMessage? = null
 	private var headTracker: Tracker? = null
 	private var oscTrackersDevice: Device? = null
@@ -80,6 +87,9 @@ class VRCOSCHandler(
 	private var timeAtLastReceivedRotationOffset = System.currentTimeMillis()
 	private var fpsTimer: NanoTimer? = null
 	private var vrcOscQueryHandler: VRCOSCQueryHandler? = null
+	private var lastChatboxSendTime: Long = 0
+	private var lastChatboxAlertTime: Long = 0
+	private val recoveryNotifications = mutableMapOf<Int, Pair<Boolean, Long>>()
 
 	init {
 		refreshSettings(false)
@@ -101,7 +111,7 @@ class VRCOSCHandler(
 			}
 		}
 
-		updateOscReceiver(config.portIn, vrsystemTrackersAddresses + oscTrackersAddresses)
+		updateOscReceiver(config.portIn, vrsystemTrackersAddresses + oscTrackersAddresses + vrchatInboundAddresses)
 		updateOscSender(config.portOut, config.address)
 
 		if (config.enabled && config.oscqueryEnabled) {
@@ -152,8 +162,14 @@ class VRCOSCHandler(
 	 * Adds an OSC Sender from OSCQuery
 	 */
 	fun addOSCQuerySender(oscPortOut: Int, oscIP: String) {
+		synchronized(senderLock) {
+			addOSCQuerySenderLocked(oscPortOut, oscIP)
+		}
+	}
+
+	private fun addOSCQuerySenderLocked(oscPortOut: Int, oscIP: String) {
 		if (!config.enabled) {
-			closeOscQuerySender()
+			closeOscQuerySenderLocked()
 			return
 		}
 
@@ -188,7 +204,7 @@ class VRCOSCHandler(
 				//  we will select this new address for OSC
 			}
 
-			closeOscQuerySender()
+			closeOscQuerySenderLocked()
 
 			if (ipMatch) {
 				LogManager.info("[VRCOSCHandler] OSCQuery sender sending to port $oscPortOut at address $oscIP (matches configured address)")
@@ -205,7 +221,7 @@ class VRCOSCHandler(
 			oscQuerySender?.connect()
 		} catch (e: IOException) {
 			LogManager.severe("[VRCOSCHandler] Error connecting OSCQuery sender to port $oscPortOut at the address $oscIP: $e")
-			closeOscQuerySender()
+			closeOscQuerySenderLocked()
 		}
 	}
 
@@ -213,6 +229,12 @@ class VRCOSCHandler(
 	 * Close/remove the OSC sender
 	 */
 	fun closeOscSender() {
+		synchronized(senderLock) {
+			closeOscSenderLocked()
+		}
+	}
+
+	private fun closeOscSenderLocked() {
 		try {
 			oscSender?.close()
 			oscSender = null
@@ -225,6 +247,12 @@ class VRCOSCHandler(
 	 * Close/remove the OSCQuery sender
 	 */
 	fun closeOscQuerySender() {
+		synchronized(senderLock) {
+			closeOscQuerySenderLocked()
+		}
+	}
+
+	private fun closeOscQuerySenderLocked() {
 		try {
 			oscQuerySender?.close()
 			oscQuerySender = null
@@ -284,8 +312,14 @@ class VRCOSCHandler(
 	}
 
 	override fun updateOscSender(portOut: Int, ip: String) {
+		synchronized(senderLock) {
+			updateOscSenderLocked(portOut, ip)
+		}
+	}
+
+	private fun updateOscSenderLocked(portOut: Int, ip: String) {
 		if (!config.enabled) {
-			closeOscSender()
+			closeOscSenderLocked()
 			return
 		}
 
@@ -305,7 +339,7 @@ class VRCOSCHandler(
 				!ipEquals(addr, oscQueryIp)
 			}
 
-			closeOscSender()
+			closeOscSenderLocked()
 
 			LogManager.info("[VRCOSCHandler] Sending to port $portOut at address $ip")
 			val newOscSender = OSCPortOut(InetSocketAddress(addr, portOut))
@@ -318,14 +352,14 @@ class VRCOSCHandler(
 			newOscSender.connect()
 
 			if (resetQuery) {
-				closeOscQuerySender()
+				closeOscQuerySenderLocked()
 			}
 		} catch (e: IOException) {
 			LogManager
 				.severe(
 					"[VRCOSCHandler] Error connecting to port $portOut at the address $ip: $e",
 				)
-			closeOscSender()
+			closeOscSenderLocked()
 			return
 		}
 	}
@@ -426,7 +460,7 @@ class VRCOSCHandler(
 			tracker.setRotation(rot)
 
 			tracker.dataTick()
-		} else {
+		} else if (event.message.address.startsWith("/tracking/trackers/")) {
 			// Receiving OSC Trackers data. This is not from VRChat.
 			if (oscTrackersDevice == null) {
 				// Instantiate OSC Trackers device
@@ -526,6 +560,10 @@ class VRCOSCHandler(
 
 				tracker.dataTick()
 			}
+		} else {
+			// Avatar, input, and chatbox packets are subscribed only so their
+			// source address can identify the Quest. They are not tracker data.
+			return
 		}
 	}
 
@@ -556,14 +594,50 @@ class VRCOSCHandler(
 
 		// Send OSC data
 		if (oscSender != null || oscQuerySender != null) {
+			val isChatboxOnly = server.configManager.vrConfig.questStandalone.chatboxOnlyMode
 			// Create new bundle
 			val bundle = OSCBundle()
 
-			for (i in computedTrackers.indices) {
-				if (trackersEnabled[i]) {
-					val vrcId = getVRCOSCTrackersId(computedTrackers[i].trackerPosition)
-					if (vrcId > 0) {
-						// Send regular trackers' positions
+			if (!isChatboxOnly) {
+				for (i in computedTrackers.indices) {
+					if (trackersEnabled[i]) {
+						val vrcId = getVRCOSCTrackersId(computedTrackers[i].trackerPosition)
+						if (vrcId > 0) {
+							// Send regular trackers' positions
+							val (x, y, z) = computedTrackers[i].position
+							oscArgs.clear()
+							oscArgs.add(x)
+							oscArgs.add(y)
+							oscArgs.add(-z)
+							bundle.addPacket(
+								OSCMessage(
+									"/tracking/trackers/$vrcId/position",
+									oscArgs.clone(),
+								),
+							)
+
+							// Send regular trackers' rotations
+							val (w, x1, y1, z1) = computedTrackers[i].getRotation()
+							val (_, x2, y2, z2) = Quaternion(
+								w,
+								-x1,
+								-y1,
+								z1,
+							).toEulerAngles(EulerOrder.YXZ)
+							oscArgs.clear()
+							oscArgs.add(x2 * FastMath.RAD_TO_DEG)
+							oscArgs.add(y2 * FastMath.RAD_TO_DEG)
+							oscArgs.add(z2 * FastMath.RAD_TO_DEG)
+							bundle.addPacket(
+								OSCMessage(
+									"/tracking/trackers/$vrcId/rotation",
+									oscArgs.clone(),
+								),
+							)
+						}
+					}
+					if (computedTrackers[i].trackerPosition == TrackerPosition.HEAD) {
+						// Send HMD position
 						val (x, y, z) = computedTrackers[i].position
 						oscArgs.clear()
 						oscArgs.add(x)
@@ -571,72 +645,72 @@ class VRCOSCHandler(
 						oscArgs.add(-z)
 						bundle.addPacket(
 							OSCMessage(
-								"/tracking/trackers/$vrcId/position",
+								"/tracking/trackers/head/position",
 								oscArgs.clone(),
 							),
 						)
-
-						// Send regular trackers' rotations
-						val (w, x1, y1, z1) = computedTrackers[i].getRotation()
-						val (_, x2, y2, z2) = Quaternion(
-							w,
-							-x1,
-							-y1,
-							z1,
-						).toEulerAngles(EulerOrder.YXZ)
+					}
+					if (computedTrackers[i].trackerPosition == TrackerPosition.LEFT_HAND) {
+						// Send Left Wrist position
+						val (x, y, z) = computedTrackers[i].position
 						oscArgs.clear()
-						oscArgs.add(x2 * FastMath.RAD_TO_DEG)
-						oscArgs.add(y2 * FastMath.RAD_TO_DEG)
-						oscArgs.add(z2 * FastMath.RAD_TO_DEG)
+						oscArgs.add(x)
+						oscArgs.add(y)
+						oscArgs.add(-z)
 						bundle.addPacket(
 							OSCMessage(
-								"/tracking/trackers/$vrcId/rotation",
+								"/tracking/trackers/leftwrist/position",
+								oscArgs.clone(),
+							),
+						)
+					}
+					if (computedTrackers[i].trackerPosition == TrackerPosition.RIGHT_HAND) {
+						// Send Right Wrist position
+						val (x, y, z) = computedTrackers[i].position
+						oscArgs.clear()
+						oscArgs.add(x)
+						oscArgs.add(y)
+						oscArgs.add(-z)
+						bundle.addPacket(
+							OSCMessage(
+								"/tracking/trackers/rightwrist/position",
 								oscArgs.clone(),
 							),
 						)
 					}
 				}
-				if (computedTrackers[i].trackerPosition == TrackerPosition.HEAD) {
-					// Send HMD position
-					val (x, y, z) = computedTrackers[i].position
-					oscArgs.clear()
-					oscArgs.add(x)
-					oscArgs.add(y)
-					oscArgs.add(-z)
-					bundle.addPacket(
-						OSCMessage(
-							"/tracking/trackers/head/position",
-							oscArgs.clone(),
-						),
-					)
+			}
+
+			if (bundle.packets.isNotEmpty()) {
+				try {
+					synchronized(senderLock) {
+						oscSender?.send(bundle)
+						if (oscQuerySender != null && oscQuerySender != oscSender) {
+							try {
+								oscQuerySender?.send(bundle)
+							} catch (ignored: Exception) {
+							}
+						}
+					}
+
+					if (now - lastHeartbeatTime > 5000L) {
+						lastHeartbeatTime = now
+						var activeCount = 0
+						for (b in trackersEnabled) if (b) activeCount++
+						LogManager.info("[VRCOSCHandler] Streaming $activeCount OSC trackers to $oscIp:$oscPortOut")
+					}
+				} catch (e: Exception) {
+					if (currentTime - timeAtLastError > 100) {
+						timeAtLastError = System.currentTimeMillis()
+						LogManager.warning("[VRCOSCHandler] Error sending OSC message to VRChat: $e")
+					}
 				}
 			}
 
 			try {
-				oscSender?.send(bundle)
-				if (oscQuerySender != null && oscQuerySender != oscSender) {
-					try {
-						oscQuerySender?.send(bundle)
-					} catch (ignored: Throwable) {
-					}
-				}
-
-				if (now - lastHeartbeatTime > 5000L) {
-					lastHeartbeatTime = now
-					var activeCount = 0
-					for (b in trackersEnabled) if (b) activeCount++
-					LogManager.info("[VRCOSCHandler] Streaming $activeCount OSC trackers to $oscIp:$oscPortOut")
-				}
-			} catch (e: IOException) {
-				if (currentTime - timeAtLastError > 100) {
-					timeAtLastError = System.currentTimeMillis()
-					LogManager.warning("[VRCOSCHandler] Error sending OSC message to VRChat: $e")
-				}
-			} catch (e: OSCSerializeException) {
-				if (currentTime - timeAtLastError > 100) {
-					timeAtLastError = System.currentTimeMillis()
-					LogManager.warning("[VRCOSCHandler] Error sending OSC message to VRChat: $e")
-				}
+				checkAndSendChatboxStatus(now)
+			} catch (e: Exception) {
+				LogManager.warning("[VRCOSCHandler] Error checking chatbox status: $e")
 			}
 		}
 	}
@@ -666,6 +740,7 @@ class VRCOSCHandler(
 	 * Sends the expected HMD rotation upon reset to align the trackers in VRC
 	 */
 	fun yawAlign(headRot: Quaternion) {
+		if (server.configManager.vrConfig.questStandalone.chatboxOnlyMode) return
 		if (oscSender != null || oscQuerySender != null) {
 			val (_, _, y, _) = headRot.toEulerAngles(EulerOrder.YXZ)
 			oscArgs.clear()
@@ -678,18 +753,140 @@ class VRCOSCHandler(
 			)
 			try {
 				// Prioritize OSCQuery since we can't validate oscSender
-				if (oscQuerySender != null) {
-					oscQuerySender?.send(oscMessage)
-				} else {
-					oscSender?.send(oscMessage)
+				synchronized(senderLock) {
+					if (oscQuerySender != null) {
+						oscQuerySender?.send(oscMessage)
+					} else {
+						oscSender?.send(oscMessage)
+					}
 				}
-			} catch (e: IOException) {
-				LogManager
-					.warning("[VRCOSCHandler] Error sending OSC message to VRChat: $e")
-			} catch (e: OSCSerializeException) {
+			} catch (e: Exception) {
 				LogManager
 					.warning("[VRCOSCHandler] Error sending OSC message to VRChat: $e")
 			}
+		}
+	}
+
+	fun sendChatboxMessage(message: String, playSound: Boolean = false) {
+		if (oscSender == null && oscQuerySender == null) return
+		val chatArgs = FastList<Any>(3)
+		chatArgs.add(message)
+		chatArgs.add(true) // bDirect = true, immediately updates chatbox bubble
+		chatArgs.add(playSound)
+		val msg = OSCMessage("/chatbox/input", chatArgs)
+		try {
+			synchronized(senderLock) {
+				if (oscQuerySender != null) {
+					oscQuerySender?.send(msg)
+				} else {
+					oscSender?.send(msg)
+				}
+			}
+			LogManager.info("[VRCOSCHandler] Sent chatbox message: \"$message\"")
+		} catch (e: Exception) {
+			LogManager.warning("[VRCOSCHandler] Failed to send chatbox message: $e")
+		}
+	}
+
+	fun sendTrackerRecoveryNotification(tracker: Tracker, recovered: Boolean) {
+		val questConfig = server.configManager.vrConfig.questStandalone
+		val resetConfig = server.configManager.vrConfig.resetsConfig
+		if (!questConfig.chatboxEnabled || !resetConfig.recoveryChatboxNotifications) return
+
+		val now = System.currentTimeMillis()
+		val previous = recoveryNotifications[tracker.id]
+		if (previous != null && previous.first == recovered && now - previous.second < 30000L) return
+		recoveryNotifications[tracker.id] = recovered to now
+
+		val part = getShortPositionName(tracker.trackerPosition)
+		val message = if (recovered) {
+			"✓ $part tracker recovered"
+		} else {
+			"⚠ $part tracker needs a reset"
+		}
+		sendChatboxMessage(message, playSound = !recovered)
+	}
+
+	fun triggerChatboxUpdate(force: Boolean = true) {
+		val msg = buildBatteryStatusMessage()
+		if (msg.isNotBlank()) {
+			sendChatboxMessage(msg, playSound = false)
+			lastChatboxSendTime = System.currentTimeMillis()
+		}
+	}
+
+	private fun checkAndSendChatboxStatus(now: Long) {
+		val questConfig = server.configManager.vrConfig.questStandalone
+		if (!questConfig.chatboxEnabled || questConfig.chatboxOnlyMode) return
+
+		val intervalMs = (questConfig.chatboxIntervalSeconds.coerceAtLeast(15)) * 1000L
+
+		// Check low battery alerts first
+		if (questConfig.chatboxLowBatteryWarning && now - lastChatboxAlertTime > 45000L) {
+			val lowBatteryList = mutableListOf<String>()
+			for (t in server.allTrackers) {
+				if (t.isImu() && t.status == TrackerStatus.OK) {
+					val battery = t.batteryLevel ?: continue
+					if (battery <= 20f) {
+						val posName = getShortPositionName(t.trackerPosition)
+						lowBatteryList.add("$posName ${battery.toInt()}%")
+					}
+				}
+			}
+			if (lowBatteryList.isNotEmpty()) {
+				lastChatboxAlertTime = now
+				lastChatboxSendTime = now
+				val alertMsg = "⚠️ Low Batt: " + lowBatteryList.joinToString(", ")
+				sendChatboxMessage(alertMsg, playSound = true)
+				return
+			}
+		}
+
+		// Periodic broadcast
+		if (now - lastChatboxSendTime > intervalMs) {
+			lastChatboxSendTime = now
+			val statusMsg = buildBatteryStatusMessage()
+			if (statusMsg.isNotBlank()) {
+				sendChatboxMessage(statusMsg, playSound = false)
+			}
+		}
+	}
+
+	private fun buildBatteryStatusMessage(): String {
+		val trackerParts = mutableListOf<String>()
+		val trackers = server.allTrackers.filter { it.isImu() && it.status == TrackerStatus.OK }
+		if (trackers.isEmpty()) {
+			return ""
+		}
+
+		for (t in trackers) {
+			val pos = getShortPositionName(t.trackerPosition)
+			val batt = t.batteryLevel?.toInt()
+			if (batt != null) {
+				trackerParts.add("$pos:$batt%")
+			} else {
+				trackerParts.add("$pos:OK")
+			}
+		}
+
+		val partsText = trackerParts.joinToString(" ")
+		return "🔋 $partsText".take(140)
+	}
+
+	private fun getShortPositionName(pos: TrackerPosition?): String {
+		return when (pos) {
+			TrackerPosition.CHEST -> "Ch"
+			TrackerPosition.WAIST, TrackerPosition.HIP -> "W"
+			TrackerPosition.LEFT_UPPER_LEG -> "LTh"
+			TrackerPosition.RIGHT_UPPER_LEG -> "RTh"
+			TrackerPosition.LEFT_LOWER_LEG -> "LSh"
+			TrackerPosition.RIGHT_LOWER_LEG -> "RSh"
+			TrackerPosition.LEFT_FOOT -> "LF"
+			TrackerPosition.RIGHT_FOOT -> "RF"
+			TrackerPosition.LEFT_UPPER_ARM -> "LA"
+			TrackerPosition.RIGHT_UPPER_ARM -> "RA"
+			TrackerPosition.HEAD -> "HMD"
+			else -> pos?.designation?.take(3)?.uppercase() ?: "Trk"
 		}
 	}
 

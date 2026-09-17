@@ -26,25 +26,24 @@ export function WifiCredsPage() {
           className="flex flex-col gap-2"
           onSubmit={handleSubmit(submitWifiCreds)}
         >
-          <div className="flex gap-2 items-center">
-            <div className="bg-accent-background-30 rounded-full p-2 fill-background-10">
-              <WifiIcon variant="navbar" value={1} size={24} />
+          <div className="flex gap-3 items-center">
+            <div className="bg-accent-background-20/12 border border-accent-background-20/25 rounded-full p-2.5 text-[#D97757] fill-[#D97757] shadow-xs">
+              <WifiIcon variant="navbar" value={1} size={22} />
             </div>
-            <Typography variant="main-title" id="onboarding-wifi_creds-v2" />
+            <Typography
+              variant="main-title"
+              id="onboarding-wifi_creds-v2"
+              className="font-serif tracking-tight"
+            />
           </div>
 
-          <div className="flex flex-col gap-2 w-full h-full p-2">
+          <div className="flex flex-col gap-3 w-full h-full p-1">
             <Typography
               id="onboarding-wifi_creds-description-v2"
               whitespace="whitespace-pre-wrap"
+              className="text-[12.5px] text-background-30"
             />
-            <div
-              className={classNames(
-                'flex flex-col gap-3 p-5 rounded-xl sentry-mask',
-                !state.alonePage && 'bg-background-70',
-                state.alonePage && 'bg-background-60'
-              )}
-            >
+            <div className="flex flex-col gap-3.5 p-6 rounded-[20px] bg-background-60/40 dark:bg-white/[0.03] border border-background-50/50 dark:border-white/[0.06] backdrop-blur-sm shadow-md sentry-mask">
               <Localized
                 id="onboarding-wifi_creds-ssid"
                 attrs={{ placeholder: true, label: true }}

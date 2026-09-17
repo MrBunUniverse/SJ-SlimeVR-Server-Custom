@@ -57,11 +57,11 @@ function DropdownItem({
 }) {
   const variantStyles = {
     primary:
-      'text-background-20 checked-hover:text-background-10 checked-hover:bg-background-50/70 focus:text-background-10 focus:bg-background-50/70 rounded-lg mx-1 my-0.5 transition-colors',
+      'text-background-20 hover:text-background-10 hover:bg-background-50/60 focus:text-background-10 focus:bg-background-50/60 rounded-[8px] mx-1 my-0.5 px-2 py-1.5 transition-colors',
     secondary:
-      'text-background-20 checked-hover:text-background-10 checked-hover:bg-background-60/70 focus:text-background-10 focus:bg-background-60/70 rounded-lg mx-1 my-0.5 transition-colors',
+      'text-background-20 hover:text-background-10 hover:bg-background-60/60 focus:text-background-10 focus:bg-background-60/60 rounded-[8px] mx-1 my-0.5 px-2 py-1.5 transition-colors',
     tertiary:
-      'bg-accent-background-30 checked-hover:bg-accent-background-20 focus:bg-accent-background-20 text-background-10 rounded-lg mx-1 my-0.5 transition-colors',
+      'bg-accent-background-20 hover:bg-accent-background-30 focus:bg-accent-background-30 text-white rounded-[8px] mx-1 my-0.5 px-2 py-1.5 transition-colors',
   };
 
   const ref = useRef<HTMLDivElement>(null);
@@ -170,8 +170,10 @@ const DropdownList = forwardRef<HTMLDivElement, DropdownListProps>(function (
   return (
     <div
       className={classNames(
-        'grid fixed z-50 overflow-hidden transition-[grid-template-rows] rounded-xl',
-        isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+        'grid fixed z-50 overflow-hidden transition-all rounded-xl',
+        isOpen
+          ? 'grid-rows-[1fr] opacity-100 scale-100'
+          : 'grid-rows-[0fr] opacity-0 scale-95 pointer-events-none !border-0 !border-transparent !shadow-none',
         variantStyles[variant]
       )}
       style={{
@@ -227,9 +229,12 @@ export function DropdownInside({
   }, [value]);
 
   const variantStyles = {
-    primary: 'bg-background-60 hover:bg-background-50',
-    secondary: 'bg-background-70 hover:bg-background-60',
-    tertiary: 'bg-accent-background-30 hover:bg-accent-background-20',
+    primary:
+      'bg-background-60/50 hover:bg-background-50/70 border-background-50/60 dark:border-white/10',
+    secondary:
+      'bg-background-70/50 hover:bg-background-60/70 border-background-50/60 dark:border-white/10',
+    tertiary:
+      'bg-accent-background-20 hover:bg-accent-background-30 text-white border-accent-background-10/30',
   };
 
   const displayStyles = {
@@ -365,7 +370,7 @@ export function DropdownInside({
       >
         <div
           className={classNames(
-            'flex flex-row justify-between items-center gap-2 pl-3.5 pr-4 py-2.5 rounded-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-30/60 relative border border-white/10 transition-colors',
+            'flex flex-row justify-between items-center gap-2 pl-3.5 pr-3 py-2 rounded-[12px] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-30/40 relative border transition-all text-[13px] shadow-2xs',
             variantStyles[variant]
           )}
           tabIndex={0}

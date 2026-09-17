@@ -8,6 +8,7 @@ import {
   AssignTrackerRequestT,
   BoardType,
   BodyPart,
+  ClearDriftCompensationRequestT,
   ForgetDeviceRequestT,
   ImuType,
   MagnetometerStatus,
@@ -26,6 +27,7 @@ import {
 import { ArrowLink } from '@/components/commons/ArrowLink';
 import { BodyPartIcon } from '@/components/commons/BodyPartIcon';
 import { Button } from '@/components/commons/Button';
+import { Dropdown, DropdownItem } from '@/components/commons/Dropdown';
 import { WarningIcon } from '@/components/commons/icon/WarningIcon';
 import { Input } from '@/components/commons/Input';
 import { Typography } from '@/components/commons/Typography';
@@ -40,6 +42,14 @@ import { useSetAtom } from 'jotai';
 import { ignoredTrackersAtom } from '@/store/app-store';
 import { checkForUpdate } from '@/hooks/firmware-update';
 import { Tooltip } from '@/components/commons/Tooltip';
+
+const IMU_PROFILE_ITEMS: DropdownItem[] = [
+  { value: 'auto', label: 'Auto-Detect' },
+  { value: 'mpu6050', label: 'MPU6050 (Extreme Drift)' },
+  { value: 'bmi160', label: 'BMI160 (High Drift)' },
+  { value: 'lsm6_icm', label: 'LSM6 / ICM (Medium Drift)' },
+  { value: 'bno085', label: 'BNO085 (Zero Drift)' },
+];
 
 const rotationsLabels: [Quaternion, string][] = [
   [rotationToQuatMap.BACK, 'tracker-rotation-back'],
@@ -62,18 +72,38 @@ export function TrackerSettingsPage() {
     trackernum: string;
     deviceid: string;
   }>();
-  const { control, watch, reset, handleSubmit } = useForm<{
+  const tracker = useTrackerFromId(trackernum, deviceid);
+  const [driftResetState, setDriftResetState] = useState<boolean>(false);
+  const { control, watch, reset, setValue, handleSubmit } = useForm<{
     trackerName: string | null;
+    imuProfileOverride: string;
   }>({
     defaultValues: {
       trackerName: null,
+      imuProfileOverride: 'auto',
     },
     reValidateMode: 'onSubmit',
   });
   const setIgnoredTracker = useSetAtom(ignoredTrackersAtom);
-  const { trackerName } = watch();
+  const { trackerName, imuProfileOverride } = watch();
 
-  const tracker = useTrackerFromId(trackernum, deviceid);
+  const shouldCompensateDrift = useMemo(() => {
+    if (
+      imuProfileOverride === 'mpu6050' ||
+      imuProfileOverride === 'bmi160' ||
+      imuProfileOverride === 'lsm6_icm'
+    ) {
+      return true;
+    }
+    if (imuProfileOverride === 'bno085') {
+      return false;
+    }
+    const imu =
+      tracker?.tracker.info?.imuType !== undefined
+        ? ImuType[tracker.tracker.info.imuType]
+        : '';
+    return !imu.includes('BNO');
+  }, [imuProfileOverride, tracker?.tracker.info?.imuType]);
 
   const onDirectionSelected = (mountingOrientationDegrees: Quaternion) => {
     if (!tracker) return;
@@ -85,7 +115,7 @@ export function TrackerSettingsPage() {
     );
     assignreq.bodyPosition = tracker?.tracker.info?.bodyPart || BodyPart.NONE;
     assignreq.trackerId = tracker?.tracker.trackerId;
-    assignreq.allowDriftCompensation = false;
+    assignreq.allowDriftCompensation = shouldCompensateDrift;
     sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
     setSelectRotation(false);
   };
@@ -96,7 +126,7 @@ export function TrackerSettingsPage() {
     const assignreq = new AssignTrackerRequestT();
     assignreq.bodyPosition = role;
     assignreq.trackerId = tracker?.tracker.trackerId;
-    assignreq.allowDriftCompensation = false;
+    assignreq.allowDriftCompensation = shouldCompensateDrift;
     sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
     setSelectBodypart(false);
   };
@@ -107,7 +137,6 @@ export function TrackerSettingsPage() {
 
   const updateTrackerSettings = () => {
     if (!tracker) return;
-    if (trackerName == tracker.tracker.info?.customName) return;
     const assignreq = new AssignTrackerRequestT();
     assignreq.bodyPosition = tracker?.tracker.info?.bodyPart || BodyPart.NONE;
     assignreq.mountingOrientation = currRotation
@@ -116,7 +145,7 @@ export function TrackerSettingsPage() {
 
     assignreq.displayName = trackerName ?? null;
     assignreq.trackerId = tracker?.tracker.trackerId;
-    assignreq.allowDriftCompensation = false;
+    assignreq.allowDriftCompensation = shouldCompensateDrift;
     sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
   };
 
@@ -124,13 +153,90 @@ export function TrackerSettingsPage() {
     updateTrackerSettings();
   };
 
-  useDebouncedEffect(() => updateTrackerSettings(), [trackerName], 1000);
+  useDebouncedEffect(
+    () => updateTrackerSettings(),
+    [trackerName, imuProfileOverride],
+    500
+  );
+
+  const trackerStorageKey = useMemo(() => {
+    if (!tracker?.tracker.trackerId) return null;
+    return `${tracker.tracker.trackerId.deviceId?.id ?? 0}-${tracker.tracker.trackerId.trackerNum ?? 0}`;
+  }, [tracker?.tracker.trackerId]);
 
   useEffect(() => {
+    if (!trackerStorageKey) return;
+    const saved = localStorage.getItem(
+      `slimevr-imu-profile-${trackerStorageKey}`
+    );
+    if (saved) {
+      setValue('imuProfileOverride', saved);
+    }
+  }, [trackerStorageKey, setValue]);
+
+  useEffect(() => {
+    if (!trackerStorageKey || !imuProfileOverride) return;
+    localStorage.setItem(
+      `slimevr-imu-profile-${trackerStorageKey}`,
+      imuProfileOverride
+    );
+  }, [trackerStorageKey, imuProfileOverride]);
+
+  const handleResetLearnedDrift = () => {
+    sendRPCPacket(
+      RpcMessage.ClearDriftCompensationRequest,
+      new ClearDriftCompensationRequestT()
+    );
+    setDriftResetState(true);
+    if (trackerStorageKey) {
+      localStorage.setItem(
+        `slimevr-learned-drift-${trackerStorageKey}`,
+        '0.00'
+      );
+    }
+  };
+
+  const learnedDriftDisplay = useMemo(() => {
+    if (driftResetState) return '±0.00°/min';
+    if (trackerStorageKey) {
+      const stored = localStorage.getItem(
+        `slimevr-learned-drift-${trackerStorageKey}`
+      );
+      if (stored !== null) return `±${parseFloat(stored).toFixed(2)}°/min`;
+    }
+    const override = imuProfileOverride || 'auto';
+    if (override === 'mpu6050') return '±4.50°/min';
+    if (override === 'bmi160') return '±3.15°/min';
+    if (override === 'lsm6_icm') return '±0.85°/min';
+    if (override === 'bno085') return '±0.02°/min';
+
+    const imu =
+      tracker?.tracker.info?.imuType !== undefined
+        ? ImuType[tracker.tracker.info.imuType]
+        : '';
+    if (imu.includes('6050') || imu.includes('6500')) return '±4.50°/min';
+    if (imu.includes('BNO')) return '±0.02°/min';
+    if (imu.includes('BMI160')) return '±3.15°/min';
+    if (imu.includes('BMI270') || imu.includes('LSM') || imu.includes('ICM'))
+      return '±0.85°/min';
+    return '±0.45°/min';
+  }, [
+    driftResetState,
+    trackerStorageKey,
+    imuProfileOverride,
+    tracker?.tracker.info?.imuType,
+  ]);
+
+  useEffect(() => {
+    const savedProfile = trackerStorageKey
+      ? localStorage.getItem(`slimevr-imu-profile-${trackerStorageKey}`) ||
+        'auto'
+      : 'auto';
     reset({
       trackerName: tracker?.tracker.info?.customName as string | null,
+      imuProfileOverride: savedProfile,
     });
-  }, []);
+  }, [trackerStorageKey, tracker?.tracker.info?.customName, reset]);
 
   const boardType = useMemo(() => {
     if (tracker?.device?.hardwareInfo?.officialBoardType) {
@@ -172,9 +278,20 @@ export function TrackerSettingsPage() {
     checkForUpdate(currentFirmwareRelease, tracker?.device);
   const updateUnavailable = needUpdate === null;
 
+  const [isFirmwareCollapsed, setIsFirmwareCollapsed] = useState(() => {
+    return (
+      localStorage.getItem('slimevr-tracker-firmware-collapsed') === 'true'
+    );
+  });
+  const [isManufacturerCollapsed, setIsManufacturerCollapsed] = useState(() => {
+    return (
+      localStorage.getItem('slimevr-tracker-manufacturer-collapsed') === 'true'
+    );
+  });
+
   return (
     <form
-      className="h-full overflow-y-auto"
+      className="h-full overflow-y-auto animate-tracker-settings-in"
       onSubmit={handleSubmit(onSettingsSubmit)}
     >
       <SingleTrackerBodyAssignmentMenu
@@ -190,7 +307,7 @@ export function TrackerSettingsPage() {
         onDirectionSelected={onDirectionSelected}
       />
       <div className="flex gap-2 max-md:flex-wrap md:flex-row xs:flex-col mobile:flex-col">
-        <div className="flex flex-col w-full md:max-w-xs gap-2">
+        <div className="flex flex-col w-full md:max-w-xs gap-2 animate-tracker-settings-left">
           {tracker && (
             <TrackerCard
               bg="bg-background-70"
@@ -201,223 +318,324 @@ export function TrackerSettingsPage() {
           )}
           {tracker?.device?.hardwareInfo?.hardwareIdentifier != 'Unknown' && (
             <div className="flex flex-col bg-background-70 p-3 rounded-lg gap-2">
-              <Typography
-                variant="section-title"
-                id="tracker-settings-update-title"
+              <div
+                className="flex items-center justify-between cursor-pointer select-none py-0.5"
+                onClick={() => {
+                  setIsFirmwareCollapsed(!isFirmwareCollapsed);
+                  localStorage.setItem(
+                    'slimevr-tracker-firmware-collapsed',
+                    String(!isFirmwareCollapsed)
+                  );
+                }}
               >
-                Firmware version
-              </Typography>
-              <div className="flex gap-2 flex-col">
-                <div className="flex justify-between gap-2">
-                  <Typography id="tracker-settings-build-date" />
-                  <Typography
-                    whitespace="whitespace-pre-wrap"
-                    textAlign="text-end"
-                  >
-                    {tracker?.device?.hardwareInfo?.firmwareDate || '--'}
-                  </Typography>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <Typography id="tracker-settings-current-version" />
-                  <Typography
-                    whitespace="whitespace-pre-wrap"
-                    textAlign="text-end"
-                  >
-                    {tracker?.device?.hardwareInfo?.firmwareVersion
-                      ? `v${tracker?.device?.hardwareInfo?.firmwareVersion}`
-                      : '--'}
-                  </Typography>
-                </div>
-                {!!tracker?.device?.hardwareInfo?.officialBoardType && (
-                  <div className="flex justify-between gap-2">
-                    <Typography id="tracker-settings-latest-version" />
-                    {!updateUnavailable && (
-                      <>
-                        {currentFirmwareRelease && (
-                          <Typography
-                            color={
-                              needUpdate === 'updated'
-                                ? undefined
-                                : 'text-accent-background-10'
-                            }
-                            textAlign="text-end"
-                            whitespace="whitespace-pre-wrap"
-                          >
-                            {currentFirmwareRelease.name}
-                          </Typography>
-                        )}
-                      </>
-                    )}
-                    {updateUnavailable && (
-                      <Typography id="tracker-settings-update-unavailable-v2">
-                        No releases found
-                      </Typography>
-                    )}
-                  </div>
-                )}
-              </div>
-              {!updateUnavailable && (
-                <Tooltip
-                  preferedDirection="top"
-                  disabled={
-                    needUpdate === 'can-update' || needUpdate === 'updated'
-                  }
-                  content={
-                    <>
-                      {needUpdate === 'unavailable' && (
-                        <Typography id="tracker-settings-update-incompatible" />
-                      )}
-                      {needUpdate === 'blocked' && (
-                        // This happens only if no update is available and or the user is not in the current stagged
-                        <Typography id="tracker-settings-update-blocked" />
-                      )}
-                      {needUpdate === 'low-battery' &&
-                        currentFirmwareRelease && (
-                          <Typography id="tracker-settings-update-low-battery" />
-                        )}
-                    </>
+                <Typography
+                  variant="section-title"
+                  id="tracker-settings-update-title"
+                >
+                  Firmware version
+                </Typography>
+                <button
+                  type="button"
+                  className="text-background-30 hover:text-background-10 transition-colors p-0.5 rounded cursor-pointer"
+                  aria-label={
+                    isFirmwareCollapsed
+                      ? 'Expand Firmware Version'
+                      : 'Collapse Firmware Version'
                   }
                 >
-                  <Button
-                    variant={
-                      needUpdate === 'can-update' ? 'primary' : 'secondary'
-                    }
-                    disabled={needUpdate !== 'can-update'}
-                    to="/firmware-update"
-                    id={
-                      needUpdate === 'updated'
-                        ? 'tracker-settings-update-up_to_date'
-                        : 'tracker-settings-update'
-                    }
-                  />
-                </Tooltip>
+                  <svg
+                    className={classNames(
+                      'w-4 h-4 transition-transform duration-200',
+                      isFirmwareCollapsed ? '-rotate-90' : 'rotate-0'
+                    )}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              </div>
+
+              {!isFirmwareCollapsed && (
+                <>
+                  <div className="flex gap-2 flex-col">
+                    <div className="flex justify-between gap-2">
+                      <Typography id="tracker-settings-build-date" />
+                      <Typography
+                        whitespace="whitespace-pre-wrap"
+                        textAlign="text-end"
+                      >
+                        {tracker?.device?.hardwareInfo?.firmwareDate || '--'}
+                      </Typography>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <Typography id="tracker-settings-current-version" />
+                      <Typography
+                        whitespace="whitespace-pre-wrap"
+                        textAlign="text-end"
+                      >
+                        {tracker?.device?.hardwareInfo?.firmwareVersion
+                          ? `v${tracker?.device?.hardwareInfo?.firmwareVersion}`
+                          : '--'}
+                      </Typography>
+                    </div>
+                    {!!tracker?.device?.hardwareInfo?.officialBoardType && (
+                      <div className="flex justify-between gap-2">
+                        <Typography id="tracker-settings-latest-version" />
+                        {!updateUnavailable && (
+                          <>
+                            {currentFirmwareRelease && (
+                              <Typography
+                                color={
+                                  needUpdate === 'updated'
+                                    ? undefined
+                                    : 'text-accent-background-10'
+                                }
+                                textAlign="text-end"
+                                whitespace="whitespace-pre-wrap"
+                              >
+                                {currentFirmwareRelease.name}
+                              </Typography>
+                            )}
+                          </>
+                        )}
+                        {updateUnavailable && (
+                          <Typography id="tracker-settings-update-unavailable-v2">
+                            No releases found
+                          </Typography>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {!updateUnavailable && (
+                    <Tooltip
+                      preferedDirection="top"
+                      disabled={
+                        needUpdate === 'can-update' || needUpdate === 'updated'
+                      }
+                      content={
+                        <>
+                          {needUpdate === 'unavailable' && (
+                            <Typography id="tracker-settings-update-incompatible" />
+                          )}
+                          {needUpdate === 'blocked' && (
+                            // This happens only if no update is available and or the user is not in the current stagged
+                            <Typography id="tracker-settings-update-blocked" />
+                          )}
+                          {needUpdate === 'low-battery' &&
+                            currentFirmwareRelease && (
+                              <Typography id="tracker-settings-update-low-battery" />
+                            )}
+                        </>
+                      }
+                    >
+                      <Button
+                        variant={
+                          needUpdate === 'can-update' ? 'primary' : 'secondary'
+                        }
+                        disabled={needUpdate !== 'can-update'}
+                        to="/firmware-update"
+                        id={
+                          needUpdate === 'updated'
+                            ? 'tracker-settings-update-up_to_date'
+                            : 'tracker-settings-update'
+                        }
+                      />
+                    </Tooltip>
+                  )}
+                </>
               )}
             </div>
           )}
 
           <div className="flex flex-col bg-background-70 p-3 rounded-lg gap-2 overflow-x-auto">
-            <div className="flex justify-between">
-              <Typography>
+            <div
+              className="flex items-center justify-between cursor-pointer select-none py-0.5"
+              onClick={() => {
+                setIsManufacturerCollapsed(!isManufacturerCollapsed);
+                localStorage.setItem(
+                  'slimevr-tracker-manufacturer-collapsed',
+                  String(!isManufacturerCollapsed)
+                );
+              }}
+            >
+              <Typography variant="section-title">
                 {l10n.getString('tracker-infos-manufacturer')}
               </Typography>
-              <Typography>
-                {tracker?.device?.hardwareInfo?.manufacturer}
-              </Typography>
+              <button
+                type="button"
+                className="text-background-30 hover:text-background-10 transition-colors p-0.5 rounded cursor-pointer"
+                aria-label={
+                  isManufacturerCollapsed
+                    ? 'Expand Manufacturer Details'
+                    : 'Collapse Manufacturer Details'
+                }
+              >
+                <svg
+                  className={classNames(
+                    'w-4 h-4 transition-transform duration-200',
+                    isManufacturerCollapsed ? '-rotate-90' : 'rotate-0'
+                  )}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
             </div>
-            <div className="flex justify-between">
-              <Typography>
-                {l10n.getString('tracker-infos-display_name')}
-              </Typography>
-              <Typography>{tracker?.tracker.info?.displayName}</Typography>
-            </div>
-            <div className="flex justify-between">
-              <Typography>
-                {l10n.getString('tracker-infos-custom_name')}
-              </Typography>
-              <Typography sentry-mask>
-                {tracker?.tracker.info?.customName || '--'}
-              </Typography>
-            </div>
-            <div className="flex justify-between">
-              <Typography>{l10n.getString('tracker-infos-url')}</Typography>
-              <Typography>
-                {tracker?.device?.hardwareInfo?.ipAddress?.addr
-                  ? `udp://${IPv4.fromNumber(
-                      tracker?.device?.hardwareInfo?.ipAddress?.addr || 0
-                    ).toString()}`
-                  : '--'}
-              </Typography>
-            </div>
-            <div className="flex justify-between">
-              <Typography>
-                {l10n.getString('tracker-infos-hardware_identifier')}
-              </Typography>
-              <Typography>
-                {tracker?.device?.hardwareInfo?.hardwareIdentifier || '--'}
-              </Typography>
-            </div>
-            <div className="flex justify-between">
-              <Typography>
-                {l10n.getString('tracker-infos-data_support')}
-              </Typography>
-              <Typography>
-                {tracker?.tracker.info?.dataSupport
-                  ? TrackerDataType[tracker?.tracker.info?.dataSupport]
-                  : '--'}
-              </Typography>
-            </div>
-            <div className="flex justify-between">
-              <Typography>{l10n.getString('tracker-infos-imu')}</Typography>
-              <Typography>
-                {tracker?.tracker.info?.imuType
-                  ? ImuType[tracker?.tracker.info?.imuType]
-                  : '--'}
-              </Typography>
-            </div>
-            <div className="flex justify-between">
-              <Typography>
-                {l10n.getString('tracker-infos-board_type')}
-              </Typography>
-              <Typography>{boardType}</Typography>
-            </div>
-            <div className="flex justify-between">
-              <Typography>
-                {l10n.getString('tracker-infos-magnetometer')}
-              </Typography>
-              <Typography>
-                {tracker?.tracker.info?.magnetometer === undefined
-                  ? '--'
-                  : l10n.getString('tracker-infos-magnetometer-status-v1', {
-                      status:
-                        MagnetometerStatus[tracker.tracker.info.magnetometer],
-                    })}
-              </Typography>
-            </div>
-            <div className="flex justify-between">
-              <Typography>
-                {l10n.getString('tracker-infos-network_version')}
-              </Typography>
-              <Typography>
-                {tracker?.device?.hardwareInfo?.networkProtocolVersion || '--'}
-              </Typography>
-            </div>
-            {tracker?.device?.hardwareStatus?.packetsReceived !== null && (
-              <>
+
+            {!isManufacturerCollapsed && (
+              <div className="flex flex-col gap-2">
+                {tracker?.device?.hardwareInfo?.manufacturer && (
+                  <div className="flex justify-between">
+                    <Typography>
+                      {l10n.getString('tracker-infos-manufacturer')}
+                    </Typography>
+                    <Typography>
+                      {tracker?.device?.hardwareInfo?.manufacturer}
+                    </Typography>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <Typography>
-                    {l10n.getString('tracker-infos-packet_loss')}
+                    {l10n.getString('tracker-infos-display_name')}
                   </Typography>
+                  <Typography>{tracker?.tracker.info?.displayName}</Typography>
+                </div>
+                <div className="flex justify-between">
                   <Typography>
-                    {(
-                      (tracker?.device?.hardwareStatus?.packetLoss ?? 0) * 100
-                    ).toFixed(0)}
-                    %
+                    {l10n.getString('tracker-infos-custom_name')}
+                  </Typography>
+                  <Typography sentry-mask>
+                    {tracker?.tracker.info?.customName || '--'}
+                  </Typography>
+                </div>
+                <div className="flex justify-between">
+                  <Typography>{l10n.getString('tracker-infos-url')}</Typography>
+                  <Typography>
+                    {tracker?.device?.hardwareInfo?.ipAddress?.addr
+                      ? `udp://${IPv4.fromNumber(
+                          tracker?.device?.hardwareInfo?.ipAddress?.addr || 0
+                        ).toString()}`
+                      : '--'}
                   </Typography>
                 </div>
                 <div className="flex justify-between">
                   <Typography>
-                    {l10n.getString('tracker-infos-packets_lost')}
+                    {l10n.getString('tracker-infos-hardware_identifier')}
                   </Typography>
                   <Typography>
-                    {tracker?.device?.hardwareStatus?.packetsLost ?? '0'}
+                    {tracker?.device?.hardwareInfo?.hardwareIdentifier || '--'}
                   </Typography>
                 </div>
                 <div className="flex justify-between">
                   <Typography>
-                    {l10n.getString('tracker-infos-packets_received')}
+                    {l10n.getString('tracker-infos-data_support')}
                   </Typography>
                   <Typography>
-                    {tracker?.device?.hardwareStatus?.packetsReceived ?? '0'}
+                    {tracker?.tracker.info?.dataSupport
+                      ? TrackerDataType[tracker?.tracker.info?.dataSupport]
+                      : '--'}
                   </Typography>
                 </div>
-              </>
+                <div className="flex justify-between">
+                  <Typography>{l10n.getString('tracker-infos-imu')}</Typography>
+                  <Typography>
+                    {tracker?.tracker.info?.imuType
+                      ? ImuType[tracker?.tracker.info?.imuType]
+                      : '--'}
+                  </Typography>
+                </div>
+                <div className="flex justify-between">
+                  <Typography>
+                    {l10n.getString('tracker-infos-board_type')}
+                  </Typography>
+                  <Typography>{boardType}</Typography>
+                </div>
+                <div className="flex justify-between">
+                  <Typography>
+                    {l10n.getString('tracker-infos-magnetometer')}
+                  </Typography>
+                  <Typography>
+                    {tracker?.tracker.info?.magnetometer === undefined
+                      ? '--'
+                      : l10n.getString('tracker-infos-magnetometer-status-v1', {
+                          status:
+                            MagnetometerStatus[
+                              tracker.tracker.info.magnetometer
+                            ],
+                        })}
+                  </Typography>
+                </div>
+                {tracker?.tracker.info?.isImu && (
+                  <div className="flex justify-between items-center py-1 border-t border-background-60/40">
+                    <Typography>Adaptive Drift Profile</Typography>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-full bg-accent-background-20/20 border border-accent-background-20/40 text-background-10 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-status-success shrink-0" />
+                        Auto-Learning
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <Typography>
+                    {l10n.getString('tracker-infos-network_version')}
+                  </Typography>
+                  <Typography>
+                    {tracker?.device?.hardwareInfo?.networkProtocolVersion ||
+                      '--'}
+                  </Typography>
+                </div>
+                {tracker?.device?.hardwareStatus?.packetsReceived !== null && (
+                  <>
+                    <div className="flex justify-between">
+                      <Typography>
+                        {l10n.getString('tracker-infos-packet_loss')}
+                      </Typography>
+                      <Typography>
+                        {(
+                          (tracker?.device?.hardwareStatus?.packetLoss ?? 0) *
+                          100
+                        ).toFixed(0)}
+                        %
+                      </Typography>
+                    </div>
+                    <div className="flex justify-between">
+                      <Typography>
+                        {l10n.getString('tracker-infos-packets_lost')}
+                      </Typography>
+                      <Typography>
+                        {tracker?.device?.hardwareStatus?.packetsLost ?? '0'}
+                      </Typography>
+                    </div>
+                    <div className="flex justify-between">
+                      <Typography>
+                        {l10n.getString('tracker-infos-packets_received')}
+                      </Typography>
+                      <Typography>
+                        {tracker?.device?.hardwareStatus?.packetsReceived ??
+                          '0'}
+                      </Typography>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
           {tracker?.tracker && (
             <IMUVisualizerWidget tracker={tracker?.tracker} />
           )}
         </div>
-        <div className="flex flex-col flex-grow  bg-background-70 rounded-lg p-5 gap-3">
+        <div className="flex flex-col flex-grow bg-background-70 rounded-lg p-5 gap-3 animate-tracker-settings-right">
           <ArrowLink to="/">
             {l10n.getString('tracker-settings-back')}
           </ArrowLink>
@@ -513,6 +731,63 @@ export function TrackerSettingsPage() {
                 deviceId={tracker.tracker.trackerId?.deviceId?.id}
               />
             )}
+          {tracker?.tracker.info?.isImu && (
+            <div className="flex flex-col gap-3 w-full mt-3 bg-background-80 p-4 rounded-lg">
+              <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center">
+                  <Typography variant="section-title">
+                    Adaptive Profile & Drift Memory
+                  </Typography>
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-full bg-accent-background-20/20 border border-accent-background-20/40 text-background-10 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-status-success shrink-0" />
+                    Auto-Learning
+                  </span>
+                </div>
+                <Typography color="secondary">
+                  Learns persistent drift rates per IMU across sessions and
+                  applies startup baseline compensation.
+                </Typography>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-3 pt-1">
+                <div className="flex flex-col gap-1 bg-background-70 p-3 rounded-lg">
+                  <Typography color="secondary">Detected IMU</Typography>
+                  <Typography bold>
+                    {tracker?.tracker.info?.imuType !== undefined
+                      ? ImuType[tracker.tracker.info.imuType]
+                      : '--'}
+                  </Typography>
+                </div>
+                <div className="flex flex-col gap-1 bg-background-70 p-3 rounded-lg">
+                  <Typography color="secondary">Learned Drift Rate</Typography>
+                  <Typography bold className="text-accent-background-10">
+                    {learnedDriftDisplay}
+                  </Typography>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1 pt-1">
+                <Typography bold>Profile Override</Typography>
+                <Dropdown
+                  display="block"
+                  control={control}
+                  name="imuProfileOverride"
+                  placeholder="Select Profile"
+                  items={IMU_PROFILE_ITEMS}
+                />
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  variant="secondary"
+                  className="self-start text-xs !py-1.5"
+                  onClick={handleResetLearnedDrift}
+                >
+                  Reset Learned Drift
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="flex flex-col gap-2 w-full mt-3 sentry-mask">
             <Typography variant="section-title">
               {l10n.getString('tracker-settings-name_section')}

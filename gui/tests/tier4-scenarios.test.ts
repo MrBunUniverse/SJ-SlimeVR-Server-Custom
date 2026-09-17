@@ -178,13 +178,37 @@ describe('Tier 4: Real-World Application Scenarios (S1 - S4)', () => {
   describe('S4: Dynamic Tracker Hot-Plug & Reconfiguration Workflow', () => {
     it('S4.1: ingests new hardware devices, assigns unassigned nodes, and calculates shake highlight', () => {
       const assignedTrackers: MockTrackerData[] = [
-        { id: { trackerNum: 0, deviceId: { id: 1 } }, bodyPart: 2, status: 2, rawRotation: [0, 0, 0], velocity: 0 },
-        { id: { trackerNum: 1, deviceId: { id: 2 } }, bodyPart: 3, status: 2, rawRotation: [0, 0, 0], velocity: 0 },
+        {
+          id: { trackerNum: 0, deviceId: { id: 1 } },
+          bodyPart: 2,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        },
+        {
+          id: { trackerNum: 1, deviceId: { id: 2 } },
+          bodyPart: 3,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        },
       ];
 
       const unassignedTrackers: MockTrackerData[] = [
-        { id: { trackerNum: 2, deviceId: { id: 3 } }, bodyPart: 0, status: 2, rawRotation: [0, 0, 0], velocity: 0 },
-        { id: { trackerNum: 3, deviceId: { id: 4 } }, bodyPart: 0, status: 2, rawRotation: [0, 0, 0], velocity: 0 },
+        {
+          id: { trackerNum: 2, deviceId: { id: 3 } },
+          bodyPart: 0,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        },
+        {
+          id: { trackerNum: 3, deviceId: { id: 4 } },
+          bodyPart: 0,
+          status: 2,
+          rawRotation: [0, 0, 0],
+          velocity: 0,
+        },
       ];
 
       assert.equal(assignedTrackers.length, 2);
@@ -205,7 +229,7 @@ describe('Tier 4: Real-World Application Scenarios (S1 - S4)', () => {
       const glow2 = calculateShakeHighlightGlow(newlyAssigned2.velocity);
 
       assert.equal(glow1, 28); // Math.floor(3.5 * 8)
-      assert.equal(glow2, 4);  // Math.floor(0.5 * 8)
+      assert.equal(glow2, 4); // Math.floor(0.5 * 8)
     });
 
     it('S4.2: verifies top diagnostics pill dynamically updates to reflect hot-plugged devices', () => {

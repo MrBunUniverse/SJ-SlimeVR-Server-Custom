@@ -21,9 +21,9 @@ export function ResetButtonIcon(options: UseResetOptions) {
   if (options.type === ResetType.Yaw) return <YawResetIcon width={18} />;
   if (options.type === ResetType.Full) return <FullResetIcon width={18} />;
   if (options.type === ResetType.Mounting) {
-    if (options.group === 'default') return <SkiIcon />;
-    if (options.group === 'feet') return <FootIcon />;
-    if (options.group === 'fingers') return <FingersIcon width={16} />;
+    if (options.group === 'default') return <SkiIcon size={18} />;
+    if (options.group === 'feet') return <FootIcon width={12} />;
+    if (options.group === 'fingers') return <FingersIcon width={14} />;
   }
 }
 

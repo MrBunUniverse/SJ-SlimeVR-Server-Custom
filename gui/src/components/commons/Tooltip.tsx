@@ -253,7 +253,8 @@ export function FloatingTooltip({
 
     const show = () => {
       if (!childRef.current || !tooltipRef.current) return;
-      const childrenRect = childRef.current.children[0]?.getBoundingClientRect();
+      const childrenRect =
+        childRef.current.children[0]?.getBoundingClientRect();
       const tooltipRect = tooltipRef.current?.getBoundingClientRect();
       if (!childrenRect || !tooltipRect) return;
 
@@ -316,7 +317,9 @@ export function FloatingTooltip({
 
   return (
     <div
-      className={classNames('fixed z-50 pointer-events-none transition-opacity duration-150 ease-out')}
+      className={classNames(
+        'fixed z-50 pointer-events-none transition-opacity duration-150 ease-out'
+      )}
       ref={tooltipRef}
       style={style}
     >

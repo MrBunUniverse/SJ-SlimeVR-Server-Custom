@@ -7,15 +7,15 @@ import { transform } from 'typescript';
 
 const colors = {
   'blue-gray': {
-    100: '#ffffff',
-    200: '#78A4C6',
-    300: '#608AAB',
-    400: '#3D6381',
-    500: '#1A3D59',
-    600: '#112D43',
-    700: '#081E30',
-    800: '#00101C',
-    900: '#000509',
+    100: '#FAF9F5',
+    200: '#D6D1CA',
+    300: '#A8A29E',
+    400: '#68625A',
+    500: '#3C3832',
+    600: '#26231E',
+    700: '#1C1915',
+    800: '#14120E',
+    900: '#0E0D0B',
   },
   purple: {
     100: '#BB8AE5',
@@ -217,15 +217,22 @@ const config = {
       },
       fontFamily: {
         sans: [
+          '"Inter"',
           '-apple-system',
           'BlinkMacSystemFont',
           '"SF Pro Text"',
           '"SF Pro Display"',
           '"SF Pro"',
-          '"Helvetica Neue"',
-          'Helvetica',
-          'Arial',
           'sans-serif',
+        ],
+        serif: [
+          '"Newsreader"',
+          '"Tiempos Headline"',
+          '"Charter"',
+          '"Iowan Old Style"',
+          '"Palatino"',
+          '"Georgia"',
+          'serif',
         ],
       },
       fontSize: {

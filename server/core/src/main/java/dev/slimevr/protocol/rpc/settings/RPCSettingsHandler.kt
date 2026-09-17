@@ -32,6 +32,26 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 		val req = messageHeader
 			.message(ChangeSettingsRequest()) as? ChangeSettingsRequest ?: return
 
+		val isPureChatbox = req.steamVrTrackers() == null &&
+			req.filtering() == null &&
+			req.driftCompensation() == null &&
+			req.oscRouter() == null &&
+			req.vrcOsc() == null &&
+			req.vmcOsc() == null &&
+			req.autoBoneSettings() == null &&
+			req.resetsSettings() == null &&
+			req.stayAligned() == null &&
+			req.hidSettings() == null &&
+			req.velocitySettings() == null &&
+			req.modelSettings()?.let { ms ->
+				ms.toggles() == null &&
+					ms.legTweaks() == null &&
+					ms.ratios() == null &&
+					ms.skeletonHeight()?.let { sh ->
+						sh.chatboxMessage() != null || sh.hasChatboxTrigger() || sh.hasChatboxOnly()
+					} == true
+			} == true
+
 		if (req.steamVrTrackers() != null) {
 			val bridge = api.server.getVRBridge {
 				it is ISteamVRBridge
@@ -324,9 +344,23 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 				if (it.hasOscRate() && it.oscRate() > 0) {
 					api.server.configManager.vrConfig.questStandalone.oscRate = it.oscRate()
 				}
+				if (it.hasChatboxEnabled()) {
+					api.server.configManager.vrConfig.questStandalone.chatboxEnabled = it.chatboxEnabled()
+				}
+				if (it.hasChatboxOnly()) {
+					api.server.configManager.vrConfig.questStandalone.chatboxOnlyMode = it.chatboxOnly()
+				}
+				if (it.hasChatboxTrigger() && it.chatboxTrigger()) {
+					api.server.vrcOSCHandler.triggerChatboxUpdate(force = true)
+				}
+				if (!it.chatboxMessage().isNullOrBlank()) {
+					api.server.vrcOSCHandler.sendChatboxMessage(it.chatboxMessage(), playSound = false)
+				}
 			}
 
-			hpm.saveConfig()
+			if (!isPureChatbox) {
+				hpm.saveConfig()
+			}
 		}
 
 		val autoBoneSettings = req.autoBoneSettings()
@@ -351,6 +385,8 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 			resetsConfig.saveMountingReset = req.resetsSettings().saveMountingReset()
 			resetsConfig.yawResetSmoothTime = req.resetsSettings().yawResetSmoothTime()
 			resetsConfig.resetHmdPitch = req.resetsSettings().resetHmdPitch()
+			resetsConfig.deadTrackerRecoveryEnabled = req.resetsSettings().deadTrackerRecoveryEnabled()
+			resetsConfig.recoveryChatboxNotifications = req.resetsSettings().recoveryChatboxNotifications()
 			resetsConfig.updateTrackersResetsSettings()
 		}
 
@@ -358,6 +394,7 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 			val config = api.server.configManager.vrConfig.stayAlignedConfig
 			val requestConfig = req.stayAligned()
 			config.enabled = requestConfig.enabled()
+			config.adaptiveKinetic = requestConfig.extraYawCorrection()
 			config.hideYawCorrection = requestConfig.hideYawCorrection()
 			config.standingRelaxedPose.enabled = requestConfig.standingEnabled()
 			config.standingRelaxedPose.upperLegAngleInDeg = requestConfig.standingUpperLegAngle()
@@ -385,7 +422,9 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 			velocityConfig.updateTrackersVelocitySettings()
 		}
 
-		api.server.configManager.saveConfig()
+		if (!isPureChatbox) {
+			api.server.configManager.saveConfig()
+		}
 	}
 
 	fun onSettingsResetRequest(conn: GenericConnection, messageHeader: RpcMessageHeader?) {

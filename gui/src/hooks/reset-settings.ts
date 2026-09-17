@@ -14,6 +14,8 @@ export interface ResetSettingsForm {
   yawResetSmoothTime: number;
   saveMountingReset: boolean;
   resetHmdPitch: boolean;
+  deadTrackerRecoveryEnabled: boolean;
+  recoveryChatboxNotifications: boolean;
 }
 
 export const defaultResetSettings = {
@@ -22,6 +24,8 @@ export const defaultResetSettings = {
   yawResetSmoothTime: 0.0,
   saveMountingReset: false,
   resetHmdPitch: false,
+  deadTrackerRecoveryEnabled: true,
+  recoveryChatboxNotifications: true,
 };
 
 export function loadResetSettings(resetSettingsForm: ResetSettingsForm) {
@@ -31,6 +35,10 @@ export function loadResetSettings(resetSettingsForm: ResetSettingsForm) {
   resetsSettings.yawResetSmoothTime = resetSettingsForm.yawResetSmoothTime;
   resetsSettings.saveMountingReset = resetSettingsForm.saveMountingReset;
   resetsSettings.resetHmdPitch = resetSettingsForm.resetHmdPitch;
+  resetsSettings.deadTrackerRecoveryEnabled =
+    resetSettingsForm.deadTrackerRecoveryEnabled;
+  resetsSettings.recoveryChatboxNotifications =
+    resetSettingsForm.recoveryChatboxNotifications;
 
   return resetsSettings;
 }

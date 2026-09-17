@@ -27,17 +27,23 @@ export function Radio<T extends FieldValues = FieldValues>({
       name={name}
       render={({ field: { onChange, ref, name, value: checked } }) => (
         <label
-          className={classNames('w-full p-3 rounded-md flex gap-3 border-2', {
-            'border-accent-background-30': value == checked,
-            'border-transparent': value != checked,
-            'bg-background-60 cursor-pointer hover:bg-background-50': !disabled,
-            'bg-background-80 cursor-not-allowed': disabled,
-          })}
+          className={classNames(
+            'w-full p-3.5 rounded-[14px] flex gap-3 border transition-all duration-150',
+            {
+              'border-accent-background-20/80 bg-accent-background-50/10 dark:bg-white/[0.04] shadow-xs':
+                value == checked,
+              'border-background-50/60 dark:border-white/[0.06] bg-background-60/40 dark:bg-white/[0.02]':
+                value != checked,
+              'cursor-pointer hover:bg-background-60/70 dark:hover:bg-white/[0.05] active:scale-[0.99]':
+                !disabled,
+              'opacity-50 cursor-not-allowed': disabled,
+            }
+          )}
         >
           <input
             type="radio"
             className={classNames(
-              'text-accent-background-30 focus:ring-transparent',
+              'accent-[#D97757] text-[#D97757] focus:ring-transparent mt-0.5',
               'focus:ring-offset-transparent focus:outline-transparent'
             )}
             name={name}

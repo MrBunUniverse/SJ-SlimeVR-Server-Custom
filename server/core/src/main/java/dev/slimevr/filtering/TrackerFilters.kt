@@ -6,6 +6,7 @@ enum class TrackerFilters(val id: Int, val configKey: String) {
 	NONE(0, "none"),
 	SMOOTHING(1, "smoothing"),
 	PREDICTION(2, "prediction"),
+	ADAPTIVE_HYBRID(3, "adaptive_hybrid"),
 	;
 
 	companion object {

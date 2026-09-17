@@ -1,14 +1,14 @@
 import { useLocalization } from '@fluent/react';
 import classnames from 'classnames';
-import { ReactNode, useRef, useState, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { NavLink, useMatch } from 'react-router-dom';
-import { GearIcon } from './commons/icon/GearIcon';
 import { HumanIcon } from './commons/icon/HumanIcon';
 import { RulerIcon } from './commons/icon/RulerIcon';
 import { useBreakpoint } from '@/hooks/breakpoint';
 import { HomeIcon } from './commons/icon/HomeIcon';
 import { SkiIcon } from './commons/icon/SkiIcon';
 import { WifiIcon } from './commons/icon/WifiIcon';
+import { RemoteIcon } from './commons/icon/RemoteIcon';
 import { Tooltip } from './commons/Tooltip';
 import { Typography } from './commons/Typography';
 
@@ -33,7 +33,11 @@ export function NavButton({
     <Tooltip
       preferedDirection="right"
       spacing={8}
-      content={<Typography className="text-[12px] font-medium whitespace-nowrap">{children}</Typography>}
+      content={
+        <Typography className="text-[12px] font-medium whitespace-nowrap">
+          {children}
+        </Typography>
+      }
     >
       <NavLink
         to={to}
@@ -49,11 +53,14 @@ export function NavButton({
         )}
       >
         <div
-          className={classnames('scale-100 transition-colors flex items-center justify-center', {
-            'fill-accent-background-20 text-accent-background-20': doesMatch,
-            'fill-background-30 text-background-30 group-hover:fill-background-10 group-hover:text-background-10':
-              !doesMatch,
-          })}
+          className={classnames(
+            'scale-100 transition-colors flex items-center justify-center',
+            {
+              'fill-accent-background-20 text-accent-background-20': doesMatch,
+              'fill-background-30 text-background-30 group-hover:fill-background-10 group-hover:text-background-10':
+                !doesMatch,
+            }
+          )}
         >
           {icon}
         </div>
@@ -69,6 +76,9 @@ export function MainLinks() {
     <>
       <NavButton to="/" icon={<HomeIcon />}>
         {l10n.getString('navbar-home')}
+      </NavButton>
+      <NavButton to="/remote" icon={<RemoteIcon />}>
+        Remote
       </NavButton>
       <NavButton
         to="/onboarding/trackers-assign"

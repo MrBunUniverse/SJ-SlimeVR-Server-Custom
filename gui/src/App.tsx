@@ -1,5 +1,11 @@
-import { createContext, useEffect, useState } from 'react';
-import { HashRouter as Router, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { createContext, lazy, Suspense, useEffect, useState } from 'react';
+import {
+  HashRouter as Router,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+} from 'react-router-dom';
 import { Home } from './components/home/Home';
 import { MainLayout } from './components/MainLayout';
 import { AppContextProvider } from './components/providers/AppContext';
@@ -37,7 +43,6 @@ import { useBreakpoint } from './hooks/breakpoint';
 import { VRModePage } from './components/vr-mode/VRModePage';
 import { InterfaceSettings } from './components/settings/pages/InterfaceSettings';
 import { error, log } from './utils/logging';
-import { FirmwareToolSettings } from './components/firmware-tool/FirmwareTool';
 import { AppLayout } from './AppLayout';
 import { Preload } from './components/Preload';
 import { UnknownDeviceModal } from './components/UnknownDeviceModal';
@@ -69,6 +74,21 @@ export const DOCS_SITE = 'https://docs.slimevr.dev';
 export const SLIMEVR_DISCORD = 'https://discord.gg/slimevr';
 
 const SentryRoutes = withSentryReactRouterV6Routing(Routes);
+const FirmwareToolSettings = lazy(() =>
+  import('./components/firmware-tool/FirmwareTool').then((module) => ({
+    default: module.FirmwareToolSettings,
+  }))
+);
+const RemotePage = lazy(() =>
+  import('./components/remote/RemotePage').then((module) => ({
+    default: module.RemotePage,
+  }))
+);
+const QuestCaptureSettingsPage = lazy(() =>
+  import('./components/settings/pages/QuestCaptureSettings').then((module) => ({
+    default: module.QuestCaptureSettingsPage,
+  }))
+);
 
 function Layout() {
   const { isMobile } = useBreakpoint('mobile');
@@ -80,118 +100,138 @@ function Layout() {
       <VersionUpdateModal />
       <UnknownDeviceModal />
       <UdevRulesModal />
-      <SentryRoutes>
-        <Route element={<AppLayout />}>
-          <Route
-            path="/"
-            element={
-              <MainLayout isMobile={isMobile} full>
-                <Home />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/firmware-update"
-            element={
-              <MainLayout isMobile={isMobile}>
-                <FirmwareUpdate />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/vr-mode"
-            element={
-              <MainLayout isMobile={isMobile} full>
-                <VRModePage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/checklist"
-            element={
-              <MainLayout isMobile={isMobile}>
-                <ChecklistPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/tracker/:trackernum/:deviceid"
-            element={
-              <MainLayout background={false} isMobile={isMobile}>
-                <TrackerSettingsPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/vrc-warnings"
-            element={
-              <MainLayout isMobile={isMobile}>
-                <VRCWarningsPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <SettingsLayout>
-                <Outlet />
-              </SettingsLayout>
-            }
-          >
-            <Route index element={<Navigate to="trackers" replace />} />
-            <Route path="vrchat" element={<Navigate to="/settings/osc/vrchat" replace />} />
-            <Route path="firmware-tool" element={<FirmwareToolSettings />} />
-            <Route path="trackers" element={<GeneralSettings />} />
-            <Route path="serial" element={<Serial />} />
-            <Route path="osc/router" element={<OSCRouterSettings />} />
-            <Route path="osc/vrchat" element={<VRCOSCSettings />} />
-            <Route path="osc/vmc" element={<VMCSettings />} />
-            <Route path="interface" element={<InterfaceSettings />} />
-            <Route path="interface/home" element={<HomeScreenSettings />} />
-            <Route path="advanced" element={<AdvancedSettings />} />
+      <Suspense fallback={null}>
+        <SentryRoutes>
+          <Route element={<AppLayout />}>
+            <Route
+              path="/"
+              element={
+                <MainLayout isMobile={isMobile} full>
+                  <Home />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/remote"
+              element={
+                <MainLayout isMobile={isMobile}>
+                  <RemotePage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/firmware-update"
+              element={
+                <MainLayout isMobile={isMobile}>
+                  <FirmwareUpdate />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/vr-mode"
+              element={
+                <MainLayout isMobile={isMobile} full>
+                  <VRModePage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/checklist"
+              element={
+                <MainLayout isMobile={isMobile}>
+                  <ChecklistPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/tracker/:trackernum/:deviceid"
+              element={
+                <MainLayout background={false} isMobile={isMobile}>
+                  <TrackerSettingsPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/vrc-warnings"
+              element={
+                <MainLayout isMobile={isMobile}>
+                  <VRCWarningsPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <SettingsLayout>
+                  <Outlet />
+                </SettingsLayout>
+              }
+            >
+              <Route index element={<Navigate to="trackers" replace />} />
+              <Route
+                path="vrchat"
+                element={<Navigate to="/settings/osc/vrchat" replace />}
+              />
+              <Route path="firmware-tool" element={<FirmwareToolSettings />} />
+              <Route path="trackers" element={<GeneralSettings />} />
+              <Route path="serial" element={<Serial />} />
+              <Route path="osc/router" element={<OSCRouterSettings />} />
+              <Route path="osc/vrchat" element={<VRCOSCSettings />} />
+              <Route path="osc/vmc" element={<VMCSettings />} />
+              <Route path="interface" element={<InterfaceSettings />} />
+              <Route path="interface/home" element={<HomeScreenSettings />} />
+              <Route
+                path="quest-capture"
+                element={<QuestCaptureSettingsPage />}
+              />
+              <Route path="advanced" element={<AdvancedSettings />} />
+            </Route>
+            <Route
+              path="/onboarding"
+              element={
+                <OnboardingLayout>
+                  <Outlet />
+                </OnboardingLayout>
+              }
+            >
+              <Route path="home" element={<HomePage />} />
+              <Route
+                path="error-collecting-consent"
+                element={<ErrorCollectingConsentPage />}
+              />
+              <Route path="wifi-creds" element={<WifiCredsPage />} />
+              <Route path="quiz/slime-set" element={<QuizSlimeSetQuestion />} />
+              <Route path="quiz/usage" element={<QuizUsageQuestion />} />
+              <Route path="quiz/runtime" element={<QuizRuntimeQuestion />} />
+              <Route path="quiz/mocap-pos" element={<QuizMocapPosQuestion />} />
+              <Route path="dongle" element={<DonglePage />} />
+              <Route path="firmware-tool" element={<FirmwareToolSettings />} />
+              <Route
+                path="connect-trackers"
+                element={<ConnectTrackersPage />}
+              />
+              <Route path="trackers-assign" element={<TrackersAssignPage />} />
+              <Route path="mounting/choose" element={<MountingChoose />} />
+              <Route path="mounting/auto" element={<AutomaticMountingPage />} />
+              <Route path="mounting/manual" element={<ManualMountingPage />} />
+              <Route
+                path="body-proportions/auto"
+                element={<AutomaticProportionsPage />}
+              />
+              <Route
+                path="body-proportions/manual"
+                element={<ManualProportionsPage />}
+              />
+              <Route
+                path="body-proportions/scaled"
+                element={<ScaledProportionsPage />}
+              />
+              <Route path="stay-aligned" element={<StayAlignedSetup />} />
+            </Route>
+            <Route path="*" element={<TopBar />} />
           </Route>
-          <Route
-            path="/onboarding"
-            element={
-              <OnboardingLayout>
-                <Outlet />
-              </OnboardingLayout>
-            }
-          >
-            <Route path="home" element={<HomePage />} />
-            <Route
-              path="error-collecting-consent"
-              element={<ErrorCollectingConsentPage />}
-            />
-            <Route path="wifi-creds" element={<WifiCredsPage />} />
-            <Route path="quiz/slime-set" element={<QuizSlimeSetQuestion />} />
-            <Route path="quiz/usage" element={<QuizUsageQuestion />} />
-            <Route path="quiz/runtime" element={<QuizRuntimeQuestion />} />
-            <Route path="quiz/mocap-pos" element={<QuizMocapPosQuestion />} />
-            <Route path="dongle" element={<DonglePage />} />
-            <Route path="firmware-tool" element={<FirmwareToolSettings />} />
-            <Route path="connect-trackers" element={<ConnectTrackersPage />} />
-            <Route path="trackers-assign" element={<TrackersAssignPage />} />
-            <Route path="mounting/choose" element={<MountingChoose />} />
-            <Route path="mounting/auto" element={<AutomaticMountingPage />} />
-            <Route path="mounting/manual" element={<ManualMountingPage />} />
-            <Route
-              path="body-proportions/auto"
-              element={<AutomaticProportionsPage />}
-            />
-            <Route
-              path="body-proportions/manual"
-              element={<ManualProportionsPage />}
-            />
-            <Route
-              path="body-proportions/scaled"
-              element={<ScaledProportionsPage />}
-            />
-            <Route path="stay-aligned" element={<StayAlignedSetup />} />
-          </Route>
-          <Route path="*" element={<TopBar />} />
-        </Route>
-      </SentryRoutes>
+        </SentryRoutes>
+      </Suspense>
     </>
   );
 }
@@ -291,13 +331,20 @@ export default function App() {
     useEffect(() => {
       const u1 = electron.api.onTrayReset?.((type) => {
         const req = new ResetRequestT();
-        req.resetType = type === 'yaw' ? ResetType.Yaw : (type === 'full' ? ResetType.Full : ResetType.Mounting);
+        req.resetType =
+          type === 'yaw'
+            ? ResetType.Yaw
+            : type === 'full'
+              ? ResetType.Full
+              : ResetType.Mounting;
         websocketAPI.sendRPCPacket(RpcMessage.ResetRequest, req);
       });
 
       const u2 = electron.api.onTrayElevationStep?.((delta) => {
         audioFeedback.playStepClick(delta > 0);
-        window.dispatchEvent(new CustomEvent('tray-elevation-delta', { detail: delta }));
+        window.dispatchEvent(
+          new CustomEvent('tray-elevation-delta', { detail: delta })
+        );
       });
 
       const u3 = electron.api.onTrayElevationReset?.(() => {

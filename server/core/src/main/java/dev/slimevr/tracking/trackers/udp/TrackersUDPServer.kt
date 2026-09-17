@@ -472,7 +472,6 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 				var rot = packet.rotation
 				rot = AXES_OFFSET.times(rot)
 				val tracker = connection?.getTracker(packet.sensorId) ?: return
-				if (tracker.status == TrackerStatus.DISCONNECTED) tracker.status = TrackerStatus.OK
 				tracker.setRotation(rot)
 				if (packet is UDPPacket23RotationAndAcceleration) {
 					// sensorOffset is applied correctly since protocol 22
@@ -488,7 +487,6 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 
 			is UDPPacket17RotationData -> {
 				val tracker = connection?.getTracker(packet.sensorId) ?: return
-				if (tracker.status == TrackerStatus.DISCONNECTED) tracker.status = TrackerStatus.OK
 				var rot17 = packet.rotation
 				rot17 = AXES_OFFSET * rot17
 				when (packet.dataType) {
@@ -512,7 +510,6 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 
 			is UDPPacket4Acceleration -> {
 				val tracker = connection?.getTracker(packet.sensorId) ?: return
-				if (tracker.status == TrackerStatus.DISCONNECTED) tracker.status = TrackerStatus.OK
 				// sensorOffset is applied correctly since protocol 22
 				// See: https://github.com/SlimeVR/SlimeVR-Tracker-ESP/pull/480
 				if (connection.protocolVersion >= 22) {
@@ -527,7 +524,7 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 				if (connection.lastPingPacketId == packet.pingId) {
 					for (t in connection.trackers.values) {
 						t.ping = (System.currentTimeMillis() - connection.lastPingPacketTime).toInt() / 2
-						t.dataTick()
+						t.heartbeat()
 					}
 				} else {
 					LogManager.debug(

@@ -23,6 +23,26 @@ class StayAlignedTrackerState(
 	// Alignment error that yaw correction attempts to minimize
 	var yawErrors = YawErrors()
 
+	// Kinetic angular velocity in rad/sec, smoothed for motion gating
+	var angularVelocity: Float = 0.0f
+		private set
+
+	private var lastDataRotation = Quaternion.IDENTITY
+	private var lastDataTime = 0L
+
+	fun onNewData(rawRotation: Quaternion) {
+		val now = System.currentTimeMillis()
+		if (lastDataTime > 0L) {
+			val dt = ((now - lastDataTime) / 1000.0f).coerceIn(0.002f, 0.2f)
+			val angleDelta = lastDataRotation.angleToR(rawRotation)
+			val instantVel = angleDelta / dt
+			// Exponential moving average to smoothly filter packet jitter
+			angularVelocity = angularVelocity * 0.7f + instantVel * 0.3f
+		}
+		lastDataTime = now
+		lastDataRotation = rawRotation
+	}
+
 	fun update() {
 		restDetector.update(tracker.getRawRotation())
 		if (restDetector.state == RestDetector.State.AT_REST) {

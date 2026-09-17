@@ -9,6 +9,7 @@ import dev.slimevr.config.FiltersConfig
 import dev.slimevr.config.HIDConfig
 import dev.slimevr.config.LegTweaksConfig
 import dev.slimevr.config.OSCConfig
+import dev.slimevr.config.QuestStandaloneConfig
 import dev.slimevr.config.ResetsConfig
 import dev.slimevr.config.SkeletonConfig
 import dev.slimevr.config.StayAlignedConfig
@@ -207,6 +208,7 @@ fun createModelSettings(
 	humanPoseManager: HumanPoseManager,
 	legTweaksConfig: LegTweaksConfig,
 	skeletonConfig: SkeletonConfig,
+	questConfig: QuestStandaloneConfig,
 ): Int {
 	val togglesOffset = ModelToggles
 		.createModelToggles(
@@ -240,11 +242,17 @@ fun createModelSettings(
 			fbb,
 			legTweaksConfig.correctionStrength,
 		)
+	val chatboxMessageOffset = fbb.createString("")
 	val skeletonConfigOffset = SkeletonHeight
 		.createSkeletonHeight(
 			fbb,
 			skeletonConfig.hmdHeight,
 			skeletonConfig.floorHeight,
+			questConfig.oscRate,
+			questConfig.chatboxEnabled,
+			false,
+			chatboxMessageOffset,
+			questConfig.chatboxOnlyMode,
 		)
 	return ModelSettings
 		.createModelSettings(
@@ -383,6 +391,8 @@ fun createArmsResetModeSettings(
 		resetsConfig.yawResetSmoothTime,
 		resetsConfig.saveMountingReset,
 		resetsConfig.resetHmdPitch,
+		resetsConfig.deadTrackerRecoveryEnabled,
+		resetsConfig.recoveryChatboxNotifications,
 	)
 
 fun createSettingsResponse(fbb: FlatBufferBuilder, server: VRServer): Int {
@@ -419,6 +429,7 @@ fun createSettingsResponse(fbb: FlatBufferBuilder, server: VRServer): Int {
 				server.humanPoseManager,
 				server.configManager.vrConfig.legTweaks,
 				server.configManager.vrConfig.skeleton,
+				server.configManager.vrConfig.questStandalone,
 			),
 			createTapDetectionSettings(
 				fbb,
@@ -453,7 +464,7 @@ fun createStayAlignedSettings(
 	.createStayAlignedSettings(
 		fbb,
 		config.enabled,
-		false, // deprecated
+		config.adaptiveKinetic,
 		config.hideYawCorrection,
 		config.standingRelaxedPose.enabled,
 		config.standingRelaxedPose.upperLegAngleInDeg,

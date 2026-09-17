@@ -37,8 +37,8 @@ function TrackerBig({
     <div className="flex flex-col justify-center rounded-md py-3 pr-4 pl-4 w-full gap-2 box-border my-8 px-6 h-32">
       <div
         className={classNames(
-          'flex justify-center fill-background-10 transition-all duration-200',
-          velocity > 0.18 && 'scale-105 text-[#0A84FF]'
+          'flex justify-center fill-background-10 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          velocity > 0.18 && 'scale-105 text-[#D97757]'
         )}
       >
         <BodyPartIcon bodyPart={tracker.info?.bodyPart} />
@@ -49,14 +49,18 @@ function TrackerBig({
           truncate
           className={classNames(
             'transition-colors duration-200',
-            velocity > 0.18 ? 'text-[#0A84FF]' : 'text-background-10'
+            velocity > 0.18 ? 'text-[#D97757]' : 'text-background-10'
           )}
         >
           {trackerName}
         </Typography>
       </div>
       <div className="flex justify-center">
-        <TrackerStatus status={tracker.status} />
+        <TrackerStatus
+          status={tracker.status}
+          recovery={tracker.recovery}
+          bodyPart={tracker.info?.bodyPart}
+        />
       </div>
       <div className="min-h-9 flex text-default justify-center gap-5 flex-wrap items-center">
         {device && device.hardwareStatus && (
@@ -113,11 +117,11 @@ function TrackerSmol({
         )}
         <div
           className={classNames(
-            'border rounded-[8px] overflow-clip transition-all duration-200',
+            'border rounded-[8px] overflow-clip transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
             {
               'border-status-warning': warning && velocity <= 0.18,
               'border-white/10': !warning && velocity <= 0.18,
-              'border-[#0A84FF]/70 shadow-[0_0_12px_-2px_rgba(10,132,255,0.4)] scale-105 bg-[#0A84FF]/10':
+              'border-[#D97757]/70 shadow-[0_0_12px_-2px_rgba(217,119,87,0.4)] scale-105 bg-[#D97757]/10':
                 velocity > 0.18,
             }
           )}
@@ -128,7 +132,7 @@ function TrackerSmol({
 
       <div
         className={classNames(
-          'flex flex-col flex-grow justify-center gap-1 transition-all duration-200',
+          'flex flex-col flex-grow justify-center gap-1 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
           velocity > 0.18 && 'translate-x-0.5'
         )}
       >
@@ -138,12 +142,16 @@ function TrackerSmol({
           variant="section-title"
           className={classNames(
             'transition-colors duration-200',
-            velocity > 0.18 ? 'text-[#0A84FF]' : 'text-background-10'
+            velocity > 0.18 ? 'text-[#D97757]' : 'text-background-10'
           )}
         >
           {trackerName}
         </Typography>
-        <TrackerStatus status={tracker.status} />
+        <TrackerStatus
+          status={tracker.status}
+          recovery={tracker.recovery}
+          bodyPart={tracker.info?.bodyPart}
+        />
       </div>
       {device && device.hardwareStatus && (
         <>
@@ -204,13 +212,14 @@ export function TrackerCard({
       <div
         onClick={onClick}
         className={classNames(
-          'rounded-[18px] overflow-hidden transition-all duration-200 select-none',
-          interactable && 'glass-interactive cursor-pointer active:scale-[0.98]',
-          outlined && 'outline outline-2 outline-[#0A84FF]/50',
+          'rounded-2xl overflow-hidden transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] select-none',
+          interactable &&
+            'glass-interactive cursor-pointer active:scale-[0.985] active:duration-150',
+          outlined && 'outline outline-2 outline-[#D97757]/50',
           !bg || bg === 'bg-background-60' ? 'card-surface' : bg,
           shakeHighlight &&
             velocity > 0.18 &&
-            'border-[#0A84FF]/60 shadow-[0_0_16px_-4px_rgba(10,132,255,0.35)]'
+            'border-[#D97757]/60 shadow-[0_0_18px_-2px_rgba(217,119,87,0.35)]'
         )}
       >
         {smol && (
