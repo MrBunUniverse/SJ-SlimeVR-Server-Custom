@@ -28,6 +28,14 @@ echo "=================================================="
 echo "Project Path: $DIR"
 
 JAR_PATH="$DIR/server/desktop/build/libs/slimevr.jar"
+GUI_ELECTRON_VITE="$DIR/gui/node_modules/.bin/electron-vite"
+
+if [ ! -x "$GUI_ELECTRON_VITE" ]; then
+    echo "Error: GUI dependencies are missing."
+    echo "Run: cd \"$DIR\" && pnpm install"
+    read -p "Press enter to exit..."
+    exit 1
+fi
 
 # Stop stale processes from an earlier launch of this exact project. This is
 # intentionally path-scoped so unrelated Electron and Java apps are untouched.
