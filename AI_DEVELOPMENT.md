@@ -20,7 +20,7 @@ This is the shared source of truth for GPT/Codex, Gemini, and other coding agent
 | Desktop server | `server/desktop/` | Desktop entry point and packaged JAR |
 | Protocol | `solarxr-protocol/` | Git submodule; FlatBuffers and generated libraries |
 | OpenVR bindings | `bindings-provider/` | Includes the `openvr` submodule |
-| Launch helpers | `Launch SlimeVR.command`, `Stop SlimeVR.command`, `apps/electron-gui/` | Keep process matching project-scoped |
+| Launch helpers | `Launch SlimeVR.command`, `Stop SlimeVR.command` | Keep process matching project-scoped |
 | Documentation | `docs/` | Start at `docs/README.md` |
 
 Do not treat `.backup/`, `.gradle/`, `.kotlin/`, `.pnpm-store/`, `.tools/`, `build/`, `graphify-out/`, `gui/out/`, or any `node_modules/` directory as source. Do not edit generated output when a source file or build command exists.

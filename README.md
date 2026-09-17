@@ -35,9 +35,6 @@ SJ SlimeVR Server/
 ├── Launch SlimeVR.command          # Unified one-click macOS launcher (builds & runs daemon + client)
 ├── Stop SlimeVR.command            # Graceful process supervisor shutdown
 │
-├── apps/
-│   └── electron-gui/               # Convenience launch/build wrappers (no duplicate source)
-│
 ├── gui/                            # Desktop Client (Electron + React 18 + TypeScript)
 │   ├── electron/                   # Native macOS window host, power assertions & menu bar tray
 │   ├── src/
@@ -64,7 +61,7 @@ SJ SlimeVR Server/
 | Change Electron/macOS integration | [`gui/electron`](gui/electron) |
 | Change tracking or OSC behavior | [`server/core`](server/core) |
 | Change FlatBuffers messages | [`solarxr-protocol`](solarxr-protocol) |
-| Run or package the GUI | [`apps/electron-gui`](apps/electron-gui) |
+| Run or package the GUI | [`gui`](gui) |
 | Read technical documentation | [`docs/README.md`](docs/README.md) |
 
 The following local directories are generated or machine-specific and are not application source: `.backup/`, `.gradle/`, `.kotlin/`, `.pnpm-store/`, `.tools/`, `build/`, `graphify-out/`, `gui/out/`, and `node_modules/`. They are excluded by `.gitignore` and can normally be hidden in your editor.
@@ -130,10 +127,13 @@ The monorepo leverages Gradle for backend services and `pnpm` workspaces for fro
 # 2. Build the Electron client production bundle
 cd gui && pnpm run build
 
-# 3. Launch the Electron client in development mode (with Hot Module Replacement)
+# 3. Package the installable Electron app
+cd gui && pnpm run package:build
+
+# 4. Launch the Electron client in development mode (with Hot Module Replacement)
 cd gui && pnpm run gui
 
-# 4. Verify code quality and formatting
+# 5. Verify code quality and formatting
 cd gui && pnpm run lint
 ```
 
