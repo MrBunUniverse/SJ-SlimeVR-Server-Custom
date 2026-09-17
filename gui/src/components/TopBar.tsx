@@ -8,7 +8,7 @@ import {
   useCallback,
   FormEvent,
 } from 'react';
-import { NavLink, useMatch, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   RpcMessage,
   ServerInfosRequestT,
@@ -42,7 +42,6 @@ import { demoModeAtom } from '@/store/demo-trackers';
 import { useElectron } from '@/hooks/electron';
 import { openUrl } from '@/hooks/crossplatform';
 import { Tooltip } from './commons/Tooltip';
-import { useLocalization } from '@fluent/react';
 import { useOperatingMode } from '@/hooks/operating-mode';
 import { useFakeBpm, BpmPresetId } from '@/hooks/fake-bpm';
 import {
@@ -249,48 +248,6 @@ export function VersionTag() {
   );
 }
 
-export function TopBarNavLink({
-  to,
-  children,
-  match,
-  state = {},
-  hasChevron,
-}: {
-  to: string;
-  children: ReactNode;
-  match?: string;
-  state?: any;
-  hasChevron?: boolean;
-}) {
-  const doesMatch = useMatch({
-    path: match || to,
-  });
-
-  return (
-    <NavLink
-      to={to}
-      state={state}
-      style={{ WebkitAppRegion: 'no-drag' } as any}
-      className={classNames(
-        'relative flex items-center gap-1 px-3 py-1 text-[13.5px] font-semibold tracking-tight transition-all rounded-[8px] select-none cursor-pointer',
-        doesMatch
-          ? 'text-background-10'
-          : 'text-background-10/70 hover:text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-      )}
-    >
-      <span>{children}</span>
-      {hasChevron && (
-        <span className="text-[11px] text-background-10/70 opacity-80 -ml-0.5 leading-none font-bold">
-          ⌄
-        </span>
-      )}
-      {doesMatch && (
-        <span className="absolute bottom-[-6px] left-2.5 right-2.5 h-[2.5px] bg-[#D97757] rounded-full shadow-[0_1px_6px_rgba(217,119,87,0.4)]" />
-      )}
-    </NavLink>
-  );
-}
-
 function getShortTrackerName(
   name: string | Uint8Array,
   bodyPart?: BodyPart,
@@ -346,11 +303,13 @@ function getShortTrackerName(
   return clean || 'Trk';
 }
 
-export function ChatboxDropdown() {
+type BroadcastMode = 'pinned' | 'music' | 'bpm' | 'dictate';
+
+const broadcastModes: BroadcastMode[] = ['dictate', 'pinned', 'music', 'bpm'];
+
+export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeMode, setActiveMode] = useState<
-    'instant' | 'pinned' | 'music' | 'bpm' | 'dictate'
-  >('instant');
+  const [activeMode, setActiveMode] = useState<BroadcastMode>('dictate');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [message, setMessage] = useState('');
   const [sentMessageFeedback, setSentMessageFeedback] = useState(false);
@@ -664,29 +623,74 @@ export function ChatboxDropdown() {
     }, 1800);
   };
 
+  const focusBroadcastTab = (mode: BroadcastMode) => {
+    setActiveMode(mode);
+    document.getElementById(`broadcast-tab-${mode}`)?.focus();
+  };
+
+  const handleBroadcastTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    mode: BroadcastMode
+  ) => {
+    const currentIndex = broadcastModes.indexOf(mode);
+    let nextMode: BroadcastMode | null = null;
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      nextMode = broadcastModes[(currentIndex + 1) % broadcastModes.length];
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      nextMode =
+        broadcastModes[
+          (currentIndex - 1 + broadcastModes.length) % broadcastModes.length
+        ];
+    } else if (event.key === 'Home') {
+      nextMode = broadcastModes[0];
+    } else if (event.key === 'End') {
+      nextMode = broadcastModes[broadcastModes.length - 1];
+    }
+
+    if (nextMode) {
+      event.preventDefault();
+      focusBroadcastTab(nextMode);
+    }
+  };
+
   return (
     <div
       ref={dropdownRef}
       style={{ WebkitAppRegion: 'no-drag' } as any}
-      className="chatbox-control relative flex items-center"
+      className={classNames(
+        'chatbox-control relative flex items-center',
+        dock && 'chatbox-control--dock'
+      )}
     >
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         className={classNames(
-          'relative flex items-center gap-1.5 px-2.5 py-1 text-[13.5px] font-semibold tracking-tight rounded-[8px] transition-all select-none cursor-pointer',
+          dock
+            ? 'relative flex min-w-[62px] flex-col items-center justify-center gap-1 rounded-[14px] px-3 py-2 text-[10px] font-medium leading-none tracking-tight transition-[background-color,color,transform] duration-150 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20 focus-visible:ring-offset-2 focus-visible:ring-offset-background-80'
+            : 'relative flex items-center gap-1.5 px-2.5 py-1 text-[13.5px] font-semibold tracking-tight rounded-[8px] transition-all select-none cursor-pointer',
           isOpen
-            ? 'bg-[#262421] text-white shadow-xs'
+            ? dock
+              ? 'bg-background-60 text-accent-background-20 shadow-xs'
+              : 'bg-[#262421] text-white shadow-xs'
             : floorAnchor.chatboxEnabled
-              ? 'text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-              : 'text-background-10/70 hover:text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+              ? dock
+                ? 'text-accent-background-20 hover:bg-background-60/70'
+                : 'text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+              : dock
+                ? 'text-background-30 hover:bg-background-60/70 hover:text-background-10'
+                : 'text-background-10/70 hover:text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
         )}
         title="VRChat Broadcast & Telemetry HUD"
       >
         {/* Chat bubble icon */}
         <svg
-          className="w-3.5 h-3.5 opacity-90 stroke-[2.2]"
+          className={classNames(
+            dock ? 'h-6 w-6' : 'h-3.5 w-3.5',
+            'opacity-90 stroke-[2.2]'
+          )}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -701,28 +705,40 @@ export function ChatboxDropdown() {
 
         {/* Live broadcasting / Compact Chat-Only indicator */}
         {floorAnchor.chatboxOnlyMode ? (
-          <span
-            className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#0A84FF]/25 text-[#5AC8FA] border border-[#0A84FF]/35 tracking-tight leading-none shrink-0"
-            title="Chat-Only Mode Active (FBT Trackers Muted)"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#5AC8FA] animate-pulse" />
-            Only
-          </span>
+          dock ? (
+            <span
+              className="absolute right-2.5 top-2 h-1.5 w-1.5 rounded-full bg-accent-background-20 animate-pulse"
+              title="Chat-Only Mode Active (FBT Trackers Muted)"
+            />
+          ) : (
+            <span
+              className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#0A84FF]/25 text-[#5AC8FA] border border-[#0A84FF]/35 tracking-tight leading-none shrink-0"
+              title="Chat-Only Mode Active (FBT Trackers Muted)"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5AC8FA] animate-pulse" />
+              Only
+            </span>
+          )
         ) : floorAnchor.chatboxEnabled ||
           floorAnchor.chatboxCustomPinnedEnabled ||
           floorAnchor.chatboxAppleMusicEnabled ||
           fakeBpm.enabled ? (
           <span
-            className="w-1.5 h-1.5 rounded-full bg-[#30D158] animate-pulse"
+            className={classNames(
+              'w-1.5 h-1.5 rounded-full bg-[#30D158] animate-pulse',
+              dock && 'absolute right-2.5 top-2'
+            )}
             title="Chatbox broadcasting active"
           />
         ) : (
-          <span className="text-[11px] font-bold opacity-80 leading-none transition-transform duration-150 text-background-10/70">
-            {isOpen ? '▴' : '⌄'}
-          </span>
+          !dock && (
+            <span className="text-[11px] font-bold opacity-80 leading-none transition-transform duration-150 text-background-10/70">
+              {isOpen ? '▴' : '⌄'}
+            </span>
+          )
         )}
 
-        {isOpen && (
+        {isOpen && !dock && (
           <span className="absolute bottom-[-6px] left-2.5 right-2.5 h-[2.5px] bg-[#D97757] rounded-full shadow-[0_1px_6px_rgba(217,119,87,0.4)]" />
         )}
       </button>
@@ -828,15 +844,22 @@ export function ChatboxDropdown() {
             </div>
           </div>
 
-          {/* 4-Segmented Mode Selector */}
+          {/* Four peer broadcast modes: tabs, not action buttons. */}
           <div
             className="chatbox-tabs flex p-1 bg-black/40 border border-white/[0.08] rounded-[10px] gap-1"
+            role="tablist"
+            aria-orientation="horizontal"
             aria-label="Broadcast modes"
           >
             <button
               type="button"
+              id="broadcast-tab-dictate"
+              role="tab"
+              aria-controls="broadcast-panel-dictate"
+              aria-selected={activeMode === 'dictate'}
+              tabIndex={activeMode === 'dictate' ? 0 : -1}
+              onKeyDown={(event) => handleBroadcastTabKeyDown(event, 'dictate')}
               onClick={() => setActiveMode('dictate')}
-              aria-pressed={activeMode === 'dictate'}
               className={classNames(
                 'flex-1 py-1.5 rounded-[7px] text-[11.5px] font-medium transition-all select-none cursor-pointer text-center flex items-center justify-center gap-1.5',
                 activeMode === 'dictate'
@@ -851,8 +874,13 @@ export function ChatboxDropdown() {
             </button>
             <button
               type="button"
+              id="broadcast-tab-pinned"
+              role="tab"
+              aria-controls="broadcast-panel-pinned"
+              aria-selected={activeMode === 'pinned'}
+              tabIndex={activeMode === 'pinned' ? 0 : -1}
+              onKeyDown={(event) => handleBroadcastTabKeyDown(event, 'pinned')}
               onClick={() => setActiveMode('pinned')}
-              aria-pressed={activeMode === 'pinned'}
               className={classNames(
                 'flex-1 py-1.5 rounded-[7px] text-[11.5px] font-medium transition-all select-none cursor-pointer text-center flex items-center justify-center gap-1.5',
                 activeMode === 'pinned'
@@ -867,8 +895,13 @@ export function ChatboxDropdown() {
             </button>
             <button
               type="button"
+              id="broadcast-tab-music"
+              role="tab"
+              aria-controls="broadcast-panel-music"
+              aria-selected={activeMode === 'music'}
+              tabIndex={activeMode === 'music' ? 0 : -1}
+              onKeyDown={(event) => handleBroadcastTabKeyDown(event, 'music')}
               onClick={() => setActiveMode('music')}
-              aria-pressed={activeMode === 'music'}
               className={classNames(
                 'flex-1 py-1.5 rounded-[7px] text-[11.5px] font-medium transition-all select-none cursor-pointer text-center flex items-center justify-center gap-1.5',
                 activeMode === 'music'
@@ -883,8 +916,13 @@ export function ChatboxDropdown() {
             </button>
             <button
               type="button"
+              id="broadcast-tab-bpm"
+              role="tab"
+              aria-controls="broadcast-panel-bpm"
+              aria-selected={activeMode === 'bpm'}
+              tabIndex={activeMode === 'bpm' ? 0 : -1}
+              onKeyDown={(event) => handleBroadcastTabKeyDown(event, 'bpm')}
               onClick={() => setActiveMode('bpm')}
-              aria-pressed={activeMode === 'bpm'}
               className={classNames(
                 'flex-1 py-1.5 rounded-[7px] text-[11.5px] font-medium transition-all select-none cursor-pointer text-center flex items-center justify-center gap-1.5',
                 activeMode === 'bpm'
@@ -903,7 +941,12 @@ export function ChatboxDropdown() {
 
           {/* Mode 1: Voice Dictation & Real-Time Translation */}
           {activeMode === 'dictate' && (
-            <div className="chatbox-mode flex flex-col gap-2.5">
+            <div
+              id="broadcast-panel-dictate"
+              role="tabpanel"
+              aria-labelledby="broadcast-tab-dictate"
+              className="chatbox-mode flex flex-col gap-2.5"
+            >
               {/* Cloud Engine Header Badge */}
               <div className="chatbox-engine flex items-center justify-between p-2 rounded-[8px] bg-[#0A84FF]/10 border border-[#0A84FF]/25">
                 <div className="flex items-center gap-2">
@@ -1277,7 +1320,12 @@ export function ChatboxDropdown() {
 
           {/* Mode 2: Sticky Design / Status Text */}
           {activeMode === 'pinned' && (
-            <div className="chatbox-mode flex flex-col gap-2.5">
+            <div
+              id="broadcast-panel-pinned"
+              role="tabpanel"
+              aria-labelledby="broadcast-tab-pinned"
+              className="chatbox-mode flex flex-col gap-2.5"
+            >
               <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
                 <div className="flex flex-col">
                   <span className="text-[11.5px] font-medium text-white">
@@ -1338,7 +1386,12 @@ export function ChatboxDropdown() {
 
           {/* Mode 3: Apple Music Live Now Playing */}
           {activeMode === 'music' && (
-            <div className="chatbox-mode flex flex-col gap-2.5">
+            <div
+              id="broadcast-panel-music"
+              role="tabpanel"
+              aria-labelledby="broadcast-tab-music"
+              className="chatbox-mode flex flex-col gap-2.5"
+            >
               <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
                 <div className="flex flex-col">
                   <span className="text-[11.5px] font-medium text-white flex items-center gap-1.5">
@@ -1423,7 +1476,12 @@ export function ChatboxDropdown() {
 
           {/* Mode 4: Fake / Simulated BPM Tracker */}
           {activeMode === 'bpm' && (
-            <div className="chatbox-mode flex flex-col gap-2.5">
+            <div
+              id="broadcast-panel-bpm"
+              role="tabpanel"
+              aria-labelledby="broadcast-tab-bpm"
+              className="chatbox-mode flex flex-col gap-2.5"
+            >
               <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
                 <div className="flex flex-col">
                   <span className="text-[11.5px] font-medium text-white flex items-center gap-1.5">
@@ -1715,147 +1773,6 @@ export function ChatboxDropdown() {
   );
 }
 
-export function SettingsDropdown() {
-  const { l10n } = useLocalization();
-  const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const isSettingsActive = useMemo(() => {
-    return (
-      location.pathname.startsWith('/settings') ||
-      location.pathname.startsWith('/onboarding') ||
-      location.pathname.startsWith('/checklist')
-    );
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [location.pathname]);
-
-  const items = [
-    {
-      to: '/settings/trackers',
-      match: '/settings/*',
-      state: { scrollTo: 'steamvr' },
-      label: l10n.getString('navbar-settings'),
-    },
-    {
-      to: '/onboarding/trackers-assign',
-      state: { alonePage: true },
-      label: l10n.getString('navbar-trackers_assign'),
-    },
-    {
-      to: '/onboarding/mounting/choose',
-      match: '/onboarding/mounting/*',
-      state: { alonePage: true },
-      label: l10n.getString('navbar-mounting'),
-    },
-    {
-      to: '/onboarding/body-proportions/scaled',
-      match: '/onboarding/body-proportions/*',
-      state: { alonePage: true },
-      label: l10n.getString('navbar-body_proportions'),
-    },
-    {
-      to: '/onboarding/wifi-creds',
-      state: { alonePage: true },
-      label: l10n.getString('navbar-connect_trackers'),
-    },
-    {
-      to: '/checklist',
-      match: '/checklist',
-      label: 'Checklist',
-    },
-    {
-      to: '/settings/serial',
-      state: { scrollTo: 'serial' },
-      label: 'Serial Console',
-    },
-  ];
-
-  return (
-    <div
-      ref={dropdownRef}
-      style={{ WebkitAppRegion: 'no-drag' } as any}
-      className="relative flex items-center"
-    >
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={classNames(
-          'relative flex items-center gap-1.5 px-2.5 py-1 text-[13.5px] font-semibold tracking-tight rounded-[8px] transition-all select-none cursor-pointer',
-          isOpen
-            ? 'bg-[#262421] text-white shadow-xs'
-            : isSettingsActive
-              ? 'text-background-10'
-              : 'text-background-10/70 hover:text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-        )}
-      >
-        <span>{l10n.getString('navbar-settings')}</span>
-        <span
-          className={classNames(
-            'text-[11px] font-bold opacity-80 leading-none transition-transform duration-150',
-            isOpen ? 'rotate-180 text-white' : 'text-background-10/70'
-          )}
-        >
-          ⌄
-        </span>
-        {isSettingsActive && (
-          <span className="absolute bottom-[-6px] left-2.5 right-2.5 h-[2.5px] bg-[#D97757] rounded-full shadow-[0_1px_6px_rgba(217,119,87,0.4)]" />
-        )}
-      </button>
-
-      {isOpen && (
-        <div className="absolute left-0 top-[38px] w-56 p-1.5 z-50 rounded-[14px] bg-[#262421] dark:bg-[#262421] border border-[#3C3A35] dark:border-[#3C3A35] shadow-2xl flex flex-col gap-0.5 animate-fade-in">
-          {items.map((item) => {
-            const isItemActive = item.match
-              ? location.pathname.startsWith(item.match.replace('/*', ''))
-              : location.pathname === item.to;
-
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                state={item.state}
-                onClick={() => setIsOpen(false)}
-                className={classNames(
-                  'flex items-center justify-between px-3 py-2 rounded-[9px] text-[13.5px] transition-colors select-none cursor-pointer',
-                  isItemActive
-                    ? 'bg-white/[0.1] text-white font-medium'
-                    : 'text-[#C4C2BC] hover:text-white hover:bg-white/[0.06] font-normal'
-                )}
-              >
-                <span>{item.label}</span>
-                {isItemActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#D97757]" />
-                )}
-              </NavLink>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function HardRebootButton() {
   const [rebooting, setRebooting] = useState(false);
 
@@ -1912,22 +1829,6 @@ export function HardRebootButton() {
         </svg>
       </button>
     </Tooltip>
-  );
-}
-
-export function TopBarNav() {
-  const { l10n } = useLocalization();
-
-  return (
-    <nav
-      style={{ WebkitAppRegion: 'no-drag' } as any}
-      className="flex items-center gap-2"
-    >
-      <TopBarNavLink to="/">{l10n.getString('navbar-home')}</TopBarNavLink>
-      <TopBarNavLink to="/remote">Remote</TopBarNavLink>
-      <ChatboxDropdown />
-      <SettingsDropdown />
-    </nav>
   );
 }
 
@@ -2190,9 +2091,7 @@ export function TopBar({
               className="flex items-center justify-center flex-grow h-full z-40"
               style={{ WebkitAppRegion: 'drag' } as any}
               data-electron-drag-region
-            >
-              <TopBarNav />
-            </div>
+            />
           )}
 
           {/* Right Controls & Window Actions */}

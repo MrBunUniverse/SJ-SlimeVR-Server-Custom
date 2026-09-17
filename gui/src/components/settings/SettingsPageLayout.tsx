@@ -101,7 +101,7 @@ export function SettingsPagePaneLayout({
     <div
       id={id}
       className={classNames(
-        'bg-background-60/40 dark:bg-white/[0.02] border border-background-50/50 dark:border-white/[0.06] rounded-[18px] p-5 sm:p-6 shadow-2xs backdrop-blur-sm flex flex-col w-full relative scroll-mt-12 mobile:scroll-mt-20 transition-all',
+        'settings-pane bg-background-60/40 dark:bg-white/[0.02] border border-background-50/50 dark:border-white/[0.06] rounded-[18px] p-5 sm:p-6 shadow-2xs backdrop-blur-sm flex flex-col w-full relative scroll-mt-12 mobile:scroll-mt-20 transition-all',
         className
       )}
       {...props}
@@ -116,7 +116,7 @@ export function SettingsPagePaneLayout({
           if (hasBody) toggleCollapsed();
         }}
       >
-        <div className="w-10 h-10 bg-accent-background-20/12 border border-accent-background-20/25 flex justify-center items-center rounded-full text-[#D97757] fill-[#D97757] shadow-xs shrink-0">
+        <div className="settings-pane__icon w-10 h-10 bg-accent-background-20/12 border border-accent-background-20/25 flex justify-center items-center rounded-full text-accent-background-20 fill-accent-background-20 shadow-xs shrink-0">
           {icon}
         </div>
 

@@ -70,14 +70,14 @@ export function MainLayout({
       <div style={{ gridArea: 't' }}>
         <TopBar />
       </div>
-      <div style={{ gridArea: 'n' }}>
+      <div style={{ gridArea: 'n' }} className="contents">
         <Navbar />
       </div>
 
       <div
         style={{ gridArea: 'c' }}
         className={classNames(
-          'overflow-hidden mx-2 my-2 mobile:m-0 min-w-0 min-h-0',
+          'overflow-hidden mx-2 my-2 mobile:m-0 min-w-0 min-h-0 pb-20',
           'flex flex-col rounded-2xl transition-[background-color,border-radius,box-shadow] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]',
           background && 'glass-panel'
         )}

@@ -447,6 +447,12 @@ export function InterfaceSettings() {
                 <ThemeSelector
                   control={control}
                   name="appearance.theme"
+                  value={'macos'}
+                  colors="!bg-macos"
+                />
+                <ThemeSelector
+                  control={control}
+                  name="appearance.theme"
                   value={'slime'}
                   colors="!bg-slime"
                 />

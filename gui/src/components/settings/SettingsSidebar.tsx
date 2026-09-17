@@ -393,7 +393,8 @@ export function SettingsLink({
       className={classNames(
         'group flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[13px] transition-colors select-none',
         {
-          'text-[#D97757] font-medium bg-[#D97757]/10': isActive,
+          'text-accent-background-20 font-medium bg-accent-background-20/10':
+            isActive,
           'text-background-30 hover:text-background-10 hover:bg-background-50/15 font-normal':
             !isActive,
         }
@@ -404,7 +405,7 @@ export function SettingsLink({
           className={classNames(
             'w-4 h-4 flex items-center justify-center shrink-0 transition-colors',
             {
-              'text-[#D97757]': isActive,
+              'text-accent-background-20': isActive,
               'text-background-30 group-hover:text-background-10': !isActive,
             }
           )}
@@ -596,7 +597,7 @@ export function SettingsSidebar() {
   ];
 
   return (
-    <div className="flex flex-col px-2.5 py-3 gap-2 overflow-y-auto bg-[var(--material-tertiary)] rounded-[16px] border border-[var(--material-border-subtle)] h-full shadow-xs select-none">
+    <div className="settings-sidebar flex flex-col px-2.5 py-3 gap-2 overflow-y-auto bg-[var(--material-tertiary)] rounded-[16px] border border-[var(--material-border-subtle)] h-full shadow-xs select-none">
       {/* Search Bar matching Claude technical aesthetic */}
       <div className="relative w-full flex items-center">
         <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none text-background-30">

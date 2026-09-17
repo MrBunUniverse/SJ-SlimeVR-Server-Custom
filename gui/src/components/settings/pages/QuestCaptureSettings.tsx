@@ -91,7 +91,7 @@ export function QuestCaptureSettingsPage() {
   if (!isLoaded) {
     return (
       <SettingsPageLayout>
-        <div className="rounded-[14px] border border-background-50/50 p-5 text-[13px] text-background-30">
+        <div className="quest-capture-surface rounded-[14px] border border-background-50/50 p-5 text-[13px] text-background-30">
           Loading Quest capture settings...
         </div>
       </SettingsPageLayout>
@@ -216,7 +216,7 @@ export function QuestCaptureSettingsPage() {
             </div>
 
             {settings.eye === 'manual' && (
-              <div className="mt-4 rounded-[12px] border border-[#D97757]/25 bg-[#D97757]/[0.055] p-3">
+              <div className="quest-capture-callout mt-4 rounded-[12px] border border-[#D97757]/25 bg-[#D97757]/[0.055] p-3">
                 <p className="mb-3 text-[12px] leading-relaxed text-background-20">
                   Manual crop values are percentages of the full Quest frame.
                 </p>

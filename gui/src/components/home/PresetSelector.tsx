@@ -38,7 +38,7 @@ export function PresetSelector() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute left-0 top-8 w-72 p-2 z-50 rounded-[14px] bg-[#262421] dark:bg-[#262421] border border-[#3C3A35] dark:border-[#3C3A35] shadow-2xl flex flex-col gap-1 animate-fade-in">
+          <div className="preset-popover absolute left-0 top-8 w-72 p-2 z-50 rounded-[14px] bg-[#262421] dark:bg-[#262421] border border-[#3C3A35] dark:border-[#3C3A35] shadow-2xl flex flex-col gap-1 animate-fade-in">
             <div className="px-2.5 py-1.5 text-[10px] font-mono font-medium text-background-30 uppercase tracking-wider">
               Tracker Assignment Sets
             </div>

@@ -90,10 +90,10 @@ export function BasicResetButton(
         type="button"
         disabled={disabled}
         className={classNames(
-          'relative overflow-clip h-[32px] px-3.5 rounded-[8px] flex items-center justify-center gap-1.5 font-medium text-[12px] transition-all duration-150 select-none will-change-transform',
+          'toolbar-reset-button relative overflow-clip h-[32px] px-3.5 rounded-[8px] flex items-center justify-center gap-1.5 font-medium text-[12px] transition-all duration-150 select-none will-change-transform',
           {
             // Active Button (Claude web aesthetic matching all reset actions)
-            'cursor-pointer active:scale-[0.98] bg-[#F0EEE6] hover:bg-[#E5E2D8] text-[#14120E] fill-[#14120E] border border-black/[0.08] dark:bg-[#262421] dark:hover:bg-[#322F2B] dark:text-[#FAF9F5] dark:fill-[#FAF9F5] dark:border-white/[0.08]':
+            'cursor-pointer active:scale-[0.98] bg-background-60 hover:bg-background-70 text-background-10 fill-background-10 border border-[var(--material-border-subtle)]':
               !disabled,
             // Disabled state
             'cursor-not-allowed opacity-40 bg-[var(--material-tertiary)] text-background-30 fill-background-30 border border-transparent':
@@ -266,7 +266,7 @@ export function ResetActionsGroup() {
   };
 
   return (
-    <div className="flex items-center gap-2 select-none">
+    <div className="toolbar-reset-group flex items-center gap-2 select-none">
       <BasicResetButton
         type={ResetType.Full}
         {...getAnimProps('full')}

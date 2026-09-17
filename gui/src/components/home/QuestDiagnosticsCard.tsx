@@ -133,20 +133,13 @@ export function QuestDiagnosticsCard() {
       )}
     >
       {/* Flush Header Strip matching getting started collapsed tab */}
-      <div
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
         aria-expanded={showTuning}
         aria-controls="quest-telemetry-controls"
         onClick={() => setShowTuning((prev) => !prev)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            setShowTuning((prev) => !prev);
-          }
-        }}
         className={classNames(
-          'w-full py-1.5 flex items-center justify-between cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D97757]/60',
+          'telemetry-strip__toggle w-full cursor-pointer py-1.5 flex items-center justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D97757]/60',
           showSidebar ? 'px-3.5 sm:px-4' : 'px-4 sm:px-6'
         )}
         title={
@@ -187,7 +180,7 @@ export function QuestDiagnosticsCard() {
             </span>
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Expanded Controls Panel with Cinematic Liquid Glass Animation */}
       <div
@@ -215,7 +208,7 @@ export function QuestDiagnosticsCard() {
                 onClick={() => setShowCoreControls((prev) => !prev)}
                 aria-expanded={showCoreControls}
                 aria-controls="quest-core-controls"
-                className="flex items-center gap-1.5 rounded-[6px] py-0.5 text-left text-[11px] font-semibold text-background-20 transition-colors hover:text-background-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97757]/60"
+                className="telemetry-disclosure flex items-center gap-1.5 rounded-[6px] py-0.5 text-left text-[11px] font-semibold text-background-20 transition-colors hover:text-background-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97757]/60"
               >
                 <span>Tracking</span>
                 <svg
@@ -499,9 +492,9 @@ export function QuestDiagnosticsCard() {
                                 : undefined
                             }
                             className={classNames(
-                              'flex-1 py-1.5 rounded-[7px] text-[11px] tnum font-semibold transition-colors duration-150 cursor-pointer select-none active:scale-[0.98]',
+                              'flex-1 py-1.5 rounded-[7px] border border-transparent text-[11px] tnum font-semibold transition-colors duration-150 cursor-pointer select-none active:scale-[0.98]',
                               isSelected
-                                ? 'bg-white dark:bg-[#2A2722] text-[#D97757] dark:text-[#E08A6D] shadow-xs border border-black/[0.04] dark:border-white/[0.08]'
+                                ? 'bg-background-50/30 text-accent-background-20 border-accent-background-20/35 shadow-xs'
                                 : 'text-background-30 hover:text-background-10 hover:bg-black/[0.02] dark:hover:bg-white/[0.04]',
                               isJustSelected && 'animate-preset-pop',
                               isOtherBouncing &&
@@ -528,7 +521,7 @@ export function QuestDiagnosticsCard() {
                 onClick={() => setShowFineTuning((prev) => !prev)}
                 aria-expanded={showFineTuning}
                 aria-controls="quest-fine-tuning"
-                className="flex items-center gap-1.5 rounded-[6px] py-0.5 text-left text-[11px] font-semibold text-background-20 transition-colors hover:text-background-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97757]/60"
+                className="telemetry-disclosure flex items-center gap-1.5 rounded-[6px] py-0.5 text-left text-[11px] font-semibold text-background-20 transition-colors hover:text-background-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97757]/60"
               >
                 <span>Advanced</span>
                 <svg
@@ -572,17 +565,42 @@ export function QuestDiagnosticsCard() {
               <div className="overflow-hidden min-h-0">
                 <div className="overflow-hidden rounded-[12px] bg-background-70 border border-[var(--material-border-primary)] shadow-xs transition-[transform,opacity] duration-400 ease-[cubic-bezier(0.22,0.8,0.24,1)] motion-reduce:transition-none motion-reduce:transform-none">
                   <div
-                    className="grid grid-cols-2 gap-0.5 border-b border-[var(--material-border-subtle)] bg-black/[0.025] p-1 dark:bg-black/20"
+                    className="telemetry-tabs grid grid-cols-2 gap-0.5 border-b border-[var(--material-border-subtle)] bg-black/[0.025] p-1 dark:bg-black/20"
                     role="tablist"
+                    aria-orientation="horizontal"
                     aria-label="Advanced telemetry settings"
                   >
                     <button
                       type="button"
                       role="tab"
+                      id="advanced-telemetry-tab-motion"
+                      aria-controls="advanced-telemetry-panel-motion"
                       aria-selected={advancedTab === 'motion'}
+                      tabIndex={advancedTab === 'motion' ? 0 : -1}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === 'ArrowRight' ||
+                          event.key === 'ArrowDown'
+                        ) {
+                          event.preventDefault();
+                          setAdvancedTab('vrchat');
+                          document
+                            .getElementById('advanced-telemetry-tab-vrchat')
+                            ?.focus();
+                        }
+                        if (event.key === 'Home' || event.key === 'End') {
+                          event.preventDefault();
+                          const nextTab =
+                            event.key === 'Home' ? 'motion' : 'vrchat';
+                          setAdvancedTab(nextTab);
+                          document
+                            .getElementById(`advanced-telemetry-tab-${nextTab}`)
+                            ?.focus();
+                        }
+                      }}
                       onClick={() => setAdvancedTab('motion')}
                       className={classNames(
-                        'min-h-7 rounded-[7px] text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97757]/60',
+                        'telemetry-tab min-h-7 rounded-[7px] text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97757]/60',
                         advancedTab === 'motion'
                           ? 'bg-white/[0.08] text-background-10 shadow-xs'
                           : 'text-background-30 hover:text-background-10 hover:bg-white/[0.04]'
@@ -593,10 +611,34 @@ export function QuestDiagnosticsCard() {
                     <button
                       type="button"
                       role="tab"
+                      id="advanced-telemetry-tab-vrchat"
+                      aria-controls="advanced-telemetry-panel-vrchat"
                       aria-selected={advancedTab === 'vrchat'}
+                      tabIndex={advancedTab === 'vrchat' ? 0 : -1}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === 'ArrowLeft' ||
+                          event.key === 'ArrowUp'
+                        ) {
+                          event.preventDefault();
+                          setAdvancedTab('motion');
+                          document
+                            .getElementById('advanced-telemetry-tab-motion')
+                            ?.focus();
+                        }
+                        if (event.key === 'Home' || event.key === 'End') {
+                          event.preventDefault();
+                          const nextTab =
+                            event.key === 'Home' ? 'motion' : 'vrchat';
+                          setAdvancedTab(nextTab);
+                          document
+                            .getElementById(`advanced-telemetry-tab-${nextTab}`)
+                            ?.focus();
+                        }
+                      }}
                       onClick={() => setAdvancedTab('vrchat')}
                       className={classNames(
-                        'min-h-7 rounded-[7px] text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97757]/60',
+                        'telemetry-tab min-h-7 rounded-[7px] text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D97757]/60',
                         advancedTab === 'vrchat'
                           ? 'bg-white/[0.08] text-background-10 shadow-xs'
                           : 'text-background-30 hover:text-background-10 hover:bg-white/[0.04]'
@@ -607,7 +649,9 @@ export function QuestDiagnosticsCard() {
                   </div>
                   {/* Card A: Kinematics & Floor Dynamics */}
                   <div
+                    id="advanced-telemetry-panel-motion"
                     role="tabpanel"
+                    aria-labelledby="advanced-telemetry-tab-motion"
                     className={classNames(
                       'p-2.5 flex flex-col justify-between gap-2',
                       advancedTab !== 'motion' && 'hidden'
@@ -699,7 +743,9 @@ export function QuestDiagnosticsCard() {
 
                   {/* Card B: VRChat OSC Telemetry & Social Integration */}
                   <div
+                    id="advanced-telemetry-panel-vrchat"
                     role="tabpanel"
+                    aria-labelledby="advanced-telemetry-tab-vrchat"
                     className={classNames(
                       'p-2.5 flex flex-col justify-between gap-2',
                       advancedTab !== 'vrchat' && 'hidden'

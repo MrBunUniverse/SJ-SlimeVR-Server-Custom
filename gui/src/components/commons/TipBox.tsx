@@ -17,7 +17,7 @@ export function TipBox({
   return (
     <div
       className={classNames(
-        'flex flex-row gap-3 bg-accent-background-50/15 dark:bg-white/[0.03] border border-accent-background-30/20 dark:border-white/[0.08] p-3 rounded-[14px]',
+        'tip-box flex flex-row gap-3 bg-accent-background-50/15 dark:bg-white/[0.03] border border-accent-background-30/20 dark:border-white/[0.08] p-3 rounded-[14px]',
         className
       )}
     >
@@ -58,7 +58,7 @@ export function WarningBox({
   return (
     <div
       className={classNames(
-        'flex flex-row gap-3 bg-[#D97757]/8 dark:bg-[#D97757]/12 border border-[#D97757]/25 dark:border-[#D97757]/30 p-3.5 rounded-[12px] select-none',
+        'warning-box flex flex-row gap-3 bg-[#D97757]/8 dark:bg-[#D97757]/12 border border-[#D97757]/25 dark:border-[#D97757]/30 p-3.5 rounded-[12px] select-none',
         className
       )}
     >

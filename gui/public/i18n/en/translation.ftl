@@ -270,6 +270,7 @@ serial_detection-close = Close
 
 ## Navigation bar
 navbar-home = Home
+navbar-remote = Remote
 navbar-body_proportions = Body Proportions
 navbar-trackers_assign = Tracker Assignment
 navbar-mounting = Mounting Calibration

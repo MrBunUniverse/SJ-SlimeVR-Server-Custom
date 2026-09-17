@@ -16,6 +16,7 @@ import { useCollapsibleHeight } from '@/hooks/collapsible-height';
 import { demoModeAtom, toggleDemoModeAtom } from '@/store/demo-trackers';
 import { useTracker } from '@/hooks/tracker';
 import { BodyPartIcon } from '@/components/commons/BodyPartIcon';
+import { SlimeVRIcon } from '@/components/commons/icon/SimevrIcon';
 import { CardIMUVisualizer } from '@/components/widgets/IMUVisualizerWidget';
 import {
   TrackerDataT,
@@ -159,18 +160,18 @@ export function ClaudeTrackerWindowCard({
     <div
       onClick={handleCardClick}
       className={classNames(
-        'group relative flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer select-none hover:-translate-y-0.5 active:scale-[0.985] active:duration-150',
+        'home-tracker-card group relative flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer select-none hover:-translate-y-0.5 active:scale-[0.985] active:duration-150',
         isMoving
           ? 'border-[#D97757] animate-tracker-motion'
           : 'border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.2] dark:hover:border-white/[0.2] shadow-xs hover:shadow-lg'
       )}
     >
       {/* Card Header Banner with Mock Window & Contour Lines */}
-      <div className="relative h-30 sm:h-32 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-2.5 select-none transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+      <div className="home-tracker-card__banner relative h-30 sm:h-32 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-2.5 select-none transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
         {/* Subtle Curved Topographic Contours with Motion Dynamic Waves */}
         <svg
           className={classNames(
-            'tracker-card-contours absolute inset-0 w-full h-full pointer-events-none stroke-[#D97757] transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
+            'tracker-accent-stroke tracker-card-contours absolute inset-0 w-full h-full pointer-events-none stroke-[#D97757] transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
             show3D ? 'opacity-0' : isMoving ? 'opacity-40' : 'opacity-20'
           )}
           viewBox="0 0 300 120"
@@ -253,7 +254,7 @@ export function ClaudeTrackerWindowCard({
               className={classNames(
                 'px-1.5 py-0.5 rounded text-[9.5px] font-mono font-medium transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.95] cursor-pointer select-none flex items-center gap-1 border',
                 show3D
-                  ? 'bg-[#D97757] border-[#D97757] text-white shadow-xs'
+                  ? 'tracker-accent-fill bg-[#D97757] border-[#D97757] text-white shadow-xs'
                   : 'bg-black/[0.04] dark:bg-white/[0.04] hover:bg-black/[0.08] dark:hover:bg-white/[0.08] border-black/[0.08] dark:border-white/[0.08] text-background-30 hover:text-background-10'
               )}
               title={show3D ? 'Hide 3D realtime view' : 'Show 3D realtime view'}
@@ -286,7 +287,7 @@ export function ClaudeTrackerWindowCard({
               {/* Tracker body icon shifted smoothly to the left */}
               <div
                 className={classNames(
-                  'shrink-0 pl-1.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] text-[#D97757] fill-[#D97757]',
+                  'tracker-accent shrink-0 pl-1.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] text-[#D97757] fill-[#D97757]',
                   isMoving
                     ? 'scale-[1.05] drop-shadow-[0_2px_8px_rgba(217,119,87,0.35)]'
                     : 'opacity-85'
@@ -304,7 +305,7 @@ export function ClaudeTrackerWindowCard({
             /* Centered Graphic Icon - Limb Silhouette with Movement Pulse */
             <div
               className={classNames(
-                'w-full flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] text-[#D97757] fill-[#D97757]',
+                'tracker-accent w-full flex items-center justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] text-[#D97757] fill-[#D97757]',
                 isMoving
                   ? 'scale-[1.06] -translate-y-0.5 drop-shadow-[0_2px_10px_rgba(217,119,87,0.35)]'
                   : 'group-hover:scale-105'
@@ -428,33 +429,11 @@ function ExpandedHeroBanner({
         )}
       >
         <div className="animate-slime-breathe flex items-center justify-center">
-          <svg
-            width="48"
-            height="28"
-            viewBox="0 0 49 29"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="text-[#D97757]"
-          >
-            <path
-              d="M2 26.996C10.44 25.59 29.16 23.1571 46.509 26.9091C46.509 26.9091 48.89 -0.199966 35.761 2.14503"
-              stroke="currentColor"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-            />
-            <path
-              d="M7.52161 15.0107L12.3649 9.20459L17.5044 13.9572"
-              stroke="currentColor"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-            />
-            <path
-              d="M27.9566 14.1435L33.7372 9.27062L37.9695 14.8458"
-              stroke="currentColor"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-            />
-          </svg>
+          <SlimeVRIcon
+            width={48}
+            height={28}
+            className="home-accent home-hero-logo"
+          />
         </div>
       </div>
 
@@ -463,7 +442,7 @@ function ExpandedHeroBanner({
         <span>{FULL_HERO_TITLE.slice(0, typedChars)}</span>
         {cursorVisible && (
           <span
-            className="inline-block w-[3px] sm:w-[3.5px] h-[0.78em] bg-[#D97757] ml-1.5 align-middle animate-terminal-cursor select-none rounded-[0.5px]"
+            className="home-accent-fill inline-block w-[3px] sm:w-[3.5px] h-[0.78em] bg-[#D97757] ml-1.5 align-middle animate-terminal-cursor select-none rounded-[0.5px]"
             aria-hidden="true"
           />
         )}
@@ -775,7 +754,7 @@ export function HomeEmptyState({
         } as React.CSSProperties);
 
   return (
-    <div className="w-full flex-grow flex flex-col select-none min-h-full">
+    <div className="home-workspace w-full flex-grow flex flex-col select-none min-h-full">
       {/* SPLIT 1: Top Hero Section with Apple Liquid Glass Collapsible Banner */}
       <div
         style={heroTabAnim.style}
@@ -804,33 +783,11 @@ export function HomeEmptyState({
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-nowrap overflow-hidden">
             <div className="animate-slime-breathe flex items-center shrink-0">
-              <svg
-                width="22"
-                height="13"
-                viewBox="0 0 49 29"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-[#D97757]"
-              >
-                <path
-                  d="M2 26.996C10.44 25.59 29.16 23.1571 46.509 26.9091C46.509 26.9091 48.89 -0.199966 35.761 2.14503"
-                  stroke="currentColor"
-                  strokeWidth="2.8"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M7.52161 15.0107L12.3649 9.20459L17.5044 13.9572"
-                  stroke="currentColor"
-                  strokeWidth="2.8"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M27.9566 14.1435L33.7372 9.27062L37.9695 14.8458"
-                  stroke="currentColor"
-                  strokeWidth="2.8"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <SlimeVRIcon
+                width={22}
+                height={13}
+                className="home-accent block shrink-0"
+              />
             </div>
             <span className="font-serif text-[13.5px] text-background-10 font-normal whitespace-nowrap shrink-0">
               SirJamesSlimeVR
@@ -873,7 +830,7 @@ export function HomeEmptyState({
       {/* SPLIT 2: Trackers Cards Grid Section (Deeper Obsidian Surface extending to screen bottom) */}
       <div
         className={classNames(
-          'w-full flex-grow min-h-full flex flex-col justify-between items-center bg-[#EFECE2] dark:bg-[#12110E]',
+          'home-tracker-surface w-full flex-grow min-h-full flex flex-col justify-between items-center bg-[#EFECE2] dark:bg-[#12110E]',
           showSidebar ? 'py-6 sm:py-10 px-3.5 sm:px-4' : 'py-10 sm:py-14 px-6'
         )}
       >
@@ -1062,12 +1019,12 @@ export function HomeEmptyState({
                       to={card.to}
                       style={animStyle}
                       className={classNames(
-                        'group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.2] dark:hover:border-white/[0.2] shadow-xs hover:shadow-lg transition-[border-color,box-shadow,transform] duration-200 cursor-pointer hover:-translate-y-0.5',
+                        'home-tracker-card group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.2] dark:hover:border-white/[0.2] shadow-xs hover:shadow-lg transition-[border-color,box-shadow,transform] duration-200 cursor-pointer hover:-translate-y-0.5',
                         animClass
                       )}
                     >
                       {/* Card Header Banner with Mock Window & Contour Lines */}
-                      <div className="relative h-24 sm:h-25 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-2.5 select-none">
+                      <div className="home-tracker-card__banner relative h-24 sm:h-25 w-full bg-[#F4F1E8] dark:bg-[#14120F] border-b border-black/[0.06] dark:border-white/[0.06] overflow-hidden flex flex-col justify-between p-2.5 select-none">
                         {/* Subtle Curved Topographic Contours */}
                         <svg
                           className="guide-card-contours absolute inset-0 w-full h-full opacity-[0.38] pointer-events-none stroke-[#D97757]"

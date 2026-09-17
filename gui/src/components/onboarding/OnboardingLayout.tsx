@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { useOnboarding } from '@/hooks/onboarding';
 import { MainLayout } from '@/components/MainLayout';
 import { TopBar } from '@/components/TopBar';
+import { Navbar } from '@/components/Navbar';
 import { useBreakpoint } from '@/hooks/breakpoint';
 import { SkipSetupButton } from './SkipSetupButton';
 import { SkipSetupWarningModal } from './SkipSetupWarningModal';
@@ -17,6 +18,7 @@ export function OnboardingLayout({ children }: { children: ReactNode }) {
       <div style={{ gridArea: 't' }}>
         <TopBar progress={state.progress} />
       </div>
+      <Navbar />
       <div style={{ gridArea: 'c' }} className="mt-2 relative">
         <div className="absolute top-12 mobile:top-0 right-2 z-50">
           <SkipSetupButton
