@@ -7,8 +7,8 @@ import dev.slimevr.VRServer
 import dev.slimevr.config.VRConfig
 import dev.slimevr.osc.VRCOSCHandler
 import dev.slimevr.protocol.rpc.settings.RPCSettingsHandler
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import solarxr_protocol.rpc.ChangeSettingsRequest

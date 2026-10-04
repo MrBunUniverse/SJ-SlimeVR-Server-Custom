@@ -13,9 +13,9 @@ import dev.slimevr.tracking.processor.config.SkeletonConfigValues
 import dev.slimevr.tracking.trackers.TrackerPosition
 import dev.slimevr.tracking.trackers.TrackerRole
 import solarxr_protocol.rpc.ChangeSettingsRequest
+import solarxr_protocol.rpc.ResetsSettings
 import solarxr_protocol.rpc.RpcMessage
 import solarxr_protocol.rpc.RpcMessageHeader
-import solarxr_protocol.rpc.ResetsSettings
 import solarxr_protocol.rpc.SettingsResponse
 import kotlin.math.*
 
@@ -453,7 +453,6 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 		}
 	}
 }
-
 
 internal fun applyRecoverySettings(settings: ResetsSettings, config: ResetsConfig) {
 	if (!settings.recoverySettingsPresent()) return

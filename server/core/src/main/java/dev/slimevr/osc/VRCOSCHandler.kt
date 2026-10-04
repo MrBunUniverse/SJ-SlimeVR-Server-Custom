@@ -873,21 +873,19 @@ class VRCOSCHandler(
 		return "🔋 $partsText".take(140)
 	}
 
-	private fun getShortPositionName(pos: TrackerPosition?): String {
-		return when (pos) {
-			TrackerPosition.CHEST -> "Ch"
-			TrackerPosition.WAIST, TrackerPosition.HIP -> "W"
-			TrackerPosition.LEFT_UPPER_LEG -> "LTh"
-			TrackerPosition.RIGHT_UPPER_LEG -> "RTh"
-			TrackerPosition.LEFT_LOWER_LEG -> "LSh"
-			TrackerPosition.RIGHT_LOWER_LEG -> "RSh"
-			TrackerPosition.LEFT_FOOT -> "LF"
-			TrackerPosition.RIGHT_FOOT -> "RF"
-			TrackerPosition.LEFT_UPPER_ARM -> "LA"
-			TrackerPosition.RIGHT_UPPER_ARM -> "RA"
-			TrackerPosition.HEAD -> "HMD"
-			else -> pos?.designation?.take(3)?.uppercase() ?: "Trk"
-		}
+	private fun getShortPositionName(pos: TrackerPosition?): String = when (pos) {
+		TrackerPosition.CHEST -> "Ch"
+		TrackerPosition.WAIST, TrackerPosition.HIP -> "W"
+		TrackerPosition.LEFT_UPPER_LEG -> "LTh"
+		TrackerPosition.RIGHT_UPPER_LEG -> "RTh"
+		TrackerPosition.LEFT_LOWER_LEG -> "LSh"
+		TrackerPosition.RIGHT_LOWER_LEG -> "RSh"
+		TrackerPosition.LEFT_FOOT -> "LF"
+		TrackerPosition.RIGHT_FOOT -> "RF"
+		TrackerPosition.LEFT_UPPER_ARM -> "LA"
+		TrackerPosition.RIGHT_UPPER_ARM -> "RA"
+		TrackerPosition.HEAD -> "HMD"
+		else -> pos?.designation?.take(3)?.uppercase() ?: "Trk"
 	}
 
 	override fun getOscSender(): OSCPortOut = oscSender!!

@@ -8,17 +8,17 @@ import dev.slimevr.tracking.trackers.udp.UDPConnectionRegistry
 import dev.slimevr.tracking.trackers.udp.UDPDevice
 import dev.slimevr.tracking.trackers.udp.UDPPacket15SensorInfo
 import dev.slimevr.tracking.trackers.udp.UDPProtocolParser
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.BufferUnderflowException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.nio.BufferUnderflowException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class UDPRepairTests {
 	@Test
@@ -153,6 +153,5 @@ class UDPRepairTests {
 		return buffer
 	}
 
-	private fun device(address: InetSocketAddress = InetSocketAddress("127.0.0.1", 6000), hardwareId: String = "AA:BB:CC:DD:EE:FF") =
-		UDPDevice(address, InetAddress.getLoopbackAddress(), hardwareId)
+	private fun device(address: InetSocketAddress = InetSocketAddress("127.0.0.1", 6000), hardwareId: String = "AA:BB:CC:DD:EE:FF") = UDPDevice(address, InetAddress.getLoopbackAddress(), hardwareId)
 }

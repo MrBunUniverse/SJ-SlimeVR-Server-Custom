@@ -161,9 +161,12 @@ object AdjustTrackerYaw {
 
 				// If sitting in adaptive mode, decouple leg neighbor cross-coupling
 				// so sitting cross-legged or relaxed never twists legs
-				val isLeg = tracker == trackers.leftUpperLeg || tracker == trackers.rightUpperLeg ||
-					tracker == trackers.leftLowerLeg || tracker == trackers.rightLowerLeg ||
-					tracker == trackers.leftFoot || tracker == trackers.rightFoot
+				val isLeg = tracker == trackers.leftUpperLeg ||
+					tracker == trackers.rightUpperLeg ||
+					tracker == trackers.leftLowerLeg ||
+					tracker == trackers.rightLowerLeg ||
+					tracker == trackers.leftFoot ||
+					tracker == trackers.rightFoot
 
 				if (!(isAdaptive && posture == KineticPosture.SITTING && isLeg)) {
 					trackers.visit(tracker, NeighborErrorVisitor(relaxedPose, it.neighborError))
@@ -171,8 +174,11 @@ object AdjustTrackerYaw {
 
 				// HMD Conical Limit Guard: if upper body tracker yaw deviates by > 70 deg from HMD forward,
 				// apply progressive restorative pull to prevent backwards torso or twisted spine glitches.
-				if (isAdaptive && head != null && (head.isHmd || !head.isImu()) &&
-					TrackerYaw.hasTrackerYaw(head) && trackers.upperBody.contains(tracker) &&
+				if (isAdaptive &&
+					head != null &&
+					(head.isHmd || !head.isImu()) &&
+					TrackerYaw.hasTrackerYaw(head) &&
+					trackers.upperBody.contains(tracker) &&
 					TrackerYaw.hasTrackerYaw(tracker)
 				) {
 					val hmdYaw = trackerYaw(head)

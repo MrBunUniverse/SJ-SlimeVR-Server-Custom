@@ -124,6 +124,7 @@ class Tracker @JvmOverloads constructor(
 	private val pendingSample = AtomicReference<TrackerSample?>(null)
 	private val pendingAcceleration = AtomicReference<TrackerAccelerationSample?>(null)
 	private var lastAccelerationCaptureTimeNanos = 0L
+
 	@Volatile
 	var mailboxOverruns: Long = 0
 		private set
@@ -390,7 +391,9 @@ class Tracker @JvmOverloads constructor(
 	private fun applyAccelerationSample(sample: TrackerAccelerationSample, allowEqualTimestamp: Boolean = false) {
 		if (sample.arrivalTimeNanos < lastAccelerationCaptureTimeNanos ||
 			(!allowEqualTimestamp && sample.arrivalTimeNanos == lastAccelerationCaptureTimeNanos)
-		) return
+		) {
+			return
+		}
 		_acceleration = sample.acceleration
 		lastAccelerationCaptureTimeNanos = sample.arrivalTimeNanos
 	}
@@ -529,9 +532,7 @@ class Tracker @JvmOverloads constructor(
 	 * Get the rotation of the tracker after the resetsHandler's corrections, filtering,
 	 * and reset smoothing if applicable
 	 */
-	fun getRotation(): Quaternion {
-		return recovery.applyTo(getRotationBase())
-	}
+	fun getRotation(): Quaternion = recovery.applyTo(getRotationBase())
 
 	internal fun getRotationBase(): Quaternion {
 		var rot = getRotationNoResetSmooth()
@@ -589,8 +590,10 @@ class Tracker @JvmOverloads constructor(
 	/** True only while captured acceleration is recent enough for stability evidence. */
 	fun hasFreshAcceleration(nowNanos: Long = System.nanoTime()): Boolean {
 		val ageNanos = nowNanos - lastAccelerationCaptureTimeNanos
-		return hasAcceleration && lastAccelerationCaptureTimeNanos > 0L &&
-			ageNanos in 0L..MAX_ACCELERATION_AGE_NANOS && _acceleration.len() > 0f
+		return hasAcceleration &&
+			lastAccelerationCaptureTimeNanos > 0L &&
+			ageNanos in 0L..MAX_ACCELERATION_AGE_NANOS &&
+			_acceleration.len() > 0f
 	}
 
 	/**

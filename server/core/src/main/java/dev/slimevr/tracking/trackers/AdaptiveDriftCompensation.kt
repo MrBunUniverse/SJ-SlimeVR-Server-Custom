@@ -2,12 +2,12 @@ package dev.slimevr.tracking.trackers
 
 import dev.slimevr.config.config
 import io.github.axisangles.ktmath.EulerOrder
+import java.util.IdentityHashMap
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
-import java.util.IdentityHashMap
 
 enum class AdaptiveDriftMode {
 	DISABLED,
@@ -139,11 +139,11 @@ object AdaptiveDriftCompensation {
 				freeze(state, AdaptiveDriftFreezeReason.RECOVERY)
 				continue
 			}
-		val stability = stabilityEstimator.evaluate(target, references, nowNanos)
-		if (!stability.stable) {
-			freeze(state, stability.reason)
-			continue
-		}
+			val stability = stabilityEstimator.evaluate(target, references, nowNanos)
+			if (!stability.stable) {
+				freeze(state, stability.reason)
+				continue
+			}
 
 			val referenceSignature = references.map {
 				ReferenceSignature(it.id, it.trackerPosition, it.resetsHandler.mountingOrientation)
@@ -304,18 +304,21 @@ object AdaptiveDriftCompensation {
 		.getReferenceAdjustedRotationBeforeDrift(tracker.getRawRotation())
 		.toEulerAngles(EulerOrder.YZX).y
 
-	private fun yawDeltaFromBaseline(tracker: Tracker, state: State): Float =
-		yawDelta(tracker, state.baselineYaw[tracker] ?: currentYaw(tracker))
+	private fun yawDeltaFromBaseline(tracker: Tracker, state: State): Float = yawDelta(tracker, state.baselineYaw[tracker] ?: currentYaw(tracker))
 
 	private fun yawDelta(tracker: Tracker, baseline: Float): Float = wrapRadians(currentYaw(tracker) - baseline)
 
 	private fun referenceWeight(tracker: Tracker): Float = when {
 		tracker.isHmd || tracker.trackerPosition == TrackerPosition.HEAD -> 4f
+
 		tracker.trackerPosition in torsoPositions -> 3f
+
 		tracker.trackerPosition?.isThigh() == true -> 1.75f
+
 		tracker.trackerPosition == TrackerPosition.LEFT_LOWER_LEG ||
 			tracker.trackerPosition == TrackerPosition.RIGHT_LOWER_LEG ||
 			tracker.trackerPosition?.isFoot() == true -> 1f
+
 		else -> 0f
 	}
 

@@ -168,8 +168,11 @@ class TrackerResetsHandler(val tracker: Tracker) {
 				// Seed baseline if a known profile preset or IMU is active
 				effectiveRate = when (override.lowercase()) {
 					"mpu6050" -> 4.5f
+
 					"bmi160" -> 3.15f
+
 					"lsm6_icm" -> 0.85f
+
 					else -> {
 						val imuName = tracker.imuType?.name ?: ""
 						when {
@@ -347,8 +350,7 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		// Preserved via tracker.config mutations directly
 	}
 
-	fun getDriftSinceDurationSeconds(): Float =
-		if (driftSince > 0) (System.currentTimeMillis() - driftSince) / 1000.0f else 0.0f
+	fun getDriftSinceDurationSeconds(): Float = if (driftSince > 0) (System.currentTimeMillis() - driftSince) / 1000.0f else 0.0f
 
 	/**
 	 * Clears drift compensation data
@@ -418,8 +420,7 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	}
 
 	/** Stable-pose observations share the same safety and persistence gate. */
-	fun learnStablePoseObservation(observedYaw: Float, elapsedMs: Long, confidence: Float) =
-		learnDriftObservation(observedYaw, elapsedMs, confidence)
+	fun learnStablePoseObservation(observedYaw: Float, elapsedMs: Long, confidence: Float) = learnDriftObservation(observedYaw, elapsedMs, confidence)
 
 	/**
 	 * Checks for compensateDrift, allowDriftCompensation, and if
@@ -859,12 +860,12 @@ class TrackerResetsHandler(val tracker: Tracker) {
 					val currentLearned = tracker.config.learnedDriftRateDegPerMin
 					val obsCount = tracker.config.totalDriftObservations
 					val alpha = if (obsCount < 3) 0.5f else 0.2f
-						val newLearned = (1f - alpha) * currentLearned + alpha * observedRate
-						tracker.config.learnedDriftRateDegPerMin = newLearned
-						tracker.config.totalDriftObservations = obsCount + 1
-						tracker.config.adaptiveDriftModelVersion = 1
-						tracker.config.adaptiveDriftLastAcceptedAt = System.currentTimeMillis()
-						markAdaptiveConfigDirty()
+					val newLearned = (1f - alpha) * currentLearned + alpha * observedRate
+					tracker.config.learnedDriftRateDegPerMin = newLearned
+					tracker.config.totalDriftObservations = obsCount + 1
+					tracker.config.adaptiveDriftModelVersion = 1
+					tracker.config.adaptiveDriftLastAcceptedAt = System.currentTimeMillis()
+					markAdaptiveConfigDirty()
 				}
 			}
 		}

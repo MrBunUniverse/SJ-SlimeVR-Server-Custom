@@ -61,7 +61,9 @@ class UDPDevice(
 	var lastPacketCounterReset: Long = System.currentTimeMillis()
 
 	val packetLossPercent: Float
-		get() = if (acceptedPackets == 0) 0f else {
+		get() = if (acceptedPackets == 0) {
+			0f
+		} else {
 			packetGapCount.toFloat() / (acceptedPackets.toFloat() + packetGapCount).coerceAtLeast(1f)
 		}
 

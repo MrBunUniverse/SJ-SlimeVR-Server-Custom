@@ -47,7 +47,10 @@ class AdaptiveDriftCompensationTests {
 		val trackers = listOf(target, hip, hmd)
 		val start = System.nanoTime()
 
-		trackers.forEach { it.setRotation(Quaternion.IDENTITY); it.dataTick(start) }
+		trackers.forEach {
+			it.setRotation(Quaternion.IDENTITY)
+			it.dataTick(start)
+		}
 		repeat(351) { index ->
 			val yaw = index * 0.01f * PI.toFloat() / 180f
 			target.setRotation(Quaternion.rotationAroundYAxis(yaw))

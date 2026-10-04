@@ -6,7 +6,9 @@ import dev.slimevr.config.QuestStandaloneConfig
 import dev.slimevr.config.RecenterBehavior
 import dev.slimevr.config.TrackingProfileType
 import dev.slimevr.config.VRConfig
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class QuestStandaloneConfigTests {

@@ -34,8 +34,7 @@ class PoseStabilityEstimator(
 		return PoseStabilityResult(true, AdaptiveDriftFreezeReason.NONE)
 	}
 
-	private fun isStable(tracker: Tracker): Boolean =
-		tracker.stayAligned.angularVelocity <= maxAngularVelocityRadPerSec && isGravityStable(tracker)
+	private fun isStable(tracker: Tracker): Boolean = tracker.stayAligned.angularVelocity <= maxAngularVelocityRadPerSec && isGravityStable(tracker)
 
 	private fun isGravityStable(tracker: Tracker): Boolean {
 		if (!tracker.hasAcceleration) return true

@@ -91,14 +91,22 @@ class QuaternionMovingAverage(
 		when (type) {
 			TrackerFilters.PREDICTION -> {
 				val target = predictedQuaternion(networkHealth())
-				val blend = ((PREDICT_GAIN_MIN + amount.coerceIn(0f, 1f) *
-					(PREDICT_GAIN_MAX - PREDICT_GAIN_MIN)) * dt).coerceAtMost(1f)
+				val blend = (
+					(
+						PREDICT_GAIN_MIN +
+							amount.coerceIn(0f, 1f) *
+							(PREDICT_GAIN_MAX - PREDICT_GAIN_MIN)
+						) *
+						dt
+					).coerceAtMost(1f)
 				filteredQuaternion = filteredQuaternion.interpQ(target, blend)
 			}
+
 			TrackerFilters.SMOOTHING -> {
 				val blend = (smoothFactor * timeSinceUpdate).coerceAtMost(1f)
 				filteredQuaternion = smoothingQuaternion.interpQ(latestQuaternion, blend)
 			}
+
 			TrackerFilters.ADAPTIVE_HYBRID -> {
 				val health = networkHealth()
 				val motionRatio = ((currentAngularVelocity - 0.15f) / 0.55f).coerceIn(0f, 1f)
@@ -113,6 +121,7 @@ class QuaternionMovingAverage(
 				val blend = (dynamicSmoothFactor * timeSinceUpdate).coerceAtMost(1f)
 				filteredQuaternion = smoothingQuaternion.interpQ(dynamicTarget, blend)
 			}
+
 			TrackerFilters.NONE -> {
 				// The latest value is installed in addQuaternion.
 			}
@@ -153,8 +162,11 @@ class QuaternionMovingAverage(
 		sampleAgeSeconds = 0f
 		sampleCount++
 		effectivePredictionHorizonSeconds = if (type == TrackerFilters.PREDICTION || type == TrackerFilters.ADAPTIVE_HYBRID) {
-			(PREDICTION_HORIZON_MIN_MS +
-				(amount.coerceIn(0f, 1f) * (PREDICTION_HORIZON_MAX_MS - PREDICTION_HORIZON_MIN_MS))) / 1000f
+			(
+				PREDICTION_HORIZON_MIN_MS +
+					(amount.coerceIn(0f, 1f) * (PREDICTION_HORIZON_MAX_MS - PREDICTION_HORIZON_MIN_MS))
+				) /
+				1000f
 		} else {
 			0f
 		}

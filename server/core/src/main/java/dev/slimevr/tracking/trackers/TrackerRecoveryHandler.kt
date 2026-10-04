@@ -62,12 +62,15 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 	@Volatile
 	var state = TrackerRecoveryState.NONE
 		private set
+
 	@Volatile
 	var reason = TrackerRecoveryReason.NONE
 		private set
+
 	@Volatile
 	var progress = 0f
 		private set
+
 	@Volatile
 	var confidence = 0f
 		private set
@@ -90,10 +93,12 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 	val activeForSkeleton: Boolean
 		get() = state != TrackerRecoveryState.NONE
 
-	private fun enabled(): Boolean =
-		VRServer.instanceInitialized &&
-			VRServer.instance.configManager.vrConfig.resetsConfig.deadTrackerRecoveryEnabled &&
-			tracker.isImu() && tracker.trackerPosition != null && !tracker.isHmd && !tracker.isComputed
+	private fun enabled(): Boolean = VRServer.instanceInitialized &&
+		VRServer.instance.configManager.vrConfig.resetsConfig.deadTrackerRecoveryEnabled &&
+		tracker.isImu() &&
+		tracker.trackerPosition != null &&
+		!tracker.isHmd &&
+		!tracker.isComputed
 
 	@Synchronized
 	fun onRotationSample(rotation: Quaternion, gapMs: Long, now: Long): Boolean {
@@ -178,9 +183,13 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 
 		when (state) {
 			TrackerRecoveryState.NONE -> {
-				if (hasBaseline && sampleAgeMs >= BRIDGE_AFTER_MS) beginGap(now)
-				else if (hasBaseline && now >= nextSnapshotAt) captureSnapshot(now)
+				if (hasBaseline && sampleAgeMs >= BRIDGE_AFTER_MS) {
+					beginGap(now)
+				} else if (hasBaseline && now >= nextSnapshotAt) {
+					captureSnapshot(now)
+				}
 			}
+
 			TrackerRecoveryState.BRIDGING_GAP -> {
 				updateFallbackFromAnchor()
 				progress = ((sampleAgeMs - BRIDGE_AFTER_MS).toFloat() / (COMPENSATE_AFTER_MS - BRIDGE_AFTER_MS)).coerceIn(0f, 1f)
@@ -191,6 +200,7 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 					LogManager.warning("[TrackerRecovery] Compensating ${tracker.displayName} after ${sampleAgeMs}ms without rotation data")
 				}
 			}
+
 			TrackerRecoveryState.COMPENSATING,
 			TrackerRecoveryState.WAITING_FOR_STILLNESS,
 			TrackerRecoveryState.VALIDATING,
@@ -198,7 +208,9 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 				updateFallbackFromAnchor()
 				if (state == TrackerRecoveryState.VALIDATING) validateAndApply(now)
 			}
+
 			TrackerRecoveryState.NEEDS_RESET -> Unit
+
 			TrackerRecoveryState.BLENDING -> {
 				progress = ((now - blendStartedAt).toFloat() / BLEND_TIME_MS).coerceIn(0f, 1f)
 				if (progress >= 1f) {
@@ -360,10 +372,9 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 		return hasHead || torsoCount >= 2
 	}
 
-	private fun configurationStillMatchesSnapshot(): Boolean =
-		snapshotHardwareId == tracker.device?.hardwareIdentifier &&
-			snapshotPosition == tracker.trackerPosition &&
-			snapshotMounting == tracker.resetsHandler.mountingOrientation
+	private fun configurationStillMatchesSnapshot(): Boolean = snapshotHardwareId == tracker.device?.hardwareIdentifier &&
+		snapshotPosition == tracker.trackerPosition &&
+		snapshotMounting == tracker.resetsHandler.mountingOrientation
 
 	private fun requireFullReset(failure: TrackerRecoveryReason) {
 		state = TrackerRecoveryState.NEEDS_RESET
@@ -391,8 +402,7 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 		return 2f * kotlin.math.acos(dot)
 	}
 
-	private fun isFinite(rotation: Quaternion): Boolean =
-		rotation.w.isFinite() && rotation.x.isFinite() && rotation.y.isFinite() && rotation.z.isFinite()
+	private fun isFinite(rotation: Quaternion): Boolean = rotation.w.isFinite() && rotation.x.isFinite() && rotation.y.isFinite() && rotation.z.isFinite()
 
 	private fun anchorWeight(anchor: Tracker): Float = when {
 		anchor.trackerPosition in TORSO_POSITIONS -> 3.0f
@@ -429,5 +439,4 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 		val confidence = (1f - disagreement / MAX_REFERENCE_DISAGREEMENT_RAD).coerceIn(0f, 1f)
 		return if (confidence.isFinite() && confidence >= MIN_REFERENCE_CONFIDENCE) desiredYaw to confidence else null
 	}
-
 }

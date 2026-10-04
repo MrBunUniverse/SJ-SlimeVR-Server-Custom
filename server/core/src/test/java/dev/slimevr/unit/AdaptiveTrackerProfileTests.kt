@@ -20,23 +20,21 @@ class AdaptiveTrackerProfileTests {
 		imu: IMUType = IMUType.UNKNOWN,
 		name: String = "TestTracker",
 		position: TrackerPosition = TrackerPosition.CHEST,
-	): Tracker {
-		return Tracker(
-			device = null,
-			id = 1,
-			name = name,
-			trackerPosition = position,
-			trackerNum = 0,
-			hasPosition = false,
-			hasRotation = true,
-			isComputed = false,
-			imuType = imu,
-			allowReset = true,
-			allowMounting = true,
-			isHmd = false,
-			trackRotDirection = false,
-		).apply { status = TrackerStatus.OK }
-	}
+	): Tracker = Tracker(
+		device = null,
+		id = 1,
+		name = name,
+		trackerPosition = position,
+		trackerNum = 0,
+		hasPosition = false,
+		hasRotation = true,
+		isComputed = false,
+		imuType = imu,
+		allowReset = true,
+		allowMounting = true,
+		isHmd = false,
+		trackRotDirection = false,
+	).apply { status = TrackerStatus.OK }
 
 	@Test
 	fun `adaptive learning and correction default to enabled`() {

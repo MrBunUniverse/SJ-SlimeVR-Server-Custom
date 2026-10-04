@@ -5,7 +5,6 @@ import dev.slimevr.VRServer
 import dev.slimevr.config.ConfigManager
 import dev.slimevr.tracking.trackers.Tracker
 import dev.slimevr.tracking.trackers.TrackerPosition
-import dev.slimevr.tracking.trackers.TrackerRecoveryReason as RecoveryReason
 import dev.slimevr.tracking.trackers.TrackerRecoveryState
 import dev.slimevr.tracking.trackers.TrackerStatus
 import dev.slimevr.tracking.trackers.udp.IMUType
@@ -15,8 +14,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import solarxr_protocol.data_feed.tracker.TrackerRecovery
 import solarxr_protocol.data_feed.tracker.TrackerRecoveryReason
-import solarxr_protocol.data_feed.tracker.TrackerRecoveryState as ProtocolRecoveryState
 import kotlin.math.PI
+import dev.slimevr.tracking.trackers.TrackerRecoveryReason as RecoveryReason
+import solarxr_protocol.data_feed.tracker.TrackerRecoveryState as ProtocolRecoveryState
 
 class TrackerRecoveryTests {
 	@Test

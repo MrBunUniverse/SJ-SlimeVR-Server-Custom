@@ -294,19 +294,19 @@ class ZeroSlideFootClamp(private val skeleton: HumanSkeleton?) {
 		foot: FootState,
 		rawPos: Vector3,
 		strength: Float,
-	): Vector3 {
-		return when (foot.state) {
-			StanceState.SWING -> rawPos
-			StanceState.STANCE_LOCKED -> {
-				if (strength >= 0.95f) {
-					foot.clampedPosition
-				} else {
-					// Interpolate between raw and firmly clamped based on user strength slider
-					val factor = FastMath.clamp(strength, 0.0f, 1.0f)
-					rawPos * (1.0f - factor) + foot.clampedPosition * factor
-				}
+	): Vector3 = when (foot.state) {
+		StanceState.SWING -> rawPos
+
+		StanceState.STANCE_LOCKED -> {
+			if (strength >= 0.95f) {
+				foot.clampedPosition
+			} else {
+				// Interpolate between raw and firmly clamped based on user strength slider
+				val factor = FastMath.clamp(strength, 0.0f, 1.0f)
+				rawPos * (1.0f - factor) + foot.clampedPosition * factor
 			}
-			StanceState.RELEASE_BLEND -> foot.clampedPosition
 		}
+
+		StanceState.RELEASE_BLEND -> foot.clampedPosition
 	}
 }

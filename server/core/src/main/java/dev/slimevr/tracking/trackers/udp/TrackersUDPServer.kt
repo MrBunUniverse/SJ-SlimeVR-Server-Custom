@@ -32,8 +32,10 @@ import kotlin.coroutines.resume
 class TrackersUDPServer(private val port: Int, name: String, private val trackersConsumer: Consumer<Tracker>) : Thread(name) {
 	private val random = Random()
 	private val connectionRegistry = UDPConnectionRegistry()
+
 	@Volatile
 	private var broadcastAddresses: List<InetSocketAddress> = emptyList()
+
 	@Volatile
 	private var lastBroadcastAddressRefresh = 0L
 	private val parser = UDPProtocolParser()

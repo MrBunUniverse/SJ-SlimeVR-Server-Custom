@@ -1,14 +1,14 @@
 package dev.slimevr.tracking.processor.stayaligned.adjust
 
+import dev.slimevr.config.StayAlignedConfig
 import dev.slimevr.math.Angle
 import dev.slimevr.math.AngleAverage
+import dev.slimevr.tracking.processor.stayaligned.AdaptiveKineticPostureDetector
+import dev.slimevr.tracking.processor.stayaligned.KineticPosture
 import dev.slimevr.tracking.processor.stayaligned.StayAlignedDefaults.CENTER_ERROR_HEAD_WEIGHT
 import dev.slimevr.tracking.processor.stayaligned.StayAlignedDefaults.CENTER_ERROR_LOWER_LEG_WEIGHT
 import dev.slimevr.tracking.processor.stayaligned.StayAlignedDefaults.CENTER_ERROR_UPPER_BODY_WEIGHT
 import dev.slimevr.tracking.processor.stayaligned.StayAlignedDefaults.CENTER_ERROR_UPPER_LEG_WEIGHT
-import dev.slimevr.config.StayAlignedConfig
-import dev.slimevr.tracking.processor.stayaligned.AdaptiveKineticPostureDetector
-import dev.slimevr.tracking.processor.stayaligned.KineticPosture
 import dev.slimevr.tracking.processor.stayaligned.adjust.TrackerYaw.hasTrackerYaw
 import dev.slimevr.tracking.processor.stayaligned.adjust.TrackerYaw.trackerYaw
 import dev.slimevr.tracking.processor.stayaligned.trackers.TrackerSkeleton
