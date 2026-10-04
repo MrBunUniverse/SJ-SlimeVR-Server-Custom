@@ -1,5 +1,14 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useState } from 'react';
 import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import {
+  BoneT,
   DataFeedMessage,
   DataFeedUpdateT,
   ResetResponseT,
@@ -17,6 +26,7 @@ import { fetchCurrentFirmwareRelease, FirmwareRelease } from './firmware-update'
 import { DEFAULT_LOCALE, LangContext } from '@/i18n/config';
 
 const isSteam = window.electronAPI ? await window.electronAPI.isSteam() : false;
+const UI_FEED_UPDATE_INTERVAL = 1000 / 30;
 
 export interface AppContext {
   currentFirmwareRelease: FirmwareRelease | null;
@@ -32,6 +42,9 @@ export function useProvideAppContext(): AppContext {
   const setDatafeed = useSetAtom(datafeedAtom);
   const setBones = useSetAtom(bonesAtom);
   const devices = useAtomValue(devicesAtom);
+  const pendingDatafeedRef = useRef<DataFeedUpdateT | null>(null);
+  const pendingBonesRef = useRef<BoneT[] | null>(null);
+  const flushTimerRef = useRef<number | null>(null);
 
   const [currentFirmwareRelease, setCurrentFirmwareRelease] =
     useState<FirmwareRelease | null>(null);
@@ -44,13 +57,47 @@ export function useProvideAppContext(): AppContext {
     }
   }, [isConnected, config?.debug, config?.devSettings?.fastDataFeed]);
 
-  useDataFeedPacket(DataFeedMessage.DataFeedUpdate, (packet: DataFeedUpdateT) => {
-    if (packet.index === 0) {
-      setDatafeed(packet);
-    } else if (packet.index === 1) {
-      setBones(packet.bones);
-    }
-  });
+  const flushPendingFeed = useCallback(() => {
+    flushTimerRef.current = null;
+
+    const pendingDatafeed = pendingDatafeedRef.current;
+    const pendingBones = pendingBonesRef.current;
+    pendingDatafeedRef.current = null;
+    pendingBonesRef.current = null;
+
+    if (pendingDatafeed) setDatafeed(pendingDatafeed);
+    if (pendingBones) setBones(pendingBones);
+  }, [setBones, setDatafeed]);
+
+  const scheduleFeedFlush = useCallback(() => {
+    if (flushTimerRef.current !== null) return;
+    flushTimerRef.current = window.setTimeout(
+      flushPendingFeed,
+      UI_FEED_UPDATE_INTERVAL
+    );
+  }, [flushPendingFeed]);
+
+  const handleDataFeedUpdate = useCallback(
+    (packet: DataFeedUpdateT) => {
+      if (packet.index === 0) {
+        pendingDatafeedRef.current = packet;
+      } else if (packet.index === 1) {
+        pendingBonesRef.current = packet.bones;
+      }
+      scheduleFeedFlush();
+    },
+    [scheduleFeedFlush]
+  );
+
+  useDataFeedPacket(DataFeedMessage.DataFeedUpdate, handleDataFeedUpdate);
+
+  useEffect(() => {
+    return () => {
+      if (flushTimerRef.current !== null) {
+        window.clearTimeout(flushTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     updateSentryContext(devices);

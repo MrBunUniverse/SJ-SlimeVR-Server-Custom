@@ -26,6 +26,10 @@ object TrackerTelemetryLogger {
 		val rotation: Quaternion,
 		val driftSinceSec: Float,
 		val learnedDrift: Float,
+		val adaptiveMode: String,
+		val adaptiveConfidence: Float,
+		val adaptiveCorrectionDeg: Float,
+		val filterHealth: dev.slimevr.tracking.trackers.FilterHealth,
 	)
 
 	private data class Session(
@@ -62,7 +66,7 @@ object TrackerTelemetryLogger {
 				ArrayBlockingQueue(QUEUE_CAPACITY),
 				AtomicBoolean(true),
 			)
-			session.writer.write("timestamp_ms,tracker_name,imu_type,yaw_deg,pitch_deg,roll_deg,drift_since_sec,learned_drift_deg_min\n")
+			session.writer.write("timestamp_ms,tracker_name,imu_type,yaw_deg,pitch_deg,roll_deg,drift_since_sec,learned_drift_deg_min,adaptive_mode,adaptive_confidence,adaptive_correction_deg,input_rate_hz,packet_jitter_ms,packet_loss,prediction_horizon_ms,effective_latency_ms,filtering_impact_rad\n")
 			session.writer.flush()
 			currentSession = session
 			lastSampleTime = 0L
@@ -97,6 +101,7 @@ object TrackerTelemetryLogger {
 		val samples = trackers.asSequence()
 			.filter { it.isImu() }
 			.map { tracker ->
+				val adaptiveStatus = tracker.adaptiveDriftStatus
 				Sample(
 					now,
 					tracker.name,
@@ -104,6 +109,10 @@ object TrackerTelemetryLogger {
 					tracker.getRotation(),
 					tracker.resetsHandler.getDriftSinceDurationSeconds(),
 					tracker.config.learnedDriftRateDegPerMin,
+					adaptiveStatus.mode.name,
+					adaptiveStatus.confidence,
+					adaptiveStatus.appliedCorrectionDeg,
+					tracker.filterHealth,
 				)
 			}
 			.toList()
@@ -128,7 +137,15 @@ object TrackerTelemetryLogger {
 						"${sample.timestamp},\"${csv(sample.name)}\",\"${csv(sample.imuType)}\"," +
 							"${"%.2f".format(Locale.ROOT, yaw)},${"%.2f".format(Locale.ROOT, pitch)}," +
 							"${"%.2f".format(Locale.ROOT, roll)},${"%.1f".format(Locale.ROOT, sample.driftSinceSec)}," +
-							"${"%.3f".format(Locale.ROOT, sample.learnedDrift)}\n",
+							"${"%.3f".format(Locale.ROOT, sample.learnedDrift)}," +
+							"${sample.adaptiveMode},${"%.3f".format(Locale.ROOT, sample.adaptiveConfidence)}," +
+							"${"%.2f".format(Locale.ROOT, sample.adaptiveCorrectionDeg)}," +
+							"${"%.2f".format(Locale.ROOT, sample.filterHealth.inputRateHz)}," +
+							"${"%.2f".format(Locale.ROOT, sample.filterHealth.packetJitterMs)}," +
+							"${"%.4f".format(Locale.ROOT, sample.filterHealth.packetLoss)}," +
+							"${"%.2f".format(Locale.ROOT, sample.filterHealth.predictionHorizonMs)}," +
+							"${"%.2f".format(Locale.ROOT, sample.filterHealth.effectiveLatencyMs)}," +
+							"${"%.4f".format(Locale.ROOT, sample.filterHealth.filteringImpactRad)}\n",
 					)
 				}
 				batchesSinceFlush++

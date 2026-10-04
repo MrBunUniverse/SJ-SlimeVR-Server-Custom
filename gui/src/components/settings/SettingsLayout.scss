@@ -3,6 +3,7 @@
 }
 
 .settings-layout {
+  --settings-dock-offset: 110px;
   display: grid;
   position: relative;
   grid-template:
@@ -12,9 +13,11 @@
 
   @screen lg {
     --settings-sidebar-w: 260px;
+    --settings-dock-offset: 130px;
   }
 
   @screen mobile {
+    --settings-dock-offset: 0px;
     grid-template:
       't' var(--topbar-h)
       'c' calc(100% - var(--topbar-h))

@@ -37,17 +37,26 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	var compensateDrift = false
 	private var driftPrediction = false
 	private var driftCompensationEnabled = false
+	private var adaptiveYawCorrectionRad = 0f
+	private var adaptiveYawTargetRad = 0f
+	private var adaptiveConfigDirty = false
+	private var lastAdaptiveConfigSaveAt = 0L
 	private var armsResetMode = ArmsResetModes.BACK
 	private var yawResetSmoothTime = 0.0f
 	var saveMountingReset = false
 	var resetHmdPitch = false
-	var allowDriftCompensation = false
+	var allowDriftCompensation = true
 		set(value) {
 			field = value
 			refreshDriftCompensationEnabled()
 		}
 	var lastResetQuaternion: Quaternion? = null
 	var recoveryYawFix = Quaternion.IDENTITY
+
+	val adaptiveYawCorrectionDegrees: Float
+		get() = Math.toDegrees(adaptiveYawCorrectionRad.toDouble()).toFloat()
+	val adaptiveYawCorrectionRadians: Float
+		get() = adaptiveYawCorrectionRad
 
 	// Manual mounting orientation
 	var mountingOrientation = HalfHorizontal
@@ -56,6 +65,10 @@ class TrackerResetsHandler(val tracker: Tracker) {
 			clearRecovery()
 			// Clear the mounting reset now that it's been set manually
 			clearMounting()
+			// A mounting/role change invalidates the runtime correction's reference
+			// frame. Keep the learned rate, but re-learn its live offset from the
+			// newly mounted pose.
+			rebaseAdaptiveCorrectionForReset()
 		}
 
 	// Reference adjustment quats
@@ -173,7 +186,12 @@ class TrackerResetsHandler(val tracker: Tracker) {
 				}
 			}
 
-			if (effectiveRate != 0.0f) {
+			// A profile seed is only a migration prior. It is not applied as active
+			// compensation until measured observations have earned confidence.
+			if (effectiveRate != 0.0f &&
+				tracker.config.totalDriftObservations > 0 &&
+				tracker.config.adaptiveDriftLastAcceptedAt <= 0L
+			) {
 				val baselineMinutes = 5.0f
 				val seedAngleRad = Math.toRadians((effectiveRate * baselineMinutes).toDouble()).toFloat()
 				val seedQuat = EulerAngles(EulerOrder.YZX, 0f, seedAngleRad, 0f).toQuaternion()
@@ -200,7 +218,129 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		} else if (tracker.config.autoLearnDrift && tracker.config.learnedDriftRateDegPerMin != 0.0f) {
 			compensateDrift = true
 		}
+		if (!isBno && allowDriftCompensation) restoreAdaptiveDriftModel()
 		refreshDriftCompensationEnabled()
+	}
+
+	/** Restores only measured model state; profile defaults remain a weak prior. */
+	private fun restoreAdaptiveDriftModel() {
+		adaptiveYawCorrectionRad = 0f
+		adaptiveYawTargetRad = 0f
+		val acceptedAt = tracker.config.adaptiveDriftLastAcceptedAt
+		if (!tracker.config.autoLearnDrift || tracker.config.totalDriftObservations <= 0 || acceptedAt <= 0L) return
+
+		val elapsedMs = (System.currentTimeMillis() - acceptedAt).coerceAtLeast(0L)
+		// learnedDriftRate is the measured sensor drift direction; runtime
+		// compensation applies its inverse.
+		val predictedDegrees = (-tracker.config.learnedDriftRateDegPerMin * elapsedMs / 60000.0f)
+			.coerceIn(-45.0f, 45.0f)
+		adaptiveYawCorrectionRad = Math.toRadians(predictedDegrees.toDouble()).toFloat()
+		adaptiveYawTargetRad = adaptiveYawCorrectionRad
+	}
+
+	/**
+	 * Slews the persistent correction toward a stable-pose estimate. The rate
+	 * limit prevents a bad single frame from snapping the torso.
+	 */
+	fun setAdaptiveYawCorrectionTarget(targetRadians: Float, deltaTimeSeconds: Float) {
+		if (!targetRadians.isFinite() || !deltaTimeSeconds.isFinite()) return
+		adaptiveYawTargetRad = wrapRadians(targetRadians)
+		val error = wrapRadians(adaptiveYawTargetRad - adaptiveYawCorrectionRad)
+		val maxStep = Math.toRadians((3.0f * deltaTimeSeconds.coerceIn(0f, 0.1f)).toDouble()).toFloat()
+		adaptiveYawCorrectionRad = wrapRadians(
+			adaptiveYawCorrectionRad + error.coerceIn(-maxStep, maxStep),
+		)
+	}
+
+	fun clearAdaptiveYawCorrection() {
+		adaptiveYawCorrectionRad = 0f
+		adaptiveYawTargetRad = 0f
+	}
+
+	/**
+	 * Re-anchors live adaptive state after a user calibration without deleting
+	 * the persistent learned rate. The next stable-pose window must start from
+	 * the new reset reference instead of applying the old pose's correction.
+	 */
+	private fun rebaseAdaptiveCorrectionForReset() {
+		clearAdaptiveYawCorrection()
+		AdaptiveDriftCompensation.clear(tracker)
+	}
+
+	fun setAdaptiveDriftLearningPaused(paused: Boolean) {
+		if (!tracker.isImu()) return
+		tracker.config.adaptiveDriftLearningPaused = paused
+		if (paused) AdaptiveDriftCompensation.clear(tracker)
+		if (VRServer.instanceInitialized) VRServer.instance.configManager.saveConfig()
+	}
+
+	fun setAdaptiveDriftEnabled(enabled: Boolean) {
+		if (!tracker.isImu()) return
+		allowDriftCompensation = enabled
+		tracker.config.allowDriftCompensation = enabled
+		if (!enabled) {
+			clearAdaptiveYawCorrection()
+			AdaptiveDriftCompensation.clear(tracker)
+		}
+		if (VRServer.instanceInitialized) VRServer.instance.configManager.saveConfig()
+	}
+
+	/** Restores the model that was accepted immediately before the current one. */
+	fun restorePreviousAdaptiveDriftModel(): Boolean {
+		val config = tracker.config
+		if (!config.hasPreviousAdaptiveDriftModel) return false
+		config.learnedDriftRateDegPerMin = config.previousLearnedDriftRateDegPerMin
+		config.totalDriftObservations = config.previousTotalDriftObservations
+		config.adaptiveDriftConfidence = config.previousAdaptiveDriftConfidence
+		config.adaptiveDriftLastAcceptedAt = config.previousAdaptiveDriftLastAcceptedAt
+		clearAdaptiveYawCorrection()
+		restoreAdaptiveDriftModel()
+		AdaptiveDriftCompensation.clear(tracker)
+		if (VRServer.instanceInitialized) VRServer.instance.configManager.saveConfig()
+		return true
+	}
+
+	/** Debounced config persistence for learned observations. */
+	fun flushAdaptiveConfigPersistence(nowMs: Long = System.currentTimeMillis()) {
+		if (!adaptiveConfigDirty || !VRServer.instanceInitialized) return
+		if (lastAdaptiveConfigSaveAt != 0L && nowMs - lastAdaptiveConfigSaveAt < 5_000L) return
+		VRServer.instance.configManager.saveConfig()
+		lastAdaptiveConfigSaveAt = nowMs
+		adaptiveConfigDirty = false
+	}
+
+	private fun markAdaptiveConfigDirty() {
+		adaptiveConfigDirty = true
+		flushAdaptiveConfigPersistence()
+	}
+
+	private fun wrapRadians(value: Float): Float {
+		var wrapped = value
+		while (wrapped > Math.PI.toFloat()) wrapped -= (Math.PI * 2.0).toFloat()
+		while (wrapped < -Math.PI.toFloat()) wrapped += (Math.PI * 2.0).toFloat()
+		return wrapped
+	}
+
+	fun setAdaptiveProfileOverride(profile: String) {
+		val normalized = profile.trim().lowercase().takeIf { it in setOf("auto", "mpu6050", "bmi160", "lsm6_icm", "bno085") }
+			?: return
+		val current = tracker.config.imuProfileOverride ?: "auto"
+		if (current == normalized) return
+
+		tracker.config.imuProfileOverride = normalized
+		tracker.config.learnedDriftRateDegPerMin = 0.0f
+		tracker.config.totalDriftObservations = 0
+		tracker.config.adaptiveDriftConfidence = 0.0f
+		tracker.config.adaptiveDriftLastAcceptedAt = 0L
+		tracker.config.adaptiveDriftModelVersion = 1
+		tracker.config.hasPreviousAdaptiveDriftModel = false
+		clearAdaptiveYawCorrection()
+		clearDriftCompensation()
+		AdaptiveDriftCompensation.clear(tracker)
+		readAdaptiveProfile(tracker.config)
+		if (VRServer.instanceInitialized) {
+			readDriftCompensationConfig(VRServer.instance.configManager.vrConfig.driftCompensation)
+		}
 	}
 
 	fun writeAdaptiveProfile(config: TrackerConfig) {
@@ -219,6 +359,8 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		totalDriftTime = 0L
 		driftQuats.clear()
 		driftTimes.clear()
+		adaptiveYawCorrectionRad = 0f
+		adaptiveYawTargetRad = 0f
 	}
 
 	/**
@@ -227,11 +369,57 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	fun resetLearnedDrift() {
 		tracker.config.learnedDriftRateDegPerMin = 0.0f
 		tracker.config.totalDriftObservations = 0
+		tracker.config.adaptiveDriftConfidence = 0.0f
+		tracker.config.adaptiveDriftLastAcceptedAt = 0L
+		tracker.config.adaptiveDriftModelVersion = 1
 		clearDriftCompensation()
+		AdaptiveDriftCompensation.clear(tracker)
 		if (VRServer.instanceInitialized) {
 			VRServer.instance.configManager.saveConfig()
 		}
 	}
+
+	/**
+	 * Records a drift observation obtained from an independent tracker reference.
+	 *
+	 * Reconnect recovery is deliberately the only automatic reference source here:
+	 * the correction is measured after a real outage and validated against multiple
+	 * trackers, so normal body motion and Stay Aligned's own correction are not
+	 * mistaken for sensor drift.
+	 */
+	fun learnDriftObservation(observedYaw: Float, elapsedMs: Long, confidence: Float) {
+		if (!tracker.isImu() || !tracker.config.autoLearnDrift || elapsedMs < 30_000L || confidence < 0.75f) return
+		if (!observedYaw.isFinite() || !confidence.isFinite()) return
+
+		val elapsedMinutes = elapsedMs / 60000.0f
+		if (elapsedMinutes <= 0.0f) return
+
+		var observedRate = Math.toDegrees(observedYaw.toDouble()).toFloat() / elapsedMinutes
+		while (observedRate > 180.0f) observedRate -= 360.0f
+		while (observedRate < -180.0f) observedRate += 360.0f
+		// A larger value is more likely to be a mounting change than gyro drift.
+		if (abs(observedRate) > 20.0f) return
+
+		val observationCount = tracker.config.totalDriftObservations
+		val alpha = if (observationCount < 3) 0.35f else 0.15f
+		val currentRate = tracker.config.learnedDriftRateDegPerMin
+		tracker.config.previousLearnedDriftRateDegPerMin = currentRate
+		tracker.config.previousTotalDriftObservations = observationCount
+		tracker.config.previousAdaptiveDriftConfidence = tracker.config.adaptiveDriftConfidence
+		tracker.config.previousAdaptiveDriftLastAcceptedAt = tracker.config.adaptiveDriftLastAcceptedAt
+		tracker.config.hasPreviousAdaptiveDriftModel = true
+		tracker.config.learnedDriftRateDegPerMin =
+			((1.0f - alpha) * currentRate + alpha * observedRate).coerceIn(-20.0f, 20.0f)
+		tracker.config.totalDriftObservations = observationCount + 1
+		tracker.config.adaptiveDriftModelVersion = 1
+		tracker.config.adaptiveDriftConfidence = confidence.coerceIn(0f, 1f)
+		tracker.config.adaptiveDriftLastAcceptedAt = System.currentTimeMillis()
+		markAdaptiveConfigDirty()
+	}
+
+	/** Stable-pose observations share the same safety and persistence gate. */
+	fun learnStablePoseObservation(observedYaw: Float, elapsedMs: Long, confidence: Float) =
+		learnDriftObservation(observedYaw, elapsedMs, confidence)
 
 	/**
 	 * Checks for compensateDrift, allowDriftCompensation, and if
@@ -257,9 +445,10 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		resetHmdPitch = config.resetHmdPitch
 	}
 
-	fun clearRecovery() {
+	fun clearRecovery(fullReset: Boolean = false) {
+		if (tracker.recovery.state == TrackerRecoveryState.NEEDS_RESET && !fullReset) return
 		recoveryYawFix = Quaternion.IDENTITY
-		tracker.recovery.cancel()
+		tracker.recovery.cancel(force = fullReset)
 	}
 
 	fun trySetMountingReset(quat: Quaternion) {
@@ -273,6 +462,12 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * and drift compensation, with the HMD as the reference.
 	 */
 	fun getReferenceAdjustedDriftRotationFrom(rotation: Quaternion): Quaternion = adjustToDrift(adjustToReference(rotation))
+
+	/**
+	 * Returns the mounting/reset-adjusted sample before adaptive drift. The
+	 * stable-pose learner must observe this stage so it cannot learn its own fix.
+	 */
+	fun getReferenceAdjustedRotationBeforeDrift(rotation: Quaternion): Quaternion = adjustToReference(rotation)
 
 	/**
 	 * Takes a rotation and adjusts it to resets and mounting,
@@ -339,15 +534,19 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * Adjust the given rotation for drift compensation if enabled,
 	 * and returns it
 	 */
-	private fun adjustToDrift(rotation: Quaternion): Quaternion {
+	private fun adjustToDrift(rotation: Quaternion, includeAdaptiveYaw: Boolean = true): Quaternion {
+		var adjusted = rotation
 		if (driftCompensationEnabled && totalDriftTime > 0) {
 			var driftTimeRatio = ((System.currentTimeMillis() - driftSince).toFloat() / totalDriftTime)
 			if (!driftPrediction) {
 				driftTimeRatio = min(1.0f, driftTimeRatio)
 			}
-			return averagedDriftQuat.pow(driftAmount * driftTimeRatio) * rotation
+			adjusted = averagedDriftQuat.pow(driftAmount * driftTimeRatio) * adjusted
 		}
-		return rotation
+		if (includeAdaptiveYaw && allowDriftCompensation && adaptiveYawCorrectionRad != 0f) {
+			adjusted = Quaternion.rotationAroundYAxis(adaptiveYawCorrectionRad) * adjusted
+		}
+		return adjusted
 	}
 
 	/**
@@ -355,7 +554,8 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * 0). This allows the tracker to be strapped to body at any pitch and roll.
 	 */
 	fun resetFull(reference: Quaternion) {
-		clearRecovery()
+		clearRecovery(fullReset = true)
+		rebaseAdaptiveCorrectionForReset()
 		constraintFix = Quaternion.IDENTITY
 
 		if (tracker.trackerDataType == TrackerDataType.FLEX_RESISTANCE) {
@@ -452,7 +652,9 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * position should be corrected in the source.
 	 */
 	fun resetYaw(reference: Quaternion) {
+		if (tracker.recovery.state == TrackerRecoveryState.NEEDS_RESET) return
 		clearRecovery()
+		rebaseAdaptiveCorrectionForReset()
 		// TODO HMD doesn't get yaw reset, which makes it so tracker.resetFilteringQuats() doesn't get called
 
 		constraintFix = Quaternion.IDENTITY
@@ -497,7 +699,12 @@ class TrackerResetsHandler(val tracker: Tracker) {
 	 * and stores it in mountRotFix, and adjusts yawFix
 	 */
 	fun resetMounting(reference: Quaternion) {
+		if (tracker.recovery.state == TrackerRecoveryState.NEEDS_RESET) return
 		clearRecovery()
+		rebaseAdaptiveCorrectionForReset()
+		// Mounting calibration must capture the physical pose, not a transient
+		// Stay Aligned correction that was calculated from the previous pose.
+		tracker.stayAligned.reset()
 		if (tracker.trackerDataType == TrackerDataType.FLEX_RESISTANCE) {
 			tracker.trackerFlexHandler.resetMax()
 			tracker.resetFilteringQuats(reference)
@@ -509,7 +716,12 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		constraintFix = Quaternion.IDENTITY
 
 		// Get the current calibrated rotation
-		var rotBuf = adjustToDrift(tracker.getRawRotation() * mountingOrientation)
+		// Do not bake the persistent adaptive yaw correction into mountRotFix.
+		// It is cleared above and will be learned again against this new frame.
+		var rotBuf = adjustToDrift(
+			tracker.getRawRotation() * mountingOrientation,
+			includeAdaptiveYaw = false,
+		)
 		rotBuf = gyroFix * rotBuf
 		rotBuf *= attachmentFix
 		rotBuf = yawFix * rotBuf
@@ -575,17 +787,38 @@ class TrackerResetsHandler(val tracker: Tracker) {
 		var rot = gyroFix * sensorRotation
 		rot *= attachmentFix
 		rot = mountRotFix.inv() * (rot * mountRotFix)
-		rot = getYawQuaternion(rot)
+		rot = getYawQuaternion(rot, useHorizontalFootHeading = tracker.trackerPosition.isFoot())
 		return rot.inv() * reference.project(Vector3.POS_Y).unit()
 	}
 
-	// TODO : isolating yaw for yaw reset bad.
-	// The way we isolate the tracker's yaw for yaw reset is
-	// incorrect. Projection around the Y-axis is worse.
-	// In both cases, the isolated yaw value changes
-	// with the tracker's roll when pointing forward.
-	// calling twinNearest() makes sure this rotation has the wanted polarity (+-).
-	private fun getYawQuaternion(rot: Quaternion): Quaternion = EulerAngles(EulerOrder.YZX, 0f, rot.toEulerAngles(EulerOrder.YZX).y, 0f).toQuaternion().twinNearest(rot)
+	/**
+	 * Extract a foot heading from the most horizontal tracker axis.
+	 *
+	 * Euler yaw is not invariant to the order in which a foot tracker is tilted
+	 * and rolled. That made a yaw reset assign a different sideways correction to
+	 * each foot, which could visibly shift the feet and open the stance. Prefer
+	 * the axis with the strongest horizontal component so this remains defined
+	 * when a foot is mounted nearly on its side. Other tracker roles retain the
+	 * established YZX convention because their reset semantics depend on it.
+	 */
+	private fun getYawQuaternion(rot: Quaternion, useHorizontalFootHeading: Boolean = false): Quaternion {
+		if (!useHorizontalFootHeading) {
+			return EulerAngles(EulerOrder.YZX, 0f, rot.toEulerAngles(EulerOrder.YZX).y, 0f).toQuaternion().twinNearest(rot)
+		}
+
+		val normalized = rot.unit()
+		val localX = normalized.sandwichUnitX()
+		val localZ = normalized.sandwichUnitZ()
+		val xHorizontalSq = localX.x * localX.x + localX.z * localX.z
+		val zHorizontalSq = localZ.x * localZ.x + localZ.z * localZ.z
+		val yaw = when {
+			xHorizontalSq >= zHorizontalSq && xHorizontalSq > 1e-6f -> atan2(-localX.z, localX.x)
+			zHorizontalSq > 1e-6f -> atan2(localZ.x, localZ.z)
+			else -> 0f
+		}
+
+		return Quaternion.rotationAroundYAxis(yaw).twinNearest(rot)
+	}
 
 	private fun makeIdentityAdjustmentQuatsFull() {
 		val sensorRotation = tracker.getRawRotation()
@@ -626,12 +859,12 @@ class TrackerResetsHandler(val tracker: Tracker) {
 					val currentLearned = tracker.config.learnedDriftRateDegPerMin
 					val obsCount = tracker.config.totalDriftObservations
 					val alpha = if (obsCount < 3) 0.5f else 0.2f
-					val newLearned = (1f - alpha) * currentLearned + alpha * observedRate
-					tracker.config.learnedDriftRateDegPerMin = newLearned
-					tracker.config.totalDriftObservations = obsCount + 1
-					if (VRServer.instanceInitialized) {
-						VRServer.instance.configManager.saveConfig()
-					}
+						val newLearned = (1f - alpha) * currentLearned + alpha * observedRate
+						tracker.config.learnedDriftRateDegPerMin = newLearned
+						tracker.config.totalDriftObservations = obsCount + 1
+						tracker.config.adaptiveDriftModelVersion = 1
+						tracker.config.adaptiveDriftLastAcceptedAt = System.currentTimeMillis()
+						markAdaptiveConfigDirty()
 				}
 			}
 		}

@@ -3,6 +3,7 @@ package dev.slimevr.protocol.rpc.settings
 import com.google.flatbuffers.FlatBufferBuilder
 import dev.slimevr.bridge.ISteamVRBridge
 import dev.slimevr.config.ArmsResetModes
+import dev.slimevr.config.ResetsConfig
 import dev.slimevr.filtering.TrackerFilters
 import dev.slimevr.protocol.GenericConnection
 import dev.slimevr.protocol.ProtocolAPI
@@ -14,6 +15,7 @@ import dev.slimevr.tracking.trackers.TrackerRole
 import solarxr_protocol.rpc.ChangeSettingsRequest
 import solarxr_protocol.rpc.RpcMessage
 import solarxr_protocol.rpc.RpcMessageHeader
+import solarxr_protocol.rpc.ResetsSettings
 import solarxr_protocol.rpc.SettingsResponse
 import kotlin.math.*
 
@@ -385,8 +387,7 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 			resetsConfig.saveMountingReset = req.resetsSettings().saveMountingReset()
 			resetsConfig.yawResetSmoothTime = req.resetsSettings().yawResetSmoothTime()
 			resetsConfig.resetHmdPitch = req.resetsSettings().resetHmdPitch()
-			resetsConfig.deadTrackerRecoveryEnabled = req.resetsSettings().deadTrackerRecoveryEnabled()
-			resetsConfig.recoveryChatboxNotifications = req.resetsSettings().recoveryChatboxNotifications()
+			applyRecoverySettings(req.resetsSettings(), resetsConfig)
 			resetsConfig.updateTrackersResetsSettings()
 		}
 
@@ -451,4 +452,11 @@ class RPCSettingsHandler(var rpcHandler: RPCHandler, var api: ProtocolAPI) {
 			}
 		}
 	}
+}
+
+
+internal fun applyRecoverySettings(settings: ResetsSettings, config: ResetsConfig) {
+	if (!settings.recoverySettingsPresent()) return
+	config.deadTrackerRecoveryEnabled = settings.deadTrackerRecoveryEnabled()
+	config.recoveryChatboxNotifications = settings.recoveryChatboxNotifications()
 }

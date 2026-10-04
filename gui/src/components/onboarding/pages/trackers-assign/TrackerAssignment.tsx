@@ -213,14 +213,15 @@ export function TrackersAssignPage() {
     const assign = (
       role: BodyPart,
       rotation: QuatT | null,
-      trackerId: TrackerIdT | null
+      trackerId: TrackerIdT | null,
+      allowDriftCompensation: boolean
     ) => {
       const assignreq = new AssignTrackerRequestT();
 
       assignreq.bodyPosition = role;
       assignreq.mountingOrientation = rotation;
       assignreq.trackerId = trackerId;
-      assignreq.allowDriftCompensation = false;
+      assignreq.allowDriftCompensation = allowDriftCompensation;
 
       sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
     };
@@ -229,7 +230,8 @@ export function TrackersAssignPage() {
       assign(
         BodyPart.NONE,
         td.tracker.info?.mountingOrientation || null,
-        td.tracker.trackerId
+        td.tracker.trackerId,
+        td.tracker.info?.allowDriftCompensation ?? false
       )
     );
 
@@ -240,7 +242,16 @@ export function TrackersAssignPage() {
     assign(
       selectedRole,
       tracker.tracker.info?.mountingOrientation || null,
-      tracker.tracker.trackerId
+      tracker.tracker.trackerId,
+      tracker.tracker.info?.allowDriftCompensation ??
+        trackers.find(
+          (td) =>
+            td.tracker.trackerId?.deviceId?.id ===
+              tracker.tracker.trackerId?.deviceId?.id &&
+            td.tracker.trackerId?.trackerNum ===
+              tracker.tracker.trackerId?.trackerNum
+        )?.tracker.info?.allowDriftCompensation ??
+        false
     );
     setSelectRole(BodyPart.NONE);
   };
@@ -261,6 +272,8 @@ export function TrackersAssignPage() {
       const assignreq = new AssignTrackerRequestT();
       assignreq.bodyPosition = BodyPart.NONE;
       assignreq.trackerId = td.tracker.trackerId;
+      assignreq.allowDriftCompensation =
+        td.tracker.info?.allowDriftCompensation ?? false;
       sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
     });
   };

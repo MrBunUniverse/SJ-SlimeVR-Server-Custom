@@ -52,10 +52,18 @@ class UDPDevice(
 	var acceptedPackets: Int = 0
 
 	@JvmField
+	var packetGapCount: Long = 0
+
+	@JvmField
+	var outOfOrderPacketCount: Long = 0
+
+	@JvmField
 	var lastPacketCounterReset: Long = System.currentTimeMillis()
 
 	val packetLossPercent: Float
-		get() = if (totalPacketsReceived == 0) 0f else (1f - acceptedPackets.toFloat() / totalPacketsReceived.toFloat())
+		get() = if (acceptedPackets == 0) 0f else {
+			packetGapCount.toFloat() / (acceptedPackets.toFloat() + packetGapCount).coerceAtLeast(1f)
+		}
 
 	@JvmField
 	var protocol: NetworkProtocol? = null
@@ -86,15 +94,24 @@ class UDPDevice(
 		if (now - lastPacketCounterReset >= 10_000L) {
 			totalPacketsReceived = 0
 			acceptedPackets = 0
+			packetGapCount = 0
+			outOfOrderPacketCount = 0
 			lastPacketCounterReset = now
 		}
 		totalPacketsReceived++
+		if (packetId > 0L && lastPacketNumber > 0L) {
+			if (packetId > lastPacketNumber + 1L) {
+				packetGapCount += packetId - lastPacketNumber - 1L
+			} else if (packetId <= lastPacketNumber) {
+				outOfOrderPacketCount++
+			}
+		}
 		val accepted = packetId == 0L || packetId > lastPacketNumber
 		if (accepted) {
 			lastPacketNumber = packetId
 			acceptedPackets++
 		}
-		val lost = totalPacketsReceived - acceptedPackets
+		val lost = packetGapCount.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 		trackers.values.forEach {
 			it.packetsReceived = totalPacketsReceived
 			it.packetsLost = lost

@@ -14,6 +14,7 @@ import dev.slimevr.tracking.processor.stayaligned.trackers.TrackerSkeleton
 object StayAligned {
 
 	private var nextTrackerIndex = 0
+	private var elapsedSinceAdjustment = 0f
 
 	/**
 	 * Adjusts the yaw of the next tracker.
@@ -27,6 +28,15 @@ object StayAligned {
 			return
 		}
 
+		// Stay Aligned is intentionally a slow learner. Running it at the full
+		// server loop makes its correction depend on CPU scheduling and wastes
+		// work on lower-end machines.
+		val frameDelta = VRServer.instance.fpsTimer.timePerFrame.coerceIn(0f, 0.1f)
+		elapsedSinceAdjustment += frameDelta
+		if (elapsedSinceAdjustment < 0.01f) return
+		val correctionDelta = elapsedSinceAdjustment.coerceAtMost(0.05f)
+		elapsedSinceAdjustment = 0f
+
 		val numTrackers = trackers.allTrackers.size
 		if (numTrackers == 0) {
 			return
@@ -34,6 +44,13 @@ object StayAligned {
 
 		val trackerToAdjust = trackers.allTrackers[nextTrackerIndex % numTrackers]
 		++nextTrackerIndex
+
+		// Reconnect recovery owns the tracker until its reference correction has been
+		// validated and blended. Letting Stay Aligned update the same yaw correction
+		// during that window creates two feedback loops and can reintroduce the drift.
+		if (trackerToAdjust.recovery.activeForSkeleton) {
+			return
+		}
 
 		// Update hide correction since the config could have changed
 		trackerToAdjust.stayAligned.hideCorrection = config.hideYawCorrection
@@ -47,7 +64,7 @@ object StayAligned {
 		// Scale yaw correction since we're only updating one tracker per tick
 		val yawCorrection =
 			yawCorrectionPerSec *
-				VRServer.instance.fpsTimer.timePerFrame *
+				correctionDelta *
 				numTrackers.toFloat()
 
 		AdjustTrackerYaw.adjust(

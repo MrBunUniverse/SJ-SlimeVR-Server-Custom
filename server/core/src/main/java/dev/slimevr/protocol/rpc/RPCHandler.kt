@@ -75,6 +75,11 @@ class RPCHandler(private val api: ProtocolAPI) : ProtocolHandler<RpcMessageHeade
 		)
 
 		registerPacketListener(
+			RpcMessage.AdaptiveDriftControlRequest,
+			::onAdaptiveDriftControlRequest,
+		)
+
+		registerPacketListener(
 			RpcMessage.RecordBVHRequest,
 			::onRecordBVHRequest,
 		)
@@ -342,6 +347,9 @@ class RPCHandler(private val api: ProtocolAPI) : ProtocolHandler<RpcMessageHeade
 		}
 
 		if (tracker.isImu()) {
+			req.imuProfileOverride()?.let { profile ->
+				tracker.resetsHandler.setAdaptiveProfileOverride(profile)
+			}
 			tracker.resetsHandler.allowDriftCompensation = req.allowDriftCompensation()
 		}
 
@@ -352,13 +360,45 @@ class RPCHandler(private val api: ProtocolAPI) : ProtocolHandler<RpcMessageHeade
 		conn: GenericConnection,
 		messageHeader: RpcMessageHeader,
 	) {
-		if (messageHeader
-				.message(ClearDriftCompensationRequest()) !is ClearDriftCompensationRequest
-		) {
+		val request = messageHeader.message(ClearDriftCompensationRequest())
+		if (request !is ClearDriftCompensationRequest) {
 			return
 		}
 
-		api.server.clearTrackersDriftCompensation()
+		val trackerId = request.trackerId()?.unpack()
+		if (trackerId == null) {
+			api.server.clearTrackersDriftCompensation()
+		} else {
+			api.server.getTrackerById(trackerId)?.let { tracker ->
+				if (tracker.isImu()) tracker.resetsHandler.resetLearnedDrift()
+			}
+		}
+	}
+
+	fun onAdaptiveDriftControlRequest(
+		conn: GenericConnection,
+		messageHeader: RpcMessageHeader,
+	) {
+		val request = messageHeader.message(AdaptiveDriftControlRequest())
+		if (request !is AdaptiveDriftControlRequest) return
+
+		val trackerId = request.trackerId()?.unpack()
+		val targets = if (trackerId == null) {
+			api.server.allTrackers.filter { it.isImu() }
+		} else {
+			listOfNotNull(api.server.getTrackerById(trackerId)?.takeIf { it.isImu() })
+		}
+
+		for (tracker in targets) {
+			when (request.action()) {
+				AdaptiveDriftAction.PAUSE_LEARNING -> tracker.resetsHandler.setAdaptiveDriftLearningPaused(true)
+				AdaptiveDriftAction.RESUME_LEARNING -> tracker.resetsHandler.setAdaptiveDriftLearningPaused(false)
+				AdaptiveDriftAction.CLEAR_MODEL -> tracker.resetsHandler.resetLearnedDrift()
+				AdaptiveDriftAction.RESTORE_PREVIOUS_MODEL -> tracker.resetsHandler.restorePreviousAdaptiveDriftModel()
+				AdaptiveDriftAction.ENABLE_CORRECTION -> tracker.resetsHandler.setAdaptiveDriftEnabled(true)
+				AdaptiveDriftAction.DISABLE_CORRECTION -> tracker.resetsHandler.setAdaptiveDriftEnabled(false)
+			}
+		}
 	}
 
 	fun onLegTweaksTmpChange(

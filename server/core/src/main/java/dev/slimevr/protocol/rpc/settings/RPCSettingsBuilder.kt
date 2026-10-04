@@ -393,6 +393,7 @@ fun createArmsResetModeSettings(
 		resetsConfig.resetHmdPitch,
 		resetsConfig.deadTrackerRecoveryEnabled,
 		resetsConfig.recoveryChatboxNotifications,
+		true,
 	)
 
 fun createSettingsResponse(fbb: FlatBufferBuilder, server: VRServer): Int {

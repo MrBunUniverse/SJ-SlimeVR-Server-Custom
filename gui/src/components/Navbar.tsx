@@ -1,7 +1,7 @@
 import { useLocalization } from '@fluent/react';
 import classNames from 'classnames';
-import { ReactNode } from 'react';
-import { NavLink, useMatch } from 'react-router-dom';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { NavLink, useLocation, useMatch } from 'react-router-dom';
 import { useBreakpoint } from '@/hooks/breakpoint';
 import { HomeIcon } from './commons/icon/HomeIcon';
 import { RemoteIcon } from './commons/icon/RemoteIcon';
@@ -30,7 +30,7 @@ export function NavButton({
       state={state}
       aria-current={doesMatch ? 'page' : undefined}
       className={classNames(
-        'group flex min-w-[62px] flex-col items-center justify-center gap-1 rounded-[14px] px-3 py-2 text-[10px] font-medium leading-none tracking-tight transition-[background-color,color,transform] duration-150 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20 focus-visible:ring-offset-2 focus-visible:ring-offset-background-80',
+        'floating-dock__item group flex min-w-[62px] flex-col items-center justify-center gap-1 rounded-[12px] px-2.5 py-1.5 text-[10px] font-medium leading-none tracking-tight transition-[background-color,color,transform] duration-150 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20 focus-visible:ring-offset-2 focus-visible:ring-offset-background-80',
         doesMatch
           ? 'bg-accent-background-20/18 text-accent-background-10'
           : 'text-background-30 hover:bg-background-60/70 hover:text-background-10'
@@ -50,6 +50,8 @@ export function NavButton({
     </NavLink>
   );
 }
+
+type DockPosition = 'left' | 'center' | 'right';
 
 export function MainLinks() {
   const { l10n } = useLocalization();
@@ -83,16 +85,47 @@ export function MainLinks() {
 
 export function Navbar() {
   const { isMobile } = useBreakpoint('mobile');
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+  const isSettings = location.pathname.startsWith('/settings');
+  const dockPosition: DockPosition =
+    isSettings && !isMobile ? 'right' : 'center';
+  const previousDockPosition = useRef<DockPosition | null>(null);
+  const [dockMotion, setDockMotion] = useState<'left' | 'right' | null>(null);
+
+  useEffect(() => {
+    const previous = previousDockPosition.current;
+    previousDockPosition.current = dockPosition;
+
+    if (previous == null || previous === dockPosition) return;
+
+    const positionValue = (position: DockPosition) =>
+      position === 'left' ? -1 : position === 'right' ? 1 : 0;
+    const direction =
+      positionValue(dockPosition) > positionValue(previous) ? 'right' : 'left';
+
+    setDockMotion(direction);
+    const timeout = window.setTimeout(() => setDockMotion(null), 560);
+    return () => window.clearTimeout(timeout);
+  }, [dockPosition]);
 
   return (
     <nav
       aria-label="Primary navigation"
       className={classNames(
         'floating-dock fixed left-1/2 z-[60] -translate-x-1/2',
+        isHome && 'floating-dock--home',
+        isSettings && !isMobile && 'floating-dock--settings',
         isMobile ? 'bottom-2 max-w-[calc(100vw-1rem)]' : 'bottom-4'
       )}
     >
-      <div className="floating-dock__surface flex items-center gap-1">
+      <div
+        className={classNames(
+          'floating-dock__surface flex items-center gap-1 p-1',
+          dockMotion === 'left' && 'floating-dock__surface--motion-left',
+          dockMotion === 'right' && 'floating-dock__surface--motion-right'
+        )}
+      >
         <MainLinks />
       </div>
     </nav>

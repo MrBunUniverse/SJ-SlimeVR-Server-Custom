@@ -595,7 +595,7 @@ export function RemotePage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain p-3 pb-8 sm:gap-4 sm:p-5 max-w-5xl mx-auto w-full">
+    <div className="flex flex-1 h-full min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain p-3 pb-28 sm:gap-4 sm:p-5 max-w-5xl mx-auto w-full">
       {/* Top Header Card */}
       <div className="remote-card flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white dark:bg-[#1B1915] p-3 sm:p-4 rounded-[12px] border border-black/[0.08] dark:border-white/[0.08] shadow-xs shrink-0 w-full">
         <div className="flex min-w-0 items-center gap-3">
@@ -1110,7 +1110,7 @@ export function RemotePage() {
       )}
 
       {/* Main Streaming Grid: Game Audio & Microphone Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 shrink-0 w-full">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 shrink-0 w-full">
         {/* Card 1: Quest Game Audio */}
         <div className="remote-card group flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border border-black/[0.08] dark:border-white/[0.08] hover:border-black/[0.18] dark:hover:border-white/[0.18] shadow-xs hover:shadow-lg transition-all duration-200">
           {/* Mock Window Banner with Contours & Centered Audio Icon */}

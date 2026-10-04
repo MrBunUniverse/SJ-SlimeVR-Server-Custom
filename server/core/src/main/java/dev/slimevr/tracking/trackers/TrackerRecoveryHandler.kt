@@ -7,9 +7,7 @@ import io.github.axisangles.ktmath.Quaternion
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.sin
 
 enum class TrackerRecoveryState(val id: Int) {
 	NONE(0),
@@ -44,7 +42,22 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 		private const val MAX_SAMPLE_GAP_MS = 250L
 		private const val MAX_STILL_ANGLE_RAD = 2f * PI.toFloat() / 180f
 		private const val MAX_REFERENCE_DISAGREEMENT_RAD = 12f * PI.toFloat() / 180f
+		private const val MIN_REFERENCE_CONFIDENCE = 0.75f
+		private const val MAX_LEARNABLE_CORRECTION_RAD = 45f * PI.toFloat() / 180f
+		private const val MAX_ANCHORS = 6
+		private val TORSO_POSITIONS = setOf(
+			TrackerPosition.UPPER_CHEST,
+			TrackerPosition.CHEST,
+			TrackerPosition.WAIST,
+			TrackerPosition.HIP,
+		)
 	}
+
+	private data class AnchorSnapshot(
+		val tracker: Tracker,
+		val yawOffset: Float,
+		val weight: Float,
+	)
 
 	@Volatile
 	var state = TrackerRecoveryState.NONE
@@ -63,16 +76,16 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 	private var lastGoodRotation = Quaternion.IDENTITY
 	private var fallbackRotation = Quaternion.IDENTITY
 	private var lastSampleRotation = Quaternion.IDENTITY
+	private var latestAdjustedSample = Quaternion.IDENTITY
 	private var stableSince = 0L
 	private var blendStartedAt = 0L
 	private var nextSnapshotAt = 0L
 	private var baselineIntervalMs = 20f
+	private var snapshotCapturedAt = 0L
 	private var snapshotHardwareId: String? = null
 	private var snapshotPosition: TrackerPosition? = null
 	private var snapshotMounting = Quaternion.IDENTITY
-	private val anchorYawOffsets = LinkedHashMap<Tracker, Float>()
-	private var primaryAnchor: Tracker? = null
-	private var primaryAnchorYaw = 0f
+	private val anchorSnapshots = LinkedHashMap<Tracker, AnchorSnapshot>()
 
 	val activeForSkeleton: Boolean
 		get() = state != TrackerRecoveryState.NONE
@@ -84,8 +97,9 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 
 	@Synchronized
 	fun onRotationSample(rotation: Quaternion, gapMs: Long, now: Long): Boolean {
+		if (state == TrackerRecoveryState.NEEDS_RESET) return true
 		if (!enabled()) {
-			state = TrackerRecoveryState.NONE
+			cancel()
 			return false
 		}
 
@@ -93,6 +107,7 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 			requireFullReset(TrackerRecoveryReason.INVALID_ROTATION)
 			return true
 		}
+		latestAdjustedSample = rotation
 
 		if (!hasBaseline) {
 			hasBaseline = true
@@ -114,9 +129,13 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 				requireFullReset(TrackerRecoveryReason.ROLE_OR_MOUNTING_CHANGED)
 				return true
 			}
-			if (!hasEnoughLiveReferences()) {
-				resumeWithoutReferences(now, rotation)
-				lastSampleRotation = rotation
+			val liveCandidates = liveAnchorCandidates()
+			if (!hasEnoughLiveReferences(liveCandidates)) {
+				requireFullReset(TrackerRecoveryReason.NO_REFERENCE)
+				return true
+			}
+			if (trustedYaw(liveCandidates) == null) {
+				requireFullReset(TrackerRecoveryReason.REFERENCE_DISAGREEMENT)
 				return true
 			}
 			state = TrackerRecoveryState.WAITING_FOR_STILLNESS
@@ -175,17 +194,16 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 			TrackerRecoveryState.COMPENSATING,
 			TrackerRecoveryState.WAITING_FOR_STILLNESS,
 			TrackerRecoveryState.VALIDATING,
-			TrackerRecoveryState.NEEDS_RESET,
 			-> {
 				updateFallbackFromAnchor()
 				if (state == TrackerRecoveryState.VALIDATING) validateAndApply(now)
 			}
+			TrackerRecoveryState.NEEDS_RESET -> Unit
 			TrackerRecoveryState.BLENDING -> {
 				progress = ((now - blendStartedAt).toFloat() / BLEND_TIME_MS).coerceIn(0f, 1f)
 				if (progress >= 1f) {
 					state = TrackerRecoveryState.NONE
 					reason = TrackerRecoveryReason.NONE
-					confidence = 1f
 					tracker.status = TrackerStatus.OK
 					captureSnapshot(now)
 					LogManager.info("[TrackerRecovery] ${tracker.displayName} recovery blend completed")
@@ -202,15 +220,15 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 	}
 
 	@Synchronized
-	fun cancel() {
+	fun cancel(force: Boolean = false) {
+		if (state == TrackerRecoveryState.NEEDS_RESET && !force) return
 		val wasActive = state != TrackerRecoveryState.NONE
 		state = TrackerRecoveryState.NONE
 		reason = TrackerRecoveryReason.NONE
 		progress = 0f
 		confidence = 0f
 		stableSince = 0L
-		anchorYawOffsets.clear()
-		primaryAnchor = null
+		anchorSnapshots.clear()
 		if (wasActive && tracker.status == TrackerStatus.BUSY) tracker.status = TrackerStatus.OK
 	}
 
@@ -230,14 +248,17 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 		snapshotHardwareId = tracker.device?.hardwareIdentifier
 		snapshotPosition = tracker.trackerPosition
 		snapshotMounting = tracker.resetsHandler.mountingOrientation
-		anchorYawOffsets.clear()
+		snapshotCapturedAt = now
+		anchorSnapshots.clear()
 		val trackerYaw = yaw(lastGoodRotation)
 		val anchors = candidateAnchors()
 		for (anchor in anchors) {
-			anchorYawOffsets[anchor] = wrapAngle(trackerYaw - yaw(anchor.getRotation()))
+			anchorSnapshots[anchor] = AnchorSnapshot(
+				anchor,
+				wrapAngle(trackerYaw - yaw(anchor.getRotation())),
+				anchorWeight(anchor),
+			)
 		}
-		primaryAnchor = anchors.firstOrNull()
-		primaryAnchorYaw = primaryAnchor?.let { yaw(it.getRotation()) } ?: 0f
 		nextSnapshotAt = now + SNAPSHOT_INTERVAL_MS
 	}
 
@@ -247,12 +268,16 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 		return VRServer.instance.allTrackers
 			.asSequence()
 			.filter { it !== tracker && !it.isInternal && it.hasRotation && it.status.sendData && !it.recovery.activeForSkeleton && it.trackerPosition in preferred }
-			.sortedBy { preferred.indexOf(it.trackerPosition) }
-			.take(4)
+			.sortedWith(compareByDescending<Tracker> { anchorWeight(it) }.thenBy { preferred.indexOf(it.trackerPosition) })
+			.take(MAX_ANCHORS)
 			.toList()
 	}
 
 	private fun preferredAnchorPositions(position: TrackerPosition?): List<TrackerPosition> = when (position) {
+		TrackerPosition.CHEST -> listOf(TrackerPosition.HIP, TrackerPosition.WAIST, TrackerPosition.UPPER_CHEST, TrackerPosition.HEAD, TrackerPosition.LEFT_UPPER_LEG, TrackerPosition.RIGHT_UPPER_LEG)
+		TrackerPosition.UPPER_CHEST -> listOf(TrackerPosition.CHEST, TrackerPosition.HIP, TrackerPosition.WAIST, TrackerPosition.HEAD, TrackerPosition.LEFT_UPPER_LEG, TrackerPosition.RIGHT_UPPER_LEG)
+		TrackerPosition.WAIST -> listOf(TrackerPosition.HIP, TrackerPosition.CHEST, TrackerPosition.UPPER_CHEST, TrackerPosition.HEAD, TrackerPosition.LEFT_UPPER_LEG, TrackerPosition.RIGHT_UPPER_LEG)
+		TrackerPosition.HIP -> listOf(TrackerPosition.CHEST, TrackerPosition.WAIST, TrackerPosition.UPPER_CHEST, TrackerPosition.HEAD, TrackerPosition.LEFT_UPPER_LEG, TrackerPosition.RIGHT_UPPER_LEG)
 		TrackerPosition.LEFT_FOOT -> listOf(TrackerPosition.LEFT_LOWER_LEG, TrackerPosition.LEFT_UPPER_LEG, TrackerPosition.HIP, TrackerPosition.HEAD)
 		TrackerPosition.RIGHT_FOOT -> listOf(TrackerPosition.RIGHT_LOWER_LEG, TrackerPosition.RIGHT_UPPER_LEG, TrackerPosition.HIP, TrackerPosition.HEAD)
 		TrackerPosition.LEFT_LOWER_LEG -> listOf(TrackerPosition.LEFT_UPPER_LEG, TrackerPosition.LEFT_FOOT, TrackerPosition.HIP, TrackerPosition.HEAD)
@@ -267,9 +292,8 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 	}
 
 	private fun updateFallbackFromAnchor() {
-		val anchor = primaryAnchor ?: return
-		if (!anchor.status.sendData) return
-		val delta = wrapAngle(yaw(anchor.getRotation()) - primaryAnchorYaw)
+		val desiredYaw = trustedYaw(liveAnchorCandidates())?.first ?: return
+		val delta = wrapAngle(desiredYaw - yaw(lastGoodRotation))
 		fallbackRotation = Quaternion.rotationAroundYAxis(delta) * lastGoodRotation
 	}
 
@@ -279,34 +303,36 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 			return
 		}
 
-		val liveCandidates = anchorYawOffsets.mapNotNull { (anchor, offset) ->
-			if (anchor.status.sendData && !anchor.recovery.activeForSkeleton) wrapAngle(yaw(anchor.getRotation()) + offset) else null
-		}
-		val hasHead = anchorYawOffsets.keys.any { it.trackerPosition == TrackerPosition.HEAD && it.status.sendData }
-		if (!hasHead || liveCandidates.size < 2) {
-			resumeWithoutReferences(now, tracker.getRotationBase())
+		val liveCandidates = liveAnchorCandidates()
+		if (!hasEnoughLiveReferences(liveCandidates)) {
+			requireFullReset(TrackerRecoveryReason.NO_REFERENCE)
 			return
 		}
 
-		val desiredYaw = circularMean(liveCandidates)
-		val disagreement = liveCandidates.maxOf { abs(wrapAngle(it - desiredYaw)) }
-		if (disagreement > MAX_REFERENCE_DISAGREEMENT_RAD) {
-			resumeWithoutReferences(now, tracker.getRotationBase())
+		val (desiredYaw, referenceConfidence) = trustedYaw(liveCandidates) ?: run {
+			requireFullReset(TrackerRecoveryReason.REFERENCE_DISAGREEMENT)
 			return
 		}
 
-		val currentRotation = tracker.getRotationBase()
+		// The most recent adjusted sample is newer than the filter output. Using
+		// it avoids validating a reconnect against the previous server frame.
+		val currentRotation = latestAdjustedSample
 		if (!isFinite(currentRotation)) {
 			requireFullReset(TrackerRecoveryReason.INVALID_ROTATION)
 			return
 		}
 		val correction = wrapAngle(desiredYaw - yaw(currentRotation))
+		if (abs(correction) <= MAX_LEARNABLE_CORRECTION_RAD) {
+			val preAdaptiveRotation = tracker.resetsHandler
+				.getReferenceAdjustedRotationBeforeDrift(tracker.getRawRotation())
+			val observedDrift = wrapAngle(yaw(preAdaptiveRotation) - desiredYaw)
+			tracker.resetsHandler.learnDriftObservation(observedDrift, now - snapshotCapturedAt, referenceConfidence)
+		}
 		tracker.resetsHandler.recoveryYawFix = Quaternion.rotationAroundYAxis(correction)
 		tracker.needReset = false
 		tracker.resetFilteringQuats(fallbackRotation)
-		confidence = (1f - disagreement / MAX_REFERENCE_DISAGREEMENT_RAD).coerceIn(0f, 1f)
-		startBlend(now, confidence)
-		LogManager.info("[TrackerRecovery] ${tracker.displayName} aligned with ${liveCandidates.size} references, yaw=${Math.toDegrees(correction.toDouble()).toInt()}deg, confidence=${"%.2f".format(confidence)}")
+		startBlend(now, referenceConfidence)
+		LogManager.info("[TrackerRecovery] ${tracker.displayName} aligned with ${liveCandidates.size} references, yaw=${Math.toDegrees(correction.toDouble()).toInt()}deg, confidence=${"%.2f".format(referenceConfidence)}")
 		VRServer.instance.vrcOSCHandler.sendTrackerRecoveryNotification(tracker, true)
 	}
 
@@ -319,27 +345,25 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 		tracker.status = TrackerStatus.BUSY
 	}
 
-	private fun hasEnoughLiveReferences(): Boolean {
-		val liveAnchors = anchorYawOffsets.keys.filter { it.status.sendData && !it.recovery.activeForSkeleton }
-		return liveAnchors.any { it.trackerPosition == TrackerPosition.HEAD } && liveAnchors.size >= 2
+	private fun liveAnchorCandidates(): List<Pair<AnchorSnapshot, Float>> = anchorSnapshots.values.mapNotNull { snapshot ->
+		if (snapshot.tracker.status.sendData && !snapshot.tracker.recovery.activeForSkeleton) {
+			snapshot to wrapAngle(yaw(snapshot.tracker.getRotation()) + snapshot.yawOffset)
+		} else {
+			null
+		}
+	}
+
+	private fun hasEnoughLiveReferences(candidates: List<Pair<AnchorSnapshot, Float>>): Boolean {
+		if (candidates.size < 2) return false
+		val hasHead = candidates.any { it.first.tracker.trackerPosition == TrackerPosition.HEAD }
+		val torsoCount = candidates.count { it.first.tracker.trackerPosition in TORSO_POSITIONS }
+		return hasHead || torsoCount >= 2
 	}
 
 	private fun configurationStillMatchesSnapshot(): Boolean =
 		snapshotHardwareId == tracker.device?.hardwareIdentifier &&
 			snapshotPosition == tracker.trackerPosition &&
 			snapshotMounting == tracker.resetsHandler.mountingOrientation
-
-	private fun resumeWithoutReferences(now: Long, rotation: Quaternion) {
-		if (!isFinite(rotation)) {
-			requireFullReset(TrackerRecoveryReason.INVALID_ROTATION)
-			return
-		}
-		fallbackRotation = fallbackRotation.interpR(rotation, 0.35f)
-		lastGoodRotation = rotation
-		tracker.needReset = false
-		LogManager.info("[TrackerRecovery] ${tracker.displayName} resumed without enough stable references; blending raw IMU data")
-		startBlend(now, 0.45f)
-	}
 
 	private fun requireFullReset(failure: TrackerRecoveryReason) {
 		state = TrackerRecoveryState.NEEDS_RESET
@@ -355,11 +379,6 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 
 	private fun yaw(rotation: Quaternion): Float = rotation.toEulerAngles(EulerOrder.YZX).y
 
-	private fun circularMean(values: List<Float>): Float = atan2(
-		values.sumOf { sin(it.toDouble()) }.toFloat(),
-		values.sumOf { cos(it.toDouble()) }.toFloat(),
-	)
-
 	private fun wrapAngle(value: Float): Float {
 		var result = value
 		while (result > PI) result -= (2.0 * PI).toFloat()
@@ -374,4 +393,41 @@ class TrackerRecoveryHandler(private val tracker: Tracker) {
 
 	private fun isFinite(rotation: Quaternion): Boolean =
 		rotation.w.isFinite() && rotation.x.isFinite() && rotation.y.isFinite() && rotation.z.isFinite()
+
+	private fun anchorWeight(anchor: Tracker): Float = when {
+		anchor.trackerPosition in TORSO_POSITIONS -> 3.0f
+		anchor.isHmd || anchor.trackerPosition == TrackerPosition.HEAD -> 2.5f
+		anchor.trackerPosition?.isThigh() == true -> 1.75f
+		else -> 1.0f
+	}
+
+	private fun desiredYaw(candidates: List<Pair<AnchorSnapshot, Float>>): Float? {
+		if (candidates.isEmpty()) return null
+		val totalWeight = candidates.sumOf { it.first.weight.toDouble() }
+		if (totalWeight <= 0.0) return null
+		val sinSum = candidates.sumOf { kotlin.math.sin(it.second.toDouble()) * it.first.weight }
+		val cosSum = candidates.sumOf { kotlin.math.cos(it.second.toDouble()) * it.first.weight }
+		return atan2(sinSum, cosSum).toFloat()
+	}
+
+	private fun weightedDisagreement(candidates: List<Pair<AnchorSnapshot, Float>>, center: Float): Float {
+		var totalWeight = 0.0f
+		var weightedError = 0.0f
+		for ((snapshot, candidateYaw) in candidates) {
+			totalWeight += snapshot.weight
+			weightedError += abs(wrapAngle(candidateYaw - center)) * snapshot.weight
+		}
+		if (totalWeight <= 0.0f) return Float.MAX_VALUE
+		return weightedError / totalWeight
+	}
+
+	private fun trustedYaw(candidates: List<Pair<AnchorSnapshot, Float>>): Pair<Float, Float>? {
+		if (!hasEnoughLiveReferences(candidates)) return null
+		val desiredYaw = desiredYaw(candidates) ?: return null
+		if (!desiredYaw.isFinite()) return null
+		val disagreement = weightedDisagreement(candidates, desiredYaw)
+		val confidence = (1f - disagreement / MAX_REFERENCE_DISAGREEMENT_RAD).coerceIn(0f, 1f)
+		return if (confidence.isFinite() && confidence >= MIN_REFERENCE_CONFIDENCE) desiredYaw to confidence else null
+	}
+
 }

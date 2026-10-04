@@ -525,6 +525,7 @@ export function TrackingChecklist({
   closing: boolean;
   toggleClosed: () => void;
 }) {
+  const { l10n } = useLocalization();
   const context = useTrackingChecklist();
   const { visibleSteps, progress, completion, warnings } = context;
 
@@ -557,24 +558,41 @@ export function TrackingChecklist({
             <Typography variant="section-title" id="tracking_checklist" />
           </div>
           <div className="flex gap-1">
-            <div
-              className="flex gap-1 items-center justify-center fill-background-40 hover:fill-background-30 cursor-pointer rounded-full w-8 h-8 hover:bg-background-50"
+            <button
+              type="button"
+              aria-label={l10n.getString('tracking_checklist-settings')}
+              title={l10n.getString('tracking_checklist-settings')}
+              className="flex gap-1 items-center justify-center fill-background-40 hover:fill-background-30 cursor-pointer rounded-full min-w-9 min-h-9 hover:bg-background-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20"
               onClick={() => setSettingsOpen(true)}
             >
               <WrenchIcon width={15} />
-            </div>
+            </button>
             {closable && (
-              <div
-                className="flex gap-1 items-center justify-center fill-background-40 hover:fill-background-30 cursor-pointer rounded-full w-8 h-8 hover:bg-background-50"
+              <button
+                type="button"
+                aria-label={l10n.getString(
+                  closed
+                    ? 'tracking_checklist-expand'
+                    : 'tracking_checklist-collapse'
+                )}
+                aria-expanded={!closed}
+                aria-controls="tracking-checklist-content"
+                title={l10n.getString(
+                  closed
+                    ? 'tracking_checklist-expand'
+                    : 'tracking_checklist-collapse'
+                )}
+                className="flex gap-1 items-center justify-center fill-background-40 hover:fill-background-30 cursor-pointer rounded-full min-w-9 min-h-9 hover:bg-background-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20"
                 onClick={() => toggleClosed()}
               >
                 {closed && <ArrowDownIcon size={25} />}
                 {!closed && <CrossIcon size={25} />}
-              </div>
+              </button>
             )}
           </div>
         </div>
         <div
+          id="tracking-checklist-content"
           className={classNames('transition-all duration-500 delay-100', {
             'opacity-0 h-0': closed,
           })}
@@ -597,10 +615,8 @@ export function TrackingChecklist({
         >
           <div
             className={classNames('flex w-full gap-2 z-10', {
-              'cursor-pointer': closed,
               'pointer-events-none': !closed,
             })}
-            onClick={() => toggleClosed()}
           >
             <div className="rounded-full bg-background-50 flex items-center justify-center h-[25px] w-[25px] -ml-[13px] relative">
               <div

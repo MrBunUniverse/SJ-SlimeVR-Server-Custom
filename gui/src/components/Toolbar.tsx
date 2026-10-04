@@ -14,6 +14,7 @@ import { assignedTrackersAtom, sidebarAnimationAtom } from '@/store/app-store';
 import { useBreakpoint } from '@/hooks/breakpoint';
 import { useMemo, useState, useEffect, CSSProperties } from 'react';
 import { ResetButtonIcon } from './home/ResetButton';
+import { useLocalization } from '@fluent/react';
 
 function ButtonProgress({
   progress,
@@ -30,9 +31,7 @@ function ButtonProgress({
       style={{
         width: `${progress * 100}%`,
         transition:
-          status === 'counting'
-            ? 'width 0.3s cubic-bezier(0.68, -0.8, 0.32, 1.8)'
-            : 'width 1s linear',
+          status === 'counting' ? 'width 0.3s ease-out' : 'width 1s linear',
       }}
     />
   );
@@ -48,6 +47,7 @@ export function BasicResetButton(
   }
 ) {
   const { isMd } = useBreakpoint('md');
+  const { l10n } = useLocalization();
   const {
     triggerReset,
     status,
@@ -89,8 +89,9 @@ export function BasicResetButton(
         }
         type="button"
         disabled={disabled}
+        aria-label={l10n.getString(name)}
         className={classNames(
-          'toolbar-reset-button relative overflow-clip h-[32px] px-3.5 rounded-[8px] flex items-center justify-center gap-1.5 font-medium text-[12px] transition-all duration-150 select-none will-change-transform',
+          'toolbar-reset-button relative overflow-clip h-9 px-2 rounded-[8px] flex items-center justify-center gap-1.5 font-medium text-[12px] transition-all duration-150 select-none will-change-transform lg:px-3.5',
           {
             // Active Button (Claude web aesthetic matching all reset actions)
             'cursor-pointer active:scale-[0.98] bg-background-60 hover:bg-background-70 text-background-10 fill-background-10 border border-[var(--material-border-subtle)]':
@@ -126,7 +127,7 @@ export function BasicResetButton(
         </div>
 
         <div
-          className={classNames('hidden md:block relative', {
+          className={classNames('hidden lg:block relative', {
             'opacity-0': status === 'counting',
           })}
         >
@@ -157,6 +158,7 @@ export function BasicResetButton(
 }
 
 export function ResetActionsGroup() {
+  const { l10n } = useLocalization();
   const assignedTrackers = useAtomValue(assignedTrackersAtom);
 
   const { groupVisibility } = useMemo(() => {
@@ -277,29 +279,54 @@ export function ResetActionsGroup() {
         {...getAnimProps('yaw')}
         onTrigger={() => handleTrigger('yaw')}
       />
-      <BasicResetButton
-        type={ResetType.Mounting}
-        group={'default'}
-        customName="toolbar-mounting_calibration-default"
-        {...getAnimProps('mounting-default')}
-        onTrigger={() => handleTrigger('mounting-default')}
-      />
-      <BasicResetButton
-        type={ResetType.Mounting}
-        group={'feet'}
-        customName="toolbar-mounting_calibration-feet"
-        {...getAnimProps('mounting-feet')}
-        onTrigger={() => handleTrigger('mounting-feet')}
-      />
-      {groupVisibility['fingers'] && (
-        <BasicResetButton
-          type={ResetType.Mounting}
-          group={'fingers'}
-          customName="toolbar-mounting_calibration-fingers"
-          {...getAnimProps('mounting-fingers')}
-          onTrigger={() => handleTrigger('mounting-fingers')}
-        />
-      )}
+      <details className="toolbar-more-resets relative">
+        <summary
+          aria-label={l10n.getString('toolbar-more_resets')}
+          title={l10n.getString('toolbar-more_resets')}
+          className="flex min-h-9 cursor-pointer list-none items-center justify-center gap-1 rounded-lg border border-[var(--material-border-subtle)] px-2.5 text-[11px] font-medium text-background-20 transition-colors hover:bg-background-60 hover:text-background-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20 [&::-webkit-details-marker]:hidden"
+        >
+          <svg
+            className="toolbar-more-resets__icon"
+            aria-hidden="true"
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+          >
+            <circle cx="3" cy="8" r="1.2" />
+            <circle cx="8" cy="8" r="1.2" />
+            <circle cx="13" cy="8" r="1.2" />
+          </svg>
+          <span className="toolbar-more-resets__label">
+            {l10n.getString('toolbar-more_resets')}
+          </span>
+        </summary>
+        <div className="absolute right-0 top-full z-50 mt-2 flex w-max flex-col gap-1.5 rounded-xl border border-[var(--material-border-primary)] bg-background-70 p-2 shadow-xl">
+          <BasicResetButton
+            type={ResetType.Mounting}
+            group={'default'}
+            customName="toolbar-mounting_calibration-default"
+            {...getAnimProps('mounting-default')}
+            onTrigger={() => handleTrigger('mounting-default')}
+          />
+          <BasicResetButton
+            type={ResetType.Mounting}
+            group={'feet'}
+            customName="toolbar-mounting_calibration-feet"
+            {...getAnimProps('mounting-feet')}
+            onTrigger={() => handleTrigger('mounting-feet')}
+          />
+          {groupVisibility['fingers'] && (
+            <BasicResetButton
+              type={ResetType.Mounting}
+              group={'fingers'}
+              customName="toolbar-mounting_calibration-fingers"
+              {...getAnimProps('mounting-fingers')}
+              onTrigger={() => handleTrigger('mounting-fingers')}
+            />
+          )}
+        </div>
+      </details>
     </div>
   );
 }

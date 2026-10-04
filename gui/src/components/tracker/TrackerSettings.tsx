@@ -5,6 +5,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
 import {
+  AdaptiveDriftAction,
+  AdaptiveDriftFreezeReason,
+  AdaptiveDriftControlRequestT,
+  AdaptiveDriftMode,
   AssignTrackerRequestT,
   BoardType,
   BodyPart,
@@ -73,8 +77,10 @@ export function TrackerSettingsPage() {
     deviceid: string;
   }>();
   const tracker = useTrackerFromId(trackernum, deviceid);
-  const [driftResetState, setDriftResetState] = useState<boolean>(false);
-  const { control, watch, reset, setValue, handleSubmit } = useForm<{
+  const [driftCorrectionEnabled, setDriftCorrectionEnabled] = useState(
+    tracker?.tracker.info?.allowDriftCompensation ?? false
+  );
+  const { control, watch, reset, handleSubmit } = useForm<{
     trackerName: string | null;
     imuProfileOverride: string;
   }>({
@@ -87,23 +93,15 @@ export function TrackerSettingsPage() {
   const setIgnoredTracker = useSetAtom(ignoredTrackersAtom);
   const { trackerName, imuProfileOverride } = watch();
 
-  const shouldCompensateDrift = useMemo(() => {
-    if (
-      imuProfileOverride === 'mpu6050' ||
-      imuProfileOverride === 'bmi160' ||
-      imuProfileOverride === 'lsm6_icm'
-    ) {
-      return true;
-    }
-    if (imuProfileOverride === 'bno085') {
-      return false;
-    }
-    const imu =
-      tracker?.tracker.info?.imuType !== undefined
-        ? ImuType[tracker.tracker.info.imuType]
-        : '';
-    return !imu.includes('BNO');
-  }, [imuProfileOverride, tracker?.tracker.info?.imuType]);
+  useEffect(() => {
+    setDriftCorrectionEnabled(
+      tracker?.tracker.info?.allowDriftCompensation ?? false
+    );
+  }, [
+    tracker?.tracker.trackerId?.deviceId?.id,
+    tracker?.tracker.trackerId?.trackerNum,
+    tracker?.tracker.info?.allowDriftCompensation,
+  ]);
 
   const onDirectionSelected = (mountingOrientationDegrees: Quaternion) => {
     if (!tracker) return;
@@ -115,7 +113,8 @@ export function TrackerSettingsPage() {
     );
     assignreq.bodyPosition = tracker?.tracker.info?.bodyPart || BodyPart.NONE;
     assignreq.trackerId = tracker?.tracker.trackerId;
-    assignreq.allowDriftCompensation = shouldCompensateDrift;
+    assignreq.allowDriftCompensation = driftCorrectionEnabled;
+    assignreq.imuProfileOverride = imuProfileOverride;
     sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
     setSelectRotation(false);
   };
@@ -126,7 +125,8 @@ export function TrackerSettingsPage() {
     const assignreq = new AssignTrackerRequestT();
     assignreq.bodyPosition = role;
     assignreq.trackerId = tracker?.tracker.trackerId;
-    assignreq.allowDriftCompensation = shouldCompensateDrift;
+    assignreq.allowDriftCompensation = driftCorrectionEnabled;
+    assignreq.imuProfileOverride = imuProfileOverride;
     sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
     setSelectBodypart(false);
   };
@@ -145,7 +145,8 @@ export function TrackerSettingsPage() {
 
     assignreq.displayName = trackerName ?? null;
     assignreq.trackerId = tracker?.tracker.trackerId;
-    assignreq.allowDriftCompensation = shouldCompensateDrift;
+    assignreq.allowDriftCompensation = driftCorrectionEnabled;
+    assignreq.imuProfileOverride = imuProfileOverride;
     sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
   };
 
@@ -155,88 +156,56 @@ export function TrackerSettingsPage() {
 
   useDebouncedEffect(
     () => updateTrackerSettings(),
-    [trackerName, imuProfileOverride],
+    [trackerName, imuProfileOverride, driftCorrectionEnabled],
     500
   );
-
-  const trackerStorageKey = useMemo(() => {
-    if (!tracker?.tracker.trackerId) return null;
-    return `${tracker.tracker.trackerId.deviceId?.id ?? 0}-${tracker.tracker.trackerId.trackerNum ?? 0}`;
-  }, [tracker?.tracker.trackerId]);
-
-  useEffect(() => {
-    if (!trackerStorageKey) return;
-    const saved = localStorage.getItem(
-      `slimevr-imu-profile-${trackerStorageKey}`
-    );
-    if (saved) {
-      setValue('imuProfileOverride', saved);
-    }
-  }, [trackerStorageKey, setValue]);
-
-  useEffect(() => {
-    if (!trackerStorageKey || !imuProfileOverride) return;
-    localStorage.setItem(
-      `slimevr-imu-profile-${trackerStorageKey}`,
-      imuProfileOverride
-    );
-  }, [trackerStorageKey, imuProfileOverride]);
 
   const handleResetLearnedDrift = () => {
     sendRPCPacket(
       RpcMessage.ClearDriftCompensationRequest,
-      new ClearDriftCompensationRequestT()
+      new ClearDriftCompensationRequestT(tracker?.tracker.trackerId)
     );
-    setDriftResetState(true);
-    if (trackerStorageKey) {
-      localStorage.setItem(
-        `slimevr-learned-drift-${trackerStorageKey}`,
-        '0.00'
-      );
-    }
   };
 
-  const learnedDriftDisplay = useMemo(() => {
-    if (driftResetState) return '±0.00°/min';
-    if (trackerStorageKey) {
-      const stored = localStorage.getItem(
-        `slimevr-learned-drift-${trackerStorageKey}`
-      );
-      if (stored !== null) return `±${parseFloat(stored).toFixed(2)}°/min`;
-    }
-    const override = imuProfileOverride || 'auto';
-    if (override === 'mpu6050') return '±4.50°/min';
-    if (override === 'bmi160') return '±3.15°/min';
-    if (override === 'lsm6_icm') return '±0.85°/min';
-    if (override === 'bno085') return '±0.02°/min';
+  const sendAdaptiveDriftAction = (action: AdaptiveDriftAction) => {
+    sendRPCPacket(
+      RpcMessage.AdaptiveDriftControlRequest,
+      new AdaptiveDriftControlRequestT(
+        tracker?.tracker.trackerId ?? null,
+        action
+      )
+    );
+  };
 
-    const imu =
-      tracker?.tracker.info?.imuType !== undefined
-        ? ImuType[tracker.tracker.info.imuType]
-        : '';
-    if (imu.includes('6050') || imu.includes('6500')) return '±4.50°/min';
-    if (imu.includes('BNO')) return '±0.02°/min';
-    if (imu.includes('BMI160')) return '±3.15°/min';
-    if (imu.includes('BMI270') || imu.includes('LSM') || imu.includes('ICM'))
-      return '±0.85°/min';
-    return '±0.45°/min';
-  }, [
-    driftResetState,
-    trackerStorageKey,
-    imuProfileOverride,
-    tracker?.tracker.info?.imuType,
-  ]);
+  const adaptiveState = tracker?.tracker.adaptiveDrift;
+  const filterHealth = tracker?.tracker.filterHealth;
+  const adaptiveMode = adaptiveState
+    ? AdaptiveDriftMode[adaptiveState.mode]
+    : '--';
+  const adaptivePaused =
+    adaptiveState?.mode === AdaptiveDriftMode.DISABLED &&
+    adaptiveState.freezeReason === AdaptiveDriftFreezeReason.PAUSED;
+  const adaptiveCorrectionEnabled = driftCorrectionEnabled;
+
+  const learnedDriftDisplay = useMemo(() => {
+    const learnedRate = tracker?.tracker.info?.learnedDriftRateDegPerMin;
+    return learnedRate === undefined
+      ? '--'
+      : `±${Math.abs(learnedRate).toFixed(2)}°/min`;
+  }, [tracker?.tracker.info?.learnedDriftRateDegPerMin]);
 
   useEffect(() => {
-    const savedProfile = trackerStorageKey
-      ? localStorage.getItem(`slimevr-imu-profile-${trackerStorageKey}`) ||
-        'auto'
-      : 'auto';
+    const serverProfile = tracker?.tracker.info?.imuProfileOverride;
     reset({
       trackerName: tracker?.tracker.info?.customName as string | null,
-      imuProfileOverride: savedProfile,
+      imuProfileOverride:
+        typeof serverProfile === 'string' ? serverProfile : 'auto',
     });
-  }, [trackerStorageKey, tracker?.tracker.info?.customName, reset]);
+  }, [
+    tracker?.tracker.info?.customName,
+    tracker?.tracker.info?.imuProfileOverride,
+    reset,
+  ]);
 
   const boardType = useMemo(() => {
     if (tracker?.device?.hardwareInfo?.officialBoardType) {
@@ -766,6 +735,53 @@ export function TrackerSettingsPage() {
                 </div>
               </div>
 
+              <div className="grid md:grid-cols-4 gap-3 pt-1">
+                <div className="flex flex-col gap-1 bg-background-70 p-3 rounded-lg">
+                  <Typography color="secondary">Learner State</Typography>
+                  <Typography bold>{adaptiveMode}</Typography>
+                </div>
+                <div className="flex flex-col gap-1 bg-background-70 p-3 rounded-lg">
+                  <Typography color="secondary">Confidence</Typography>
+                  <Typography bold>
+                    {adaptiveState
+                      ? `${Math.round(adaptiveState.confidence * 100)}%`
+                      : '--'}
+                  </Typography>
+                </div>
+                <div className="flex flex-col gap-1 bg-background-70 p-3 rounded-lg">
+                  <Typography color="secondary">Input</Typography>
+                  <Typography bold>
+                    {filterHealth
+                      ? `${filterHealth.inputRateHz.toFixed(1)} Hz`
+                      : '--'}
+                  </Typography>
+                </div>
+                <div className="flex flex-col gap-1 bg-background-70 p-3 rounded-lg">
+                  <Typography color="secondary">Jitter</Typography>
+                  <Typography bold>
+                    {filterHealth
+                      ? `${filterHealth.packetJitterMs.toFixed(1)} ms`
+                      : '--'}
+                  </Typography>
+                </div>
+                <div className="flex flex-col gap-1 bg-background-70 p-3 rounded-lg">
+                  <Typography color="secondary">Stable Window</Typography>
+                  <Typography bold>
+                    {adaptiveState
+                      ? `${Math.round(Number(adaptiveState.stableDurationMs) / 1000)} s`
+                      : '--'}
+                  </Typography>
+                </div>
+                <div className="flex flex-col gap-1 bg-background-70 p-3 rounded-lg">
+                  <Typography color="secondary">Applied Correction</Typography>
+                  <Typography bold>
+                    {adaptiveState
+                      ? `${adaptiveState.appliedCorrectionDeg.toFixed(2)}°`
+                      : '--'}
+                  </Typography>
+                </div>
+              </div>
+
               <div className="flex flex-col gap-1 pt-1">
                 <Typography bold>Profile Override</Typography>
                 <Dropdown
@@ -777,7 +793,48 @@ export function TrackerSettingsPage() {
                 />
               </div>
 
-              <div className="flex justify-end pt-1">
+              <div className="flex flex-wrap justify-end gap-2 pt-1">
+                <Button
+                  variant="secondary"
+                  className="self-start text-xs !py-1.5"
+                  onClick={() => {
+                    const enabled = !adaptiveCorrectionEnabled;
+                    setDriftCorrectionEnabled(enabled);
+                    sendAdaptiveDriftAction(
+                      enabled
+                        ? AdaptiveDriftAction.ENABLE_CORRECTION
+                        : AdaptiveDriftAction.DISABLE_CORRECTION
+                    );
+                  }}
+                >
+                  {adaptiveCorrectionEnabled
+                    ? 'Disable Correction'
+                    : 'Enable Correction'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="self-start text-xs !py-1.5"
+                  onClick={() =>
+                    sendAdaptiveDriftAction(
+                      adaptivePaused
+                        ? AdaptiveDriftAction.RESUME_LEARNING
+                        : AdaptiveDriftAction.PAUSE_LEARNING
+                    )
+                  }
+                >
+                  {adaptivePaused ? 'Resume Learning' : 'Pause Learning'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="self-start text-xs !py-1.5"
+                  onClick={() =>
+                    sendAdaptiveDriftAction(
+                      AdaptiveDriftAction.RESTORE_PREVIOUS_MODEL
+                    )
+                  }
+                >
+                  Restore Previous
+                </Button>
                 <Button
                   variant="secondary"
                   className="self-start text-xs !py-1.5"

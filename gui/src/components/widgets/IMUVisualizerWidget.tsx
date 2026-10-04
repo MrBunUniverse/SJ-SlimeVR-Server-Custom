@@ -31,9 +31,11 @@ import { StayAlignedInfo } from '@/components/stay-aligned/StayAlignedInfo';
 import { useAtomValue } from 'jotai';
 import { demoModeAtom } from '@/store/demo-trackers';
 
-const GROUND_COLOR = '#3C3832';
+const GROUND_COLOR = '#2F5F86';
 const MODEL_SCALE = 6.5;
 const CANVAS_HEIGHT = 200;
+const MAX_RENDER_PIXEL_RATIO = 1.25;
+const DEMO_FRAME_INTERVAL = 1000 / 30;
 
 // Three.js context - isolated from React
 type IMUVisualizerContext = {
@@ -68,6 +70,12 @@ async function initializeIMUVisualizer(
     powerPreference: 'low-power',
     stencil: false,
   });
+  renderer.setPixelRatio(
+    Math.min(
+      typeof window !== 'undefined' ? window.devicePixelRatio : 1,
+      MAX_RENDER_PIXEL_RATIO
+    )
+  );
   renderer.setSize(width, height);
 
   const ambientLight = new AmbientLight(0xffffff, 0.5 * Math.PI);
@@ -208,7 +216,27 @@ export function IMUVisualizerCanvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contextRef = useRef<IMUVisualizerContext | null>(null);
+  const isVisibleRef = useRef(true);
+  const latestDataRef = useRef({ quat, vec, mag });
+  const updateFrameRef = useRef<number | null>(null);
+  const lastUpdateTimeRef = useRef(0);
   const [error, setError] = useState<Error | null>(null);
+
+  latestDataRef.current = { quat, vec, mag };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisibleRef.current = entry.isIntersecting;
+      },
+      { threshold: 0.01 }
+    );
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -238,10 +266,41 @@ export function IMUVisualizerCanvas({
   }, [model, height]);
 
   useEffect(() => {
-    if (!animateDemo) {
-      contextRef.current?.update(quat, vec, mag);
+    if (animateDemo || !isVisibleRef.current) return;
+
+    const renderLatest = () => {
+      updateFrameRef.current = null;
+      if (
+        !isVisibleRef.current ||
+        (typeof document !== 'undefined' && document.hidden)
+      ) {
+        return;
+      }
+
+      const now = performance.now();
+      const elapsed = now - lastUpdateTimeRef.current;
+      if (elapsed < DEMO_FRAME_INTERVAL) {
+        updateFrameRef.current = requestAnimationFrame(renderLatest);
+        return;
+      }
+
+      const latest = latestDataRef.current;
+      contextRef.current?.update(latest.quat, latest.vec, latest.mag);
+      lastUpdateTimeRef.current = now;
+    };
+
+    if (updateFrameRef.current === null) {
+      updateFrameRef.current = requestAnimationFrame(renderLatest);
     }
   }, [quat, vec, mag, animateDemo]);
+
+  useEffect(() => {
+    return () => {
+      if (updateFrameRef.current !== null) {
+        cancelAnimationFrame(updateFrameRef.current);
+      }
+    };
+  }, []);
 
   // Realistic IMU simulation: natural human pose shifts, micro-tremors, sensor noise, and linear accel kicks
   useEffect(() => {
@@ -251,11 +310,23 @@ export function IMUVisualizerCanvas({
     const euler = new Euler();
     const demoQuat = new Quaternion();
     const accelVec = new Vector3();
+    let previousRenderTime = 0;
 
     const loop = () => {
+      animId = requestAnimationFrame(loop);
+      if (
+        !isVisibleRef.current ||
+        (typeof document !== 'undefined' && document.hidden)
+      ) {
+        return;
+      }
+
+      const now = performance.now();
+      if (now - previousRenderTime < DEMO_FRAME_INTERVAL) return;
+      previousRenderTime = now;
+
       const ctx = contextRef.current;
       if (ctx) {
-        const now = performance.now();
         const t = now * 0.001;
 
         // 1. Natural human body motion cadence (multi-frequency harmonic shifts)
@@ -312,7 +383,6 @@ export function IMUVisualizerCanvas({
 
         ctx.render();
       }
-      animId = requestAnimationFrame(loop);
     };
 
     animId = requestAnimationFrame(loop);

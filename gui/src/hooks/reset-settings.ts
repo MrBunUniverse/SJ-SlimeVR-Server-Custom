@@ -39,6 +39,7 @@ export function loadResetSettings(resetSettingsForm: ResetSettingsForm) {
     resetSettingsForm.deadTrackerRecoveryEnabled;
   resetsSettings.recoveryChatboxNotifications =
     resetSettingsForm.recoveryChatboxNotifications;
+  resetsSettings.recoverySettingsPresent = true;
 
   return resetsSettings;
 }

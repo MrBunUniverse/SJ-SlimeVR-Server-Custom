@@ -2,6 +2,7 @@ import {
   ReactNode,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -306,9 +307,13 @@ function getShortTrackerName(
 type BroadcastMode = 'pinned' | 'music' | 'bpm' | 'dictate';
 
 const broadcastModes: BroadcastMode[] = ['dictate', 'pinned', 'music', 'bpm'];
+const CHATBOX_PANEL_EXIT_MS = 240;
 
 export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isPanelMounted, setIsPanelMounted] = useState(false);
+  const panelExitTimerRef = useRef<number | null>(null);
+  const modeContentRef = useRef<HTMLDivElement>(null);
   const [activeMode, setActiveMode] = useState<BroadcastMode>('dictate');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [message, setMessage] = useState('');
@@ -543,6 +548,52 @@ export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
     (!floorAnchor.chatboxOnlyMode && floorAnchor.chatboxEnabled) ||
     fakeBpm.enabled;
 
+  const updateBackdropPosition = useCallback(() => {
+    const bounds = dropdownRef.current?.getBoundingClientRect();
+    if (!bounds || window.innerWidth === 0) return;
+
+    const centerX =
+      ((bounds.left + bounds.width / 2) / window.innerWidth) * 100;
+    document.body.style.setProperty('--chatbox-backdrop-x', `${centerX}%`);
+  }, []);
+
+  const openPanel = useCallback(() => {
+    if (panelExitTimerRef.current !== null) {
+      window.clearTimeout(panelExitTimerRef.current);
+      panelExitTimerRef.current = null;
+    }
+    updateBackdropPosition();
+    setIsPanelMounted(true);
+    setIsOpen(true);
+  }, [updateBackdropPosition]);
+
+  const closePanel = useCallback(() => {
+    setIsOpen(false);
+    if (panelExitTimerRef.current !== null) {
+      window.clearTimeout(panelExitTimerRef.current);
+    }
+    panelExitTimerRef.current = window.setTimeout(() => {
+      setIsPanelMounted(false);
+      panelExitTimerRef.current = null;
+    }, CHATBOX_PANEL_EXIT_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (panelExitTimerRef.current !== null) {
+        window.clearTimeout(panelExitTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updateBackdropPosition();
+    window.addEventListener('resize', updateBackdropPosition);
+    return () => window.removeEventListener('resize', updateBackdropPosition);
+  }, [isOpen, updateBackdropPosition]);
+
   // Single unified periodic broadcaster (adapts interval when BPM active for natural 2-3s cadence)
   useEffect(() => {
     if (!isBroadcastingActive) {
@@ -591,7 +642,7 @@ export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
+        closePanel();
       }
     };
     if (isOpen) {
@@ -600,7 +651,7 @@ export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen]);
+  }, [closePanel, isOpen]);
 
   // Focus input when opened
   useEffect(() => {
@@ -610,6 +661,20 @@ export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
       }, 50);
     }
   }, [isOpen]);
+
+  useLayoutEffect(() => {
+    const modeContent = modeContentRef.current;
+    if (!modeContent) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      const activePane = modeContent.firstElementChild;
+      if (!(activePane instanceof HTMLElement)) return;
+
+      modeContent.style.height = `${activePane.getBoundingClientRect().height}px`;
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeMode, isPanelMounted]);
 
   const handleSendMessage = (e?: FormEvent) => {
     if (e) e.preventDefault();
@@ -660,96 +725,102 @@ export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
       style={{ WebkitAppRegion: 'no-drag' } as any}
       className={classNames(
         'chatbox-control relative flex items-center',
-        dock && 'chatbox-control--dock'
+        dock && 'chatbox-control--dock',
+        isOpen && 'chatbox-control--open'
       )}
     >
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        className={classNames(
-          dock
-            ? 'relative flex min-w-[62px] flex-col items-center justify-center gap-1 rounded-[14px] px-3 py-2 text-[10px] font-medium leading-none tracking-tight transition-[background-color,color,transform] duration-150 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20 focus-visible:ring-offset-2 focus-visible:ring-offset-background-80'
-            : 'relative flex items-center gap-1.5 px-2.5 py-1 text-[13.5px] font-semibold tracking-tight rounded-[8px] transition-all select-none cursor-pointer',
-          isOpen
-            ? dock
-              ? 'bg-background-60 text-accent-background-20 shadow-xs'
-              : 'bg-[#262421] text-white shadow-xs'
-            : floorAnchor.chatboxEnabled
-              ? dock
-                ? 'text-accent-background-20 hover:bg-background-60/70'
-                : 'text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-              : dock
-                ? 'text-background-30 hover:bg-background-60/70 hover:text-background-10'
-                : 'text-background-10/70 hover:text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-        )}
-        title="VRChat Broadcast & Telemetry HUD"
-      >
-        {/* Chat bubble icon */}
-        <svg
+      <div className={dock ? 'chatbox-dock-button-clip' : 'contents'}>
+        <button
+          type="button"
+          onClick={() => (isOpen ? closePanel() : openPanel())}
+          aria-expanded={isOpen}
           className={classNames(
-            dock ? 'h-6 w-6' : 'h-3.5 w-3.5',
-            'opacity-90 stroke-[2.2]'
+            dock
+              ? 'floating-dock__item relative flex min-w-[62px] flex-col items-center justify-center gap-1 rounded-[12px] px-2.5 py-1.5 text-[10px] font-medium leading-none tracking-tight transition-[background-color,color,transform] duration-150 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20 focus-visible:ring-offset-2 focus-visible:ring-offset-background-80'
+              : 'relative flex items-center gap-1.5 px-2.5 py-1 text-[13.5px] font-semibold tracking-tight rounded-[8px] transition-all select-none cursor-pointer',
+            isOpen
+              ? dock
+                ? 'bg-background-60 text-accent-background-20 shadow-xs'
+                : 'bg-[#262421] text-white shadow-xs'
+              : floorAnchor.chatboxEnabled
+                ? dock
+                  ? 'text-accent-background-20 hover:bg-background-60/70'
+                  : 'text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                : dock
+                  ? 'text-background-30 hover:bg-background-60/70 hover:text-background-10'
+                  : 'text-background-10/70 hover:text-background-10 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
           )}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          title="VRChat Broadcast & Telemetry HUD"
         >
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
+          {/* Chat bubble icon */}
+          <svg
+            className={classNames(
+              dock ? 'h-6 w-6' : 'h-3.5 w-3.5',
+              'opacity-90 stroke-[2.2]'
+            )}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
 
-        <span>Broadcast</span>
+          <span>Broadcast</span>
 
-        {/* Live broadcasting / Compact Chat-Only indicator */}
-        {floorAnchor.chatboxOnlyMode ? (
-          dock ? (
+          {/* Live broadcasting / Compact Chat-Only indicator */}
+          {floorAnchor.chatboxOnlyMode ? (
+            dock ? (
+              <span
+                className="absolute right-2.5 top-2 h-1.5 w-1.5 rounded-full bg-accent-background-20 animate-pulse"
+                title="Chat-Only Mode Active (FBT Trackers Muted)"
+              />
+            ) : (
+              <span
+                className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#0A84FF]/25 text-[#5AC8FA] border border-[#0A84FF]/35 tracking-tight leading-none shrink-0"
+                title="Chat-Only Mode Active (FBT Trackers Muted)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#5AC8FA] animate-pulse" />
+                Only
+              </span>
+            )
+          ) : floorAnchor.chatboxEnabled ||
+            floorAnchor.chatboxCustomPinnedEnabled ||
+            floorAnchor.chatboxAppleMusicEnabled ||
+            fakeBpm.enabled ? (
             <span
-              className="absolute right-2.5 top-2 h-1.5 w-1.5 rounded-full bg-accent-background-20 animate-pulse"
-              title="Chat-Only Mode Active (FBT Trackers Muted)"
+              className={classNames(
+                'w-1.5 h-1.5 rounded-full bg-[#30D158] animate-pulse',
+                dock && 'absolute right-2.5 top-2'
+              )}
+              title="Chatbox broadcasting active"
             />
           ) : (
-            <span
-              className="flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#0A84FF]/25 text-[#5AC8FA] border border-[#0A84FF]/35 tracking-tight leading-none shrink-0"
-              title="Chat-Only Mode Active (FBT Trackers Muted)"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#5AC8FA] animate-pulse" />
-              Only
-            </span>
-          )
-        ) : floorAnchor.chatboxEnabled ||
-          floorAnchor.chatboxCustomPinnedEnabled ||
-          floorAnchor.chatboxAppleMusicEnabled ||
-          fakeBpm.enabled ? (
-          <span
-            className={classNames(
-              'w-1.5 h-1.5 rounded-full bg-[#30D158] animate-pulse',
-              dock && 'absolute right-2.5 top-2'
-            )}
-            title="Chatbox broadcasting active"
-          />
-        ) : (
-          !dock && (
-            <span className="text-[11px] font-bold opacity-80 leading-none transition-transform duration-150 text-background-10/70">
-              {isOpen ? '▴' : '⌄'}
-            </span>
-          )
-        )}
+            !dock && (
+              <span className="text-[11px] font-bold opacity-80 leading-none transition-transform duration-150 text-background-10/70">
+                {isOpen ? '▴' : '⌄'}
+              </span>
+            )
+          )}
 
-        {isOpen && !dock && (
-          <span className="absolute bottom-[-6px] left-2.5 right-2.5 h-[2.5px] bg-[#D97757] rounded-full shadow-[0_1px_6px_rgba(217,119,87,0.4)]" />
-        )}
-      </button>
+          {isOpen && !dock && (
+            <span className="absolute bottom-[-6px] left-2.5 right-2.5 h-[2.5px] bg-[#D97757] rounded-full shadow-[0_1px_6px_rgba(217,119,87,0.4)]" />
+          )}
+        </button>
+      </div>
 
-      {isOpen && (
+      {isPanelMounted && (
         <div
           style={{ WebkitAppRegion: 'no-drag' } as any}
-          className="chatbox-panel"
+          className={classNames(
+            'chatbox-panel',
+            isOpen ? 'chatbox-panel--open' : 'chatbox-panel--closing'
+          )}
           onKeyDown={(event) => {
             if (event.key === 'Escape' && !isEditingIp) {
-              setIsOpen(false);
+              closePanel();
               dropdownRef.current?.querySelector('button')?.focus();
             }
           }}
@@ -938,303 +1009,265 @@ export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
           </div>
 
           {/* Active Mode Panes */}
-
-          {/* Mode 1: Voice Dictation & Real-Time Translation */}
-          {activeMode === 'dictate' && (
-            <div
-              id="broadcast-panel-dictate"
-              role="tabpanel"
-              aria-labelledby="broadcast-tab-dictate"
-              className="chatbox-mode flex flex-col gap-2.5"
-            >
-              {/* Cloud Engine Header Badge */}
-              <div className="chatbox-engine flex items-center justify-between p-2 rounded-[8px] bg-[#0A84FF]/10 border border-[#0A84FF]/25">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#0A84FF] shadow-xs animate-pulse" />
-                  <span className="text-[11.5px] font-semibold text-white">
-                    Cloud Whisper Engine
-                  </span>
-                </div>
-                <span className="text-[9px] px-2 py-0.5 rounded font-semibold bg-[#0A84FF]/20 text-[#5AC8FA] border border-[#0A84FF]/30">
-                  Whisper v3 Turbo
-                </span>
-              </div>
-
-              {/* Cloud API Key Drawer */}
-              <div className="chatbox-key-card p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08] flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="uppercase font-semibold text-[#A09E96] tracking-wide">
-                    Groq API Key
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => openUrl('https://console.groq.com/keys')}
-                    className="text-[#0A84FF] hover:underline cursor-pointer font-medium"
-                  >
-                    Get Free Key
-                  </button>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type={showApiKeyInput ? 'text' : 'password'}
-                    value={dictation.settings.groqApiKey}
-                    onChange={(e) => dictation.setGroqApiKey(e.target.value)}
-                    placeholder="gsk_..."
-                    className="flex-grow px-2.5 py-1 rounded-[7px] bg-black/60 border border-[#484640] text-white text-[11px] font-mono focus:outline-none focus:border-[#0A84FF]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowApiKeyInput(!showApiKeyInput)}
-                    className="px-2.5 py-1 rounded-[7px] bg-white/[0.06] hover:bg-white/[0.1] text-[10.5px] text-[#C4C2BC] cursor-pointer"
-                  >
-                    {showApiKeyInput ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Apple Inset Settings Group */}
-              <div className="chatbox-settings-group rounded-[10px] bg-black/40 border border-white/[0.08] divide-y divide-white/[0.06] overflow-hidden">
-                {/* Row 1: Microphone Input Device */}
-                <div className="flex items-center justify-between p-2.5">
-                  <div className="flex flex-col min-w-0 pr-2">
-                    <span className="text-[11.5px] font-medium text-white truncate">
-                      Microphone
-                    </span>
-                    <span className="text-[9.5px] text-[#A09E96] truncate">
-                      Audio input source
+          <div ref={modeContentRef} className="chatbox-mode-shell">
+            {/* Mode 1: Voice Dictation & Real-Time Translation */}
+            {activeMode === 'dictate' && (
+              <div
+                id="broadcast-panel-dictate"
+                role="tabpanel"
+                aria-labelledby="broadcast-tab-dictate"
+                className="chatbox-mode flex flex-col gap-2.5"
+              >
+                {/* Cloud Engine Header Badge */}
+                <div className="chatbox-engine flex items-center justify-between p-2 rounded-[8px] bg-[#0A84FF]/10 border border-[#0A84FF]/25">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#0A84FF] shadow-xs animate-pulse" />
+                    <span className="text-[11.5px] font-semibold text-white">
+                      Cloud Whisper Engine
                     </span>
                   </div>
-                  <select
-                    value={dictation.settings.inputDeviceId || 'default'}
-                    onChange={(e) => dictation.setInputDeviceId(e.target.value)}
-                    onFocus={() => dictation.refreshDevices()}
-                    className="bg-black/60 text-white border border-[#484640] rounded-[7px] px-2.5 py-1 text-[11px] focus:outline-none focus:border-[#0A84FF] cursor-pointer max-w-[190px] truncate"
-                  >
-                    <option value="default">Default Microphone</option>
-                    {dictation.availableDevices.map((dev) => (
-                      <option key={dev.deviceId} value={dev.deviceId}>
-                        {dev.label}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="text-[9px] px-2 py-0.5 rounded font-semibold bg-[#0A84FF]/20 text-[#5AC8FA] border border-[#0A84FF]/30">
+                    Whisper v3 Turbo
+                  </span>
                 </div>
 
-                {/* Row 2: Target Language */}
-                <div className="flex items-center justify-between p-2.5">
-                  <div className="flex flex-col">
-                    <span className="text-[11.5px] font-medium text-white">
-                      Translate Speech
+                {/* Cloud API Key Drawer */}
+                <div className="chatbox-key-card p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08] flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="uppercase font-semibold text-[#A09E96] tracking-wide">
+                      Groq API Key
                     </span>
-                    <span className="text-[9.5px] text-[#A09E96]">
-                      Target output language
-                    </span>
-                  </div>
-                  <select
-                    value={dictation.settings.targetLanguage}
-                    onChange={(e) =>
-                      dictation.setTargetLanguage(e.target.value)
-                    }
-                    className="bg-black/60 text-white border border-[#484640] rounded-[7px] px-2.5 py-1 text-[11px] focus:outline-none focus:border-[#0A84FF] cursor-pointer"
-                  >
-                    {SUPPORTED_LANGUAGES.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Row 2: Format & Activation */}
-                <div className="grid grid-cols-2 divide-x divide-white/[0.06]">
-                  <div className="flex flex-col gap-1 p-2.5">
-                    <span className="text-[9.5px] uppercase font-semibold text-[#A09E96] tracking-wide">
-                      Format
-                    </span>
-                    <select
-                      value={dictation.settings.format}
-                      onChange={(e) =>
-                        dictation.setFormat(e.target.value as DictationFormat)
-                      }
-                      className="bg-black/60 text-white border border-[#484640] rounded-[6px] px-2 py-1 text-[10.5px] focus:outline-none focus:border-[#0A84FF] cursor-pointer"
+                    <button
+                      type="button"
+                      onClick={() => openUrl('https://console.groq.com/keys')}
+                      className="text-[#0A84FF] hover:underline cursor-pointer font-medium"
                     >
-                      <option value="translation_only">Translation Only</option>
-                      <option value="bilingual">Bilingual</option>
-                      <option value="original_only">Original Voice</option>
+                      Get Free Key
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type={showApiKeyInput ? 'text' : 'password'}
+                      value={dictation.settings.groqApiKey}
+                      onChange={(e) => dictation.setGroqApiKey(e.target.value)}
+                      placeholder="gsk_..."
+                      className="flex-grow px-2.5 py-1 rounded-[7px] bg-black/60 border border-[#484640] text-white text-[11px] font-mono focus:outline-none focus:border-[#0A84FF]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+                      className="px-2.5 py-1 rounded-[7px] bg-white/[0.06] hover:bg-white/[0.1] text-[10.5px] text-[#C4C2BC] cursor-pointer"
+                    >
+                      {showApiKeyInput ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Apple Inset Settings Group */}
+                <div className="chatbox-settings-group rounded-[10px] bg-black/40 border border-white/[0.08] divide-y divide-white/[0.06] overflow-hidden">
+                  {/* Row 1: Microphone Input Device */}
+                  <div className="flex items-center justify-between p-2.5">
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <span className="text-[11.5px] font-medium text-white truncate">
+                        Microphone
+                      </span>
+                      <span className="text-[9.5px] text-[#A09E96] truncate">
+                        Audio input source
+                      </span>
+                    </div>
+                    <select
+                      value={dictation.settings.inputDeviceId || 'default'}
+                      onChange={(e) =>
+                        dictation.setInputDeviceId(e.target.value)
+                      }
+                      onFocus={() => dictation.refreshDevices()}
+                      className="bg-black/60 text-white border border-[#484640] rounded-[7px] px-2.5 py-1 text-[11px] focus:outline-none focus:border-[#0A84FF] cursor-pointer max-w-[190px] truncate"
+                    >
+                      <option value="default">Default Microphone</option>
+                      {dictation.availableDevices.map((dev) => (
+                        <option key={dev.deviceId} value={dev.deviceId}>
+                          {dev.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
-                  <div className="flex flex-col gap-1 p-2.5">
-                    <span className="text-[9.5px] uppercase font-semibold text-[#A09E96] tracking-wide">
-                      Activation
-                    </span>
+                  {/* Row 2: Target Language */}
+                  <div className="flex items-center justify-between p-2.5">
+                    <div className="flex flex-col">
+                      <span className="text-[11.5px] font-medium text-white">
+                        Translate Speech
+                      </span>
+                      <span className="text-[9.5px] text-[#A09E96]">
+                        Target output language
+                      </span>
+                    </div>
                     <select
-                      value={dictation.settings.activationMode}
+                      value={dictation.settings.targetLanguage}
                       onChange={(e) =>
-                        dictation.setActivationMode(
-                          e.target.value as DictationActivation
-                        )
+                        dictation.setTargetLanguage(e.target.value)
                       }
-                      className="bg-black/60 text-white border border-[#484640] rounded-[6px] px-2 py-1 text-[10.5px] focus:outline-none focus:border-[#0A84FF] cursor-pointer"
+                      className="bg-black/60 text-white border border-[#484640] rounded-[7px] px-2.5 py-1 text-[11px] focus:outline-none focus:border-[#0A84FF] cursor-pointer"
                     >
-                      <option value="toggle">Toggle (Click)</option>
-                      <option value="ptt">Push-to-Talk</option>
+                      {SUPPORTED_LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.label}
+                        </option>
+                      ))}
                     </select>
+                  </div>
+
+                  {/* Row 2: Format & Activation */}
+                  <div className="grid grid-cols-2 divide-x divide-white/[0.06]">
+                    <div className="flex flex-col gap-1 p-2.5">
+                      <span className="text-[9.5px] uppercase font-semibold text-[#A09E96] tracking-wide">
+                        Format
+                      </span>
+                      <select
+                        value={dictation.settings.format}
+                        onChange={(e) =>
+                          dictation.setFormat(e.target.value as DictationFormat)
+                        }
+                        className="bg-black/60 text-white border border-[#484640] rounded-[6px] px-2 py-1 text-[10.5px] focus:outline-none focus:border-[#0A84FF] cursor-pointer"
+                      >
+                        <option value="translation_only">
+                          Translation Only
+                        </option>
+                        <option value="bilingual">Bilingual</option>
+                        <option value="original_only">Original Voice</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1 p-2.5">
+                      <span className="text-[9.5px] uppercase font-semibold text-[#A09E96] tracking-wide">
+                        Activation
+                      </span>
+                      <select
+                        value={dictation.settings.activationMode}
+                        onChange={(e) =>
+                          dictation.setActivationMode(
+                            e.target.value as DictationActivation
+                          )
+                        }
+                        className="bg-black/60 text-white border border-[#484640] rounded-[6px] px-2 py-1 text-[10.5px] focus:outline-none focus:border-[#0A84FF] cursor-pointer"
+                      >
+                        <option value="toggle">Toggle (Click)</option>
+                        <option value="ptt">Push-to-Talk</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Auto-Send Switch */}
+                  <div className="flex items-center justify-between p-2.5">
+                    <div className="flex flex-col">
+                      <span className="text-[11.5px] font-medium text-white">
+                        Auto-Send to Chatbox
+                      </span>
+                      <span className="text-[9.5px] text-[#A09E96]">
+                        Broadcasts automatically on voice pause
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={dictation.settings.autoSend}
+                      onClick={() =>
+                        dictation.setAutoSend(!dictation.settings.autoSend)
+                      }
+                      className={classNames(
+                        'ios-switch w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-[#484640] cursor-pointer',
+                        dictation.settings.autoSend
+                          ? 'bg-[#0A84FF]'
+                          : 'bg-white/10'
+                      )}
+                    >
+                      <div
+                        className={classNames(
+                          'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
+                          dictation.settings.autoSend
+                            ? 'translate-x-[16px]'
+                            : 'translate-x-0'
+                        )}
+                      />
+                    </button>
                   </div>
                 </div>
 
-                {/* Row 3: Auto-Send Switch */}
-                <div className="flex items-center justify-between p-2.5">
-                  <div className="flex flex-col">
-                    <span className="text-[11.5px] font-medium text-white">
-                      Auto-Send to Chatbox
+                {/* Minimal Live VU Audio Meter */}
+                <div className="chatbox-meter p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08] flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-[10.5px]">
+                    <span className="text-[#A09E96] font-medium flex items-center gap-2">
+                      <span
+                        className={classNames(
+                          'w-2 h-2 rounded-full transition-colors',
+                          dictation.isListening
+                            ? 'bg-[#30D158] animate-pulse'
+                            : dictation.isProcessing
+                              ? 'bg-amber-400 animate-spin'
+                              : 'bg-[#66645E]'
+                        )}
+                      />
+                      {dictation.isListening ? (
+                        <span className="text-[#E0DFDC] font-medium">
+                          Listening ·{' '}
+                          <span className="text-white font-semibold">
+                            Cloud Whisper
+                          </span>
+                        </span>
+                      ) : dictation.isProcessing ? (
+                        <span className="text-amber-300 font-medium">
+                          Transcribing with Whisper v3...
+                        </span>
+                      ) : (
+                        <span>Microphone Standby (Cloud Whisper)</span>
+                      )}
                     </span>
-                    <span className="text-[9.5px] text-[#A09E96]">
-                      Broadcasts automatically on voice pause
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded text-[8.5px] font-semibold uppercase tracking-wider bg-[#0A84FF]/15 text-[#5AC8FA] border border-[#0A84FF]/30">
+                        Whisper v3
+                      </span>
+                      <span className="font-mono text-[9.5px] text-[#A09E96]">
+                        {dictation.audioLevel}%
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={dictation.settings.autoSend}
-                    onClick={() =>
-                      dictation.setAutoSend(!dictation.settings.autoSend)
-                    }
-                    className={classNames(
-                      'ios-switch w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-[#484640] cursor-pointer',
-                      dictation.settings.autoSend
-                        ? 'bg-[#0A84FF]'
-                        : 'bg-white/10'
-                    )}
-                  >
+                  <div className="w-full h-1 bg-black/60 rounded-full overflow-hidden border border-white/[0.04]">
                     <div
                       className={classNames(
-                        'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
-                        dictation.settings.autoSend
-                          ? 'translate-x-[16px]'
-                          : 'translate-x-0'
+                        'h-full transition-all duration-75 rounded-full',
+                        dictation.audioLevel > 60
+                          ? 'bg-amber-400'
+                          : dictation.audioLevel > 20
+                            ? 'bg-[#30D158]'
+                            : 'bg-[#0A84FF]'
                       )}
+                      style={{ width: `${dictation.audioLevel}%` }}
                     />
-                  </button>
-                </div>
-              </div>
-
-              {/* Minimal Live VU Audio Meter */}
-              <div className="chatbox-meter p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08] flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-[10.5px]">
-                  <span className="text-[#A09E96] font-medium flex items-center gap-2">
-                    <span
-                      className={classNames(
-                        'w-2 h-2 rounded-full transition-colors',
-                        dictation.isListening
-                          ? 'bg-[#30D158] animate-pulse'
-                          : dictation.isProcessing
-                            ? 'bg-amber-400 animate-spin'
-                            : 'bg-[#66645E]'
-                      )}
-                    />
-                    {dictation.isListening ? (
-                      <span className="text-[#E0DFDC] font-medium">
-                        Listening ·{' '}
-                        <span className="text-white font-semibold">
-                          Cloud Whisper
-                        </span>
-                      </span>
-                    ) : dictation.isProcessing ? (
-                      <span className="text-amber-300 font-medium">
-                        Transcribing with Whisper v3...
-                      </span>
-                    ) : (
-                      <span>Microphone Standby (Cloud Whisper)</span>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded text-[8.5px] font-semibold uppercase tracking-wider bg-[#0A84FF]/15 text-[#5AC8FA] border border-[#0A84FF]/30">
-                      Whisper v3
-                    </span>
-                    <span className="font-mono text-[9.5px] text-[#A09E96]">
-                      {dictation.audioLevel}%
-                    </span>
                   </div>
                 </div>
-                <div className="w-full h-1 bg-black/60 rounded-full overflow-hidden border border-white/[0.04]">
-                  <div
+
+                {/* Error Notice */}
+                {dictation.error && (
+                  <div className="p-2.5 rounded-[8px] bg-red-500/15 border border-red-500/30 text-red-300 text-[11px]">
+                    {dictation.error}
+                  </div>
+                )}
+
+                {/* Primary Action Button */}
+                {dictation.settings.activationMode === 'ptt' ? (
+                  <button
+                    type="button"
+                    onMouseDown={() => dictation.startListening()}
+                    onMouseUp={() => dictation.stopListening()}
+                    onTouchStart={() => dictation.startListening()}
+                    onTouchEnd={() => dictation.stopListening()}
                     className={classNames(
-                      'h-full transition-all duration-75 rounded-full',
-                      dictation.audioLevel > 60
-                        ? 'bg-amber-400'
-                        : dictation.audioLevel > 20
-                          ? 'bg-[#30D158]'
-                          : 'bg-[#0A84FF]'
+                      'w-full py-2.5 rounded-[10px] font-semibold text-[12px] flex items-center justify-center gap-2 transition-all select-none cursor-pointer shadow-md',
+                      dictation.isListening
+                        ? 'bg-[#FF3B30] hover:bg-[#D70015] text-white ring-2 ring-red-400/40 scale-[0.99]'
+                        : 'bg-[#0A84FF] hover:bg-[#0071E3] text-white'
                     )}
-                    style={{ width: `${dictation.audioLevel}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Error Notice */}
-              {dictation.error && (
-                <div className="p-2.5 rounded-[8px] bg-red-500/15 border border-red-500/30 text-red-300 text-[11px]">
-                  {dictation.error}
-                </div>
-              )}
-
-              {/* Primary Action Button */}
-              {dictation.settings.activationMode === 'ptt' ? (
-                <button
-                  type="button"
-                  onMouseDown={() => dictation.startListening()}
-                  onMouseUp={() => dictation.stopListening()}
-                  onTouchStart={() => dictation.startListening()}
-                  onTouchEnd={() => dictation.stopListening()}
-                  className={classNames(
-                    'w-full py-2.5 rounded-[10px] font-semibold text-[12px] flex items-center justify-center gap-2 transition-all select-none cursor-pointer shadow-md',
-                    dictation.isListening
-                      ? 'bg-[#FF3B30] hover:bg-[#D70015] text-white ring-2 ring-red-400/40 scale-[0.99]'
-                      : 'bg-[#0A84FF] hover:bg-[#0071E3] text-white'
-                  )}
-                >
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
                   >
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="22" />
-                  </svg>
-                  <span>
-                    {dictation.isListening
-                      ? 'Release to Send (Cloud Whisper)'
-                      : 'Hold to Speak (Cloud Whisper)'}
-                  </span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  style={{ WebkitAppRegion: 'no-drag' } as any}
-                  onClick={() => dictation.toggleListening()}
-                  className={classNames(
-                    'w-full py-2.5 rounded-[10px] font-semibold text-[12px] flex items-center justify-center gap-2 transition-all select-none cursor-pointer shadow-md',
-                    dictation.isListening
-                      ? 'bg-[#FF3B30] hover:bg-[#D70015] text-white ring-2 ring-red-400/40'
-                      : 'bg-[#0A84FF] hover:bg-[#0071E3] text-white'
-                  )}
-                >
-                  {dictation.isListening ? (
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <rect x="6" y="6" width="12" height="12" rx="2" />
-                    </svg>
-                  ) : (
                     <svg
                       width="15"
                       height="15"
@@ -1249,429 +1282,474 @@ export function ChatboxDropdown({ dock = false }: { dock?: boolean }) {
                       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                       <line x1="12" y1="19" x2="12" y2="22" />
                     </svg>
-                  )}
-                  <span>
-                    {dictation.isListening
-                      ? 'Stop Listening (Cloud Whisper)'
-                      : 'Start Dictation (Cloud Whisper)'}
-                  </span>
-                </button>
-              )}
-
-              {/* Live Output Card */}
-              {(dictation.finalTranscript ||
-                dictation.interimTranscript ||
-                dictation.translatedText) && (
-                <div className="p-2.5 rounded-[10px] bg-black/50 border border-white/[0.08] flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-[10px] text-[#A09E96]">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold uppercase tracking-wide">
-                        Recognized Speech
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/[0.06] text-[#A09E96] font-mono">
-                        Whisper v3
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (dictation.translatedText) {
-                          setChatboxCustomPinnedText(dictation.translatedText);
-                          setChatboxCustomPinnedEnabled(true);
-                        }
-                      }}
-                      className="text-[#30D158] hover:underline cursor-pointer font-medium flex items-center gap-1"
-                    >
-                      <span>Pin as Sticky</span>
-                    </button>
-                  </div>
-                  <div className="text-[11.5px] text-[#E0DFDC] bg-black/40 p-2.5 rounded-[8px] border border-white/[0.04]">
-                    {dictation.finalTranscript ||
-                      dictation.interimTranscript ||
-                      '—'}
-                  </div>
-
-                  {dictation.translatedText &&
-                    dictation.settings.targetLanguage !== 'none' && (
-                      <>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
-                          Translation (
-                          {dictation.settings.targetLanguage.toUpperCase()})
-                        </span>
-                        <div className="text-[12px] font-medium text-emerald-300 bg-emerald-950/20 p-2.5 rounded-[8px] border border-emerald-500/20">
-                          {dictation.translatedText}
-                        </div>
-                      </>
-                    )}
-
-                  <div className="flex items-center justify-end gap-1.5 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => dictation.sendCurrentPreview()}
-                      className="px-3 py-1 rounded-[7px] bg-[#0A84FF] hover:bg-[#0071E3] text-white font-medium text-[11px] cursor-pointer"
-                    >
-                      Send to Chatbox
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Mode 2: Sticky Design / Status Text */}
-          {activeMode === 'pinned' && (
-            <div
-              id="broadcast-panel-pinned"
-              role="tabpanel"
-              aria-labelledby="broadcast-tab-pinned"
-              className="chatbox-mode flex flex-col gap-2.5"
-            >
-              <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
-                <div className="flex flex-col">
-                  <span className="text-[11.5px] font-medium text-white">
-                    Sticky Status Text
-                  </span>
-                  <span className="text-[9.5px] text-[#A09E96]">
-                    Persistent text above avatar
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChatboxCustomPinnedEnabled(
-                      !floorAnchor.chatboxCustomPinnedEnabled
-                    );
-                  }}
-                  className={classNames(
-                    'ios-switch w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-[#484640] cursor-pointer',
-                    floorAnchor.chatboxCustomPinnedEnabled
-                      ? 'bg-[#30D158]'
-                      : 'bg-white/10'
-                  )}
-                  title="Keep this message displayed permanently in VRChat"
-                  role="switch"
-                  aria-checked={floorAnchor.chatboxCustomPinnedEnabled}
-                  aria-label="Sticky status text"
-                >
-                  <div
+                    <span>
+                      {dictation.isListening
+                        ? 'Release to Send (Cloud Whisper)'
+                        : 'Hold to Speak (Cloud Whisper)'}
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    style={{ WebkitAppRegion: 'no-drag' } as any}
+                    onClick={() => dictation.toggleListening()}
                     className={classNames(
-                      'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
-                      floorAnchor.chatboxCustomPinnedEnabled
-                        ? 'translate-x-[16px]'
-                        : 'translate-x-0'
+                      'w-full py-2.5 rounded-[10px] font-semibold text-[12px] flex items-center justify-center gap-2 transition-all select-none cursor-pointer shadow-md',
+                      dictation.isListening
+                        ? 'bg-[#FF3B30] hover:bg-[#D70015] text-white ring-2 ring-red-400/40'
+                        : 'bg-[#0A84FF] hover:bg-[#0071E3] text-white'
                     )}
-                  />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <input
-                  type="text"
-                  value={floorAnchor.chatboxCustomPinnedText}
-                  onChange={(e) => setChatboxCustomPinnedText(e.target.value)}
-                  placeholder="Write your status..."
-                  aria-label="Sticky status message"
-                  maxLength={140}
-                  className="w-full px-2.5 py-2 rounded-[8px] bg-black/40 border border-[#484640] text-white placeholder-[#787670] text-[12px] focus:outline-none focus:ring-0 focus:border-[#0A84FF] focus-visible:outline-none transition-colors"
-                />
-                <div className="flex items-center justify-between text-[10px] text-[#A09E96]">
-                  <span>Repeats periodically in VRChat</span>
-                  {floorAnchor.chatboxCustomPinnedEnabled && (
-                    <span className="text-[#30D158] font-medium">Active</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Mode 3: Apple Music Live Now Playing */}
-          {activeMode === 'music' && (
-            <div
-              id="broadcast-panel-music"
-              role="tabpanel"
-              aria-labelledby="broadcast-tab-music"
-              className="chatbox-mode flex flex-col gap-2.5"
-            >
-              <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
-                <div className="flex flex-col">
-                  <span className="text-[11.5px] font-medium text-white flex items-center gap-1.5">
-                    <span>Apple Music Now Playing</span>
-                    {appleMusicInfo?.playing && (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] bg-[#FA2D48]/20 text-[#FA2D48] border border-[#FA2D48]/30">
-                        Playing
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-[9.5px] text-[#A09E96]">
-                    Live song &amp; artist broadcast
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChatboxAppleMusicEnabled(
-                      !floorAnchor.chatboxAppleMusicEnabled
-                    );
-                  }}
-                  className={classNames(
-                    'ios-switch w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-[#484640] cursor-pointer',
-                    floorAnchor.chatboxAppleMusicEnabled
-                      ? 'bg-[#30D158]'
-                      : 'bg-white/10'
-                  )}
-                  title="Stream current music track to VRChat chatbox"
-                  role="switch"
-                  aria-checked={floorAnchor.chatboxAppleMusicEnabled}
-                  aria-label="Apple music broadcast"
-                >
-                  <div
-                    className={classNames(
-                      'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
-                      floorAnchor.chatboxAppleMusicEnabled
-                        ? 'translate-x-[16px]'
-                        : 'translate-x-0'
-                    )}
-                  />
-                </button>
-              </div>
-
-              {/* Music Widget Card */}
-              <div className="chatbox-widget p-3 rounded-[10px] bg-black/40 border border-white/[0.08] flex items-center gap-3">
-                <div
-                  className={classNames(
-                    'w-10 h-10 rounded-[8px] flex items-center justify-center text-lg shrink-0 transition-transform duration-300 select-none',
-                    appleMusicInfo.playing
-                      ? 'bg-[#FA2D48]/20 border border-[#FA2D48]/40 text-[#FA2D48]'
-                      : 'bg-white/[0.04] border border-white/[0.06] text-white/40'
-                  )}
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
                   >
-                    <path d="M9 18V5l12-2v13" />
-                    <circle cx="6" cy="18" r="3" />
-                    <circle cx="18" cy="16" r="3" />
-                  </svg>
-                </div>
-                <div className="flex flex-col min-w-0 flex-grow">
-                  <span className="text-[12px] font-medium text-white truncate">
-                    {appleMusicInfo.track || 'No track playing'}
-                  </span>
-                  <span className="text-[10px] text-[#A09E96] truncate">
-                    {appleMusicInfo.artist
-                      ? `${appleMusicInfo.artist}${appleMusicInfo.album ? ` — ${appleMusicInfo.album}` : ''}`
-                      : 'Launch Apple Music on Mac to broadcast'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+                    {dictation.isListening ? (
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <rect x="6" y="6" width="12" height="12" rx="2" />
+                      </svg>
+                    ) : (
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                      </svg>
+                    )}
+                    <span>
+                      {dictation.isListening
+                        ? 'Stop Listening (Cloud Whisper)'
+                        : 'Start Dictation (Cloud Whisper)'}
+                    </span>
+                  </button>
+                )}
 
-          {/* Mode 4: Fake / Simulated BPM Tracker */}
-          {activeMode === 'bpm' && (
-            <div
-              id="broadcast-panel-bpm"
-              role="tabpanel"
-              aria-labelledby="broadcast-tab-bpm"
-              className="chatbox-mode flex flex-col gap-2.5"
-            >
-              <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
-                <div className="flex flex-col">
-                  <span className="text-[11.5px] font-medium text-white flex items-center gap-1.5">
-                    <span>Simulated Heart Rate</span>
-                    {fakeBpm.enabled && (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] bg-[#FF3B30]/20 text-[#FF453A] border border-[#FF3B30]/30 font-medium">
-                        Active
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-[9.5px] text-[#A09E96]">
-                    {fakeBpm.presetId === 'adaptive'
-                      ? 'Simulated from live tracker activity'
-                      : 'Natural fluctuation (2–3s)'}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => fakeBpm.setEnabled(!fakeBpm.enabled)}
-                  className={classNames(
-                    'ios-switch w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-[#484640] cursor-pointer',
-                    fakeBpm.enabled ? 'bg-[#FF3B30]' : 'bg-white/10'
-                  )}
-                  title="Toggle Fake BPM simulation in Chatbox"
-                  role="switch"
-                  aria-checked={fakeBpm.enabled}
-                  aria-label="Simulated heart rate"
-                >
-                  <div
+                {/* Live Output Card */}
+                {(dictation.finalTranscript ||
+                  dictation.interimTranscript ||
+                  dictation.translatedText) && (
+                  <div className="p-2.5 rounded-[10px] bg-black/50 border border-white/[0.08] flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-[10px] text-[#A09E96]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold uppercase tracking-wide">
+                          Recognized Speech
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-white/[0.06] text-[#A09E96] font-mono">
+                          Whisper v3
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (dictation.translatedText) {
+                            setChatboxCustomPinnedText(
+                              dictation.translatedText
+                            );
+                            setChatboxCustomPinnedEnabled(true);
+                          }
+                        }}
+                        className="text-[#30D158] hover:underline cursor-pointer font-medium flex items-center gap-1"
+                      >
+                        <span>Pin as Sticky</span>
+                      </button>
+                    </div>
+                    <div className="text-[11.5px] text-[#E0DFDC] bg-black/40 p-2.5 rounded-[8px] border border-white/[0.04]">
+                      {dictation.finalTranscript ||
+                        dictation.interimTranscript ||
+                        '—'}
+                    </div>
+
+                    {dictation.translatedText &&
+                      dictation.settings.targetLanguage !== 'none' && (
+                        <>
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+                            Translation (
+                            {dictation.settings.targetLanguage.toUpperCase()})
+                          </span>
+                          <div className="text-[12px] font-medium text-emerald-300 bg-emerald-950/20 p-2.5 rounded-[8px] border border-emerald-500/20">
+                            {dictation.translatedText}
+                          </div>
+                        </>
+                      )}
+
+                    <div className="flex items-center justify-end gap-1.5 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => dictation.sendCurrentPreview()}
+                        className="px-3 py-1 rounded-[7px] bg-[#0A84FF] hover:bg-[#0071E3] text-white font-medium text-[11px] cursor-pointer"
+                      >
+                        Send to Chatbox
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Mode 2: Sticky Design / Status Text */}
+            {activeMode === 'pinned' && (
+              <div
+                id="broadcast-panel-pinned"
+                role="tabpanel"
+                aria-labelledby="broadcast-tab-pinned"
+                className="chatbox-mode flex flex-col gap-2.5"
+              >
+                <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
+                  <div className="flex flex-col">
+                    <span className="text-[11.5px] font-medium text-white">
+                      Sticky Status Text
+                    </span>
+                    <span className="text-[9.5px] text-[#A09E96]">
+                      Persistent text above avatar
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatboxCustomPinnedEnabled(
+                        !floorAnchor.chatboxCustomPinnedEnabled
+                      );
+                    }}
                     className={classNames(
-                      'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
-                      fakeBpm.enabled ? 'translate-x-[16px]' : 'translate-x-0'
+                      'ios-switch w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-[#484640] cursor-pointer',
+                      floorAnchor.chatboxCustomPinnedEnabled
+                        ? 'bg-[#30D158]'
+                        : 'bg-white/10'
                     )}
+                    title="Keep this message displayed permanently in VRChat"
+                    role="switch"
+                    aria-checked={floorAnchor.chatboxCustomPinnedEnabled}
+                    aria-label="Sticky status text"
+                  >
+                    <div
+                      className={classNames(
+                        'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
+                        floorAnchor.chatboxCustomPinnedEnabled
+                          ? 'translate-x-[16px]'
+                          : 'translate-x-0'
+                      )}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <input
+                    type="text"
+                    value={floorAnchor.chatboxCustomPinnedText}
+                    onChange={(e) => setChatboxCustomPinnedText(e.target.value)}
+                    placeholder="Write your status..."
+                    aria-label="Sticky status message"
+                    maxLength={140}
+                    className="w-full px-2.5 py-2 rounded-[8px] bg-black/40 border border-[#484640] text-white placeholder-[#787670] text-[12px] focus:outline-none focus:ring-0 focus:border-[#0A84FF] focus-visible:outline-none transition-colors"
                   />
-                </button>
+                  <div className="flex items-center justify-between text-[10px] text-[#A09E96]">
+                    <span>Repeats periodically in VRChat</span>
+                    {floorAnchor.chatboxCustomPinnedEnabled && (
+                      <span className="text-[#30D158] font-medium">Active</span>
+                    )}
+                  </div>
+                </div>
               </div>
+            )}
 
-              {/* Live Heart Widget Card */}
-              <div className="chatbox-widget p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08] flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
+            {/* Mode 3: Apple Music Live Now Playing */}
+            {activeMode === 'music' && (
+              <div
+                id="broadcast-panel-music"
+                role="tabpanel"
+                aria-labelledby="broadcast-tab-music"
+                className="chatbox-mode flex flex-col gap-2.5"
+              >
+                <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
+                  <div className="flex flex-col">
+                    <span className="text-[11.5px] font-medium text-white flex items-center gap-1.5">
+                      <span>Apple Music Now Playing</span>
+                      {appleMusicInfo?.playing && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-[#FA2D48]/20 text-[#FA2D48] border border-[#FA2D48]/30">
+                          Playing
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[9.5px] text-[#A09E96]">
+                      Live song &amp; artist broadcast
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatboxAppleMusicEnabled(
+                        !floorAnchor.chatboxAppleMusicEnabled
+                      );
+                    }}
+                    className={classNames(
+                      'ios-switch w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-[#484640] cursor-pointer',
+                      floorAnchor.chatboxAppleMusicEnabled
+                        ? 'bg-[#30D158]'
+                        : 'bg-white/10'
+                    )}
+                    title="Stream current music track to VRChat chatbox"
+                    role="switch"
+                    aria-checked={floorAnchor.chatboxAppleMusicEnabled}
+                    aria-label="Apple music broadcast"
+                  >
+                    <div
+                      className={classNames(
+                        'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
+                        floorAnchor.chatboxAppleMusicEnabled
+                          ? 'translate-x-[16px]'
+                          : 'translate-x-0'
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {/* Music Widget Card */}
+                <div className="chatbox-widget p-3 rounded-[10px] bg-black/40 border border-white/[0.08] flex items-center gap-3">
                   <div
                     className={classNames(
-                      'w-9 h-9 rounded-[8px] flex items-center justify-center text-lg shrink-0 transition-transform duration-300 select-none',
-                      fakeBpm.enabled
-                        ? 'bg-[#FF3B30]/20 border border-[#FF3B30]/40 text-[#FF453A] animate-pulse'
+                      'w-10 h-10 rounded-[8px] flex items-center justify-center text-lg shrink-0 transition-transform duration-300 select-none',
+                      appleMusicInfo.playing
+                        ? 'bg-[#FA2D48]/20 border border-[#FA2D48]/40 text-[#FA2D48]'
                         : 'bg-white/[0.04] border border-white/[0.06] text-white/40'
                     )}
                   >
                     <svg
-                      aria-hidden="true"
-                      width="22"
-                      height="22"
+                      width="20"
+                      height="20"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.75"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
+                      <path d="M9 18V5l12-2v13" />
+                      <circle cx="6" cy="18" r="3" />
+                      <circle cx="18" cy="16" r="3" />
                     </svg>
                   </div>
-                  <div className="flex flex-col">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-xl font-bold font-mono tracking-tight text-white">
-                        {fakeBpm.enabled
-                          ? fakeBpm.available
-                            ? fakeBpm.currentBpm
-                            : '—'
-                          : fakeBpm.preset.base}
-                      </span>
-                      <span className="text-[10.5px] font-semibold text-[#A09E96]">
-                        BPM
-                      </span>
-                      {fakeBpm.enabled && fakeBpm.delta !== 0 && (
-                        <span
-                          className={classNames(
-                            'text-[9.5px] font-mono font-semibold ml-1',
-                            fakeBpm.delta > 0
-                              ? 'text-[#FF453A]'
-                              : 'text-[#30D158]'
-                          )}
-                        >
-                          {fakeBpm.delta > 0
-                            ? `▲ +${fakeBpm.delta}`
-                            : `▼ ${fakeBpm.delta}`}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-[#A09E96]">
-                      {fakeBpm.activityLabel}
+                  <div className="flex flex-col min-w-0 flex-grow">
+                    <span className="text-[12px] font-medium text-white truncate">
+                      {appleMusicInfo.track || 'No track playing'}
+                    </span>
+                    <span className="text-[10px] text-[#A09E96] truncate">
+                      {appleMusicInfo.artist
+                        ? `${appleMusicInfo.artist}${appleMusicInfo.album ? ` — ${appleMusicInfo.album}` : ''}`
+                        : 'Launch Apple Music on Mac to broadcast'}
                     </span>
                   </div>
                 </div>
-
-                <span
-                  className={classNames(
-                    'px-2 py-0.5 rounded text-[9.5px] font-semibold uppercase tracking-wider',
-                    fakeBpm.zone === 'resting'
-                      ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                      : fakeBpm.zone === 'normal'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : fakeBpm.zone === 'elevated'
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                  )}
-                >
-                  {fakeBpm.available ? fakeBpm.zone : 'Paused'}
-                </span>
               </div>
+            )}
 
-              {/* Situation Presets Grid */}
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-[10px] uppercase font-semibold text-[#A09E96] tracking-wide">
-                  <span>Situation Presets</span>
-                  <span className="text-[9px] text-[#787670]">
-                    Target Range
+            {/* Mode 4: Fake / Simulated BPM Tracker */}
+            {activeMode === 'bpm' && (
+              <div
+                id="broadcast-panel-bpm"
+                role="tabpanel"
+                aria-labelledby="broadcast-tab-bpm"
+                className="chatbox-mode flex flex-col gap-2.5"
+              >
+                <div className="chatbox-feature-toggle flex items-center justify-between p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08]">
+                  <div className="flex flex-col">
+                    <span className="text-[11.5px] font-medium text-white flex items-center gap-1.5">
+                      <span>Simulated Heart Rate</span>
+                      {fakeBpm.enabled && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-[#FF3B30]/20 text-[#FF453A] border border-[#FF3B30]/30 font-medium">
+                          Active
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[9.5px] text-[#A09E96]">
+                      {fakeBpm.presetId === 'adaptive'
+                        ? 'Simulated from live tracker activity'
+                        : 'Natural fluctuation (2–3s)'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fakeBpm.setEnabled(!fakeBpm.enabled)}
+                    className={classNames(
+                      'ios-switch w-[34px] h-[18px] rounded-full p-[2px] transition-colors duration-200 relative flex items-center border border-[#484640] cursor-pointer',
+                      fakeBpm.enabled ? 'bg-[#FF3B30]' : 'bg-white/10'
+                    )}
+                    title="Toggle Fake BPM simulation in Chatbox"
+                    role="switch"
+                    aria-checked={fakeBpm.enabled}
+                    aria-label="Simulated heart rate"
+                  >
+                    <div
+                      className={classNames(
+                        'w-[14px] h-[14px] rounded-full bg-white shadow-xs transition-transform duration-150',
+                        fakeBpm.enabled ? 'translate-x-[16px]' : 'translate-x-0'
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {/* Live Heart Widget Card */}
+                <div className="chatbox-widget p-2.5 rounded-[10px] bg-black/40 border border-white/[0.08] flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={classNames(
+                        'w-9 h-9 rounded-[8px] flex items-center justify-center text-lg shrink-0 transition-transform duration-300 select-none',
+                        fakeBpm.enabled
+                          ? 'bg-[#FF3B30]/20 border border-[#FF3B30]/40 text-[#FF453A] animate-pulse'
+                          : 'bg-white/[0.04] border border-white/[0.06] text-white/40'
+                      )}
+                    >
+                      <svg
+                        aria-hidden="true"
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                      >
+                        <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
+                      </svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-xl font-bold font-mono tracking-tight text-white">
+                          {fakeBpm.enabled
+                            ? fakeBpm.available
+                              ? fakeBpm.currentBpm
+                              : '—'
+                            : fakeBpm.preset.base}
+                        </span>
+                        <span className="text-[10.5px] font-semibold text-[#A09E96]">
+                          BPM
+                        </span>
+                        {fakeBpm.enabled && fakeBpm.delta !== 0 && (
+                          <span
+                            className={classNames(
+                              'text-[9.5px] font-mono font-semibold ml-1',
+                              fakeBpm.delta > 0
+                                ? 'text-[#FF453A]'
+                                : 'text-[#30D158]'
+                            )}
+                          >
+                            {fakeBpm.delta > 0
+                              ? `▲ +${fakeBpm.delta}`
+                              : `▼ ${fakeBpm.delta}`}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-[#A09E96]">
+                        {fakeBpm.activityLabel}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span
+                    className={classNames(
+                      'px-2 py-0.5 rounded text-[9.5px] font-semibold uppercase tracking-wider',
+                      fakeBpm.zone === 'resting'
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                        : fakeBpm.zone === 'normal'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : fakeBpm.zone === 'elevated'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                    )}
+                  >
+                    {fakeBpm.available ? fakeBpm.zone : 'Paused'}
                   </span>
                 </div>
 
-                <div className="chatbox-presets grid grid-cols-3 gap-1.5 overflow-hidden">
-                  {fakeBpm.allPresets.map((p, idx) => {
-                    const isSelected = fakeBpm.presetId === p.id;
-                    const isJustSelected = selectedBpmPresetAnim?.id === p.id;
-                    const isOtherBouncing =
-                      selectedBpmPresetAnim !== null &&
-                      selectedBpmPresetAnim.id !== p.id;
-                    const selectedIdx = selectedBpmPresetAnim
-                      ? fakeBpm.allPresets.findIndex(
-                          (item) => item.id === selectedBpmPresetAnim.id
-                        )
-                      : -1;
-                    const dist =
-                      selectedIdx >= 0 ? Math.abs(idx - selectedIdx) : 0;
-                    const isLeftOfSelected =
-                      selectedIdx >= 0 && idx < selectedIdx;
-                    const isRightOfSelected =
-                      selectedIdx >= 0 && idx > selectedIdx;
-                    const bounceDelay = `${(dist * 0.045).toFixed(3)}s`;
-                    const bounceAmp = Math.max(0.2, 1 - dist * 0.25);
+                {/* Situation Presets Grid */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-[10px] uppercase font-semibold text-[#A09E96] tracking-wide">
+                    <span>Situation Presets</span>
+                    <span className="text-[9px] text-[#787670]">
+                      Target Range
+                    </span>
+                  </div>
 
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() =>
-                          handleBpmPresetClick(p.id as BpmPresetId)
-                        }
-                        aria-pressed={isSelected}
-                        title={p.description}
-                        style={
-                          isOtherBouncing
-                            ? ({
-                                '--push-amp': bounceAmp.toFixed(2),
-                                animationDelay: bounceDelay,
-                              } as React.CSSProperties)
-                            : undefined
-                        }
-                        className={classNames(
-                          'flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-[7px] border text-left transition-all cursor-pointer select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white',
-                          p.id === 'adaptive' && 'col-span-3',
-                          isSelected
-                            ? 'bg-[#FF3B30]/15 border-[#FF3B30]/50 shadow-xs'
-                            : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.07] text-[#C4C2BC]',
-                          isJustSelected && 'animate-preset-pop',
-                          isOtherBouncing &&
-                            isLeftOfSelected &&
-                            'animate-preset-push-left',
-                          isOtherBouncing &&
-                            isRightOfSelected &&
-                            'animate-preset-push-right'
-                        )}
-                      >
-                        <span
+                  <div className="chatbox-presets grid grid-cols-3 gap-1.5 overflow-hidden">
+                    {fakeBpm.allPresets.map((p, idx) => {
+                      const isSelected = fakeBpm.presetId === p.id;
+                      const isJustSelected = selectedBpmPresetAnim?.id === p.id;
+                      const isOtherBouncing =
+                        selectedBpmPresetAnim !== null &&
+                        selectedBpmPresetAnim.id !== p.id;
+                      const selectedIdx = selectedBpmPresetAnim
+                        ? fakeBpm.allPresets.findIndex(
+                            (item) => item.id === selectedBpmPresetAnim.id
+                          )
+                        : -1;
+                      const dist =
+                        selectedIdx >= 0 ? Math.abs(idx - selectedIdx) : 0;
+                      const isLeftOfSelected =
+                        selectedIdx >= 0 && idx < selectedIdx;
+                      const isRightOfSelected =
+                        selectedIdx >= 0 && idx > selectedIdx;
+                      const bounceDelay = `${(dist * 0.045).toFixed(3)}s`;
+                      const bounceAmp = Math.max(0.2, 1 - dist * 0.25);
+
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() =>
+                            handleBpmPresetClick(p.id as BpmPresetId)
+                          }
+                          aria-pressed={isSelected}
+                          title={p.description}
+                          style={
+                            isOtherBouncing
+                              ? ({
+                                  '--push-amp': bounceAmp.toFixed(2),
+                                  animationDelay: bounceDelay,
+                                } as React.CSSProperties)
+                              : undefined
+                          }
                           className={classNames(
-                            'text-[10.5px] font-medium truncate flex items-center gap-1',
-                            isSelected ? 'text-white' : 'text-[#C4C2BC]'
+                            'flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-[7px] border text-left transition-all cursor-pointer select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-white',
+                            p.id === 'adaptive' && 'col-span-3',
+                            isSelected
+                              ? 'bg-[#FF3B30]/15 border-[#FF3B30]/50 shadow-xs'
+                              : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.07] text-[#C4C2BC]',
+                            isJustSelected && 'animate-preset-pop',
+                            isOtherBouncing &&
+                              isLeftOfSelected &&
+                              'animate-preset-push-left',
+                            isOtherBouncing &&
+                              isRightOfSelected &&
+                              'animate-preset-push-right'
                           )}
                         >
-                          {isSelected && <span aria-hidden="true">✓</span>}
-                          {p.label}
-                        </span>
-                        <span className="font-mono text-[9px] text-[#A09E96] shrink-0">
-                          {p.min}–{p.max}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span
+                            className={classNames(
+                              'text-[10.5px] font-medium truncate flex items-center gap-1',
+                              isSelected ? 'text-white' : 'text-[#C4C2BC]'
+                            )}
+                          >
+                            {isSelected && <span aria-hidden="true">✓</span>}
+                            {p.label}
+                          </span>
+                          <span className="font-mono text-[9px] text-[#A09E96] shrink-0">
+                            {p.min}–{p.max}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Unified Quick-Send Composer (Always Accessible) */}
           <form
@@ -2056,7 +2134,7 @@ export function TopBar({
                     >
                       <div
                         className={classNames(
-                          'w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ease-mac-spring',
+                          'w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-transform duration-200 ease-out',
                           isQuestStandalone
                             ? 'translate-x-[16px]'
                             : 'translate-x-0'

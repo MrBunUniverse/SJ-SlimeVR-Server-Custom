@@ -22,6 +22,8 @@ export function useDataFeedConfig() {
     trackerData.rawMagneticVector = true;
     trackerData.stayAligned = true;
     trackerData.recovery = true;
+    trackerData.adaptiveDrift = true;
+    trackerData.filterHealth = true;
 
     const dataMask = new DeviceDataMaskT();
     dataMask.deviceData = true;

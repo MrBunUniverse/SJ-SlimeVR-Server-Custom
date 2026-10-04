@@ -41,7 +41,8 @@ export function ManualMountingPage() {
         mountingOrientationDegrees
       );
       assignreq.trackerId = td.tracker.trackerId;
-      assignreq.allowDriftCompensation = false;
+      assignreq.allowDriftCompensation =
+        td.tracker.info?.allowDriftCompensation ?? false;
 
       sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
       Sentry.metrics.count('manual_mounting_set', 1, {
@@ -130,7 +131,8 @@ export function ManualMountingPageStayAligned({
         mountingOrientationDegrees
       );
       assignreq.trackerId = td.tracker.trackerId;
-      assignreq.allowDriftCompensation = false;
+      assignreq.allowDriftCompensation =
+        td.tracker.info?.allowDriftCompensation ?? false;
 
       sendRPCPacket(RpcMessage.AssignTrackerRequest, assignreq);
       Sentry.metrics.count('manual_mounting_set', 1, {

@@ -1,5 +1,6 @@
 import classNames from 'classnames';
 import { ReactNode, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   LegTweaksTmpChangeT,
   LegTweaksTmpClearT,
@@ -26,6 +27,7 @@ export function MainLayout({
   showToolbarSettings?: boolean;
   full?: boolean;
 }) {
+  const location = useLocation();
   const { completion } = useTrackingChecklist();
   const { sendRPCPacket } = useWebsocketAPI();
   const [ProportionsLastPageOpen, setProportionsLastPageOpen] = useState(true);
@@ -77,7 +79,8 @@ export function MainLayout({
       <div
         style={{ gridArea: 'c' }}
         className={classNames(
-          'overflow-hidden mx-2 my-2 mobile:m-0 min-w-0 min-h-0 pb-20',
+          'overflow-hidden mx-2 my-2 mobile:m-0 min-w-0 min-h-0 h-full',
+          location.pathname !== '/' && 'pb-20',
           'flex flex-col rounded-2xl transition-[background-color,border-radius,box-shadow] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]',
           background && 'glass-panel'
         )}

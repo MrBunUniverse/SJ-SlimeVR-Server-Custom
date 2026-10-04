@@ -1715,17 +1715,42 @@ tracking_checklist-STAY_ALIGNED_CONFIGURED-desc = Record the Stay Aligned poses 
 tracking_checklist-STAY_ALIGNED_CONFIGURED-open = Open Stay Aligned Wizard
 
 tracking_checklist-ignore = Ignore
+tracking_checklist-status-ready-short = Ready
+tracking_checklist-status-incomplete-short = Needs attention
+tracking_checklist-status-partial-short = Warnings
+tracking_checklist-expand = Expand checklist
+tracking_checklist-collapse = Collapse checklist
 
 preview-mocap_mode_soon = Mocap Mode (Soon™)
 preview-disable_render = Disable rendering
+preview-enable_render = Enable rendering
 preview-disabled_render = Rendering disabled
 preview-auto_orbit = Auto-orbit camera
 preview-auto_orbit_stop = Stop camera orbit
+
+home-tracker-target = Target
+home-tracker-connected = Connected
+home-view-select = Tracker view
+home-view-cards = Cards
+home-view-table = Table
+home-view-preview = Skeleton preview
+home-view-preview-hide = Hide skeleton preview
+home-more-resets = More resets
+home-tracker-setup = Tracker setup
+home-tracker-connect = Connect trackers
+home-quest-floor-offset = Floor offset
+home-quest-osc-rate = OSC rate
+home-quest-anchored = Anchored
+home-quest-unanchored = Unanchored
+home-reset-preview-width = Reset preview width
+home-preview-move = Move skeleton preview dock
+home-preview-resize-height = Resize preview dock height
 
 toolbar-mounting_calibration = Mounting Calibration
 toolbar-mounting_calibration-default = Body
 toolbar-mounting_calibration-feet = Feet
 toolbar-mounting_calibration-fingers = Fingers
+toolbar-more_resets = More resets
 toolbar-drift_reset = Drift Reset
 toolbar-assigned_trackers = {$count} trackers assigned
 toolbar-unassigned_trackers = {$count} trackers unassigned

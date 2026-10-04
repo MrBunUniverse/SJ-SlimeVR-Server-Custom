@@ -27,13 +27,22 @@ class TrackerConfig {
 	var totalDriftObservations: Int = 0
 	var autoLearnDrift: Boolean = true
 	var imuProfileOverride: String? = null
+	var adaptiveDriftModelVersion: Int = 1
+	var adaptiveDriftConfidence: Float = 0.0f
+	var adaptiveDriftLastAcceptedAt: Long = 0L
+	var adaptiveDriftLearningPaused: Boolean = false
+	var previousLearnedDriftRateDegPerMin: Float = 0.0f
+	var previousTotalDriftObservations: Int = 0
+	var previousAdaptiveDriftConfidence: Float = 0.0f
+	var previousAdaptiveDriftLastAcceptedAt: Long = 0L
+	var hasPreviousAdaptiveDriftModel: Boolean = false
 
 	constructor()
 
 	constructor(tracker: Tracker) {
 		this.designation = if (tracker.trackerPosition != null) tracker.trackerPosition!!.designation else null
 		this.customName = tracker.customName
-		allowDriftCompensation = tracker.isImu()
+		allowDriftCompensation = tracker.isImu() && tracker.imuType?.name?.contains("BNO") != true
 		shouldHaveMagEnabled = tracker.isImu()
 	}
 

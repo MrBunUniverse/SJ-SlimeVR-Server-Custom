@@ -433,9 +433,11 @@ function createWindow() {
     frame: !isMac ? false : false,
     titleBarStyle: isMac ? 'hiddenInset' : undefined,
     trafficLightPosition: isMac ? { x: 16, y: 14 } : undefined,
-    vibrancy: isMac ? 'under-window' : undefined,
-    visualEffectState: isMac ? 'active' : undefined,
-    backgroundColor: isMac ? '#00000000' : undefined,
+    // Keep the desktop surface opaque so macOS does not continuously composite
+    // the whole window through vibrancy while the app is idle.
+    vibrancy: undefined,
+    visualEffectState: undefined,
+    backgroundColor: isMac ? '#0D1932' : undefined,
     roundedCorners: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

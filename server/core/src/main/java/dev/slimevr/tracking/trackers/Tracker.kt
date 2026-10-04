@@ -11,11 +11,14 @@ import dev.slimevr.util.InterpolationHandler
 import io.eiren.util.BufferedTimer
 import io.github.axisangles.ktmath.Quaternion
 import io.github.axisangles.ktmath.Vector3
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.properties.Delegates
 import kotlin.time.Duration.Companion.microseconds
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
+
+private const val MAX_ACCELERATION_AGE_NANOS = 250_000_000L
 
 const val TIMEOUT_MS = 2_000L
 const val DISCONNECT_MS = 3_000L + TIMEOUT_MS
@@ -113,10 +116,17 @@ class Tracker @JvmOverloads constructor(
 	val usesSleep: Boolean = false,
 ) {
 	private val timer = BufferedTimer(1f)
-	private var timeAtLastUpdate: Long = System.currentTimeMillis()
+	private var timeAtLastUpdate: Long = monotonicMillis()
 	private var timeAtLastRotationUpdate: Long = timeAtLastUpdate
+	private var timeAtLastRotationTimestampNanos: Long = 0L
 	private var timeScheduledSleep: Long = Long.MAX_VALUE
 	private var _rotation = Quaternion.IDENTITY
+	private val pendingSample = AtomicReference<TrackerSample?>(null)
+	private val pendingAcceleration = AtomicReference<TrackerAccelerationSample?>(null)
+	private var lastAccelerationCaptureTimeNanos = 0L
+	@Volatile
+	var mailboxOverruns: Long = 0
+		private set
 
 	// IMU: +z forward, +x left, +y up
 	// SlimeVR: +z backward, +x right, +y up
@@ -140,6 +150,10 @@ class Tracker @JvmOverloads constructor(
 	val recovery: TrackerRecoveryHandler = TrackerRecoveryHandler(this)
 	val filteringHandler: TrackerFilteringHandler = TrackerFilteringHandler()
 	val trackerFlexHandler: TrackerFlexHandler = TrackerFlexHandler(this)
+	val filterHealth: FilterHealth
+		get() = filteringHandler.getHealth()
+	val adaptiveDriftStatus: AdaptiveDriftStatus
+		get() = AdaptiveDriftCompensation.statusFor(this)
 	var batteryVoltage: Float? = null
 	var batteryLevel: Float? = null
 	var batteryRemainingRuntime: Long? = null
@@ -240,9 +254,11 @@ class Tracker @JvmOverloads constructor(
 		}
 		if (this.isImu() && config.allowDriftCompensation == null) {
 			// If value didn't exist, default to true and save
-			resetsHandler.allowDriftCompensation = true
+			val isBno = config.imuProfileOverride?.equals("bno085", ignoreCase = true) == true ||
+				(this.imuType?.name?.contains("BNO") == true && (config.imuProfileOverride.isNullOrEmpty() || config.imuProfileOverride.equals("auto", ignoreCase = true)))
+			resetsHandler.allowDriftCompensation = !isBno
 			if (VRServer.instanceInitialized) {
-				VRServer.instance.configManager.vrConfig.getTracker(this).allowDriftCompensation = true
+				VRServer.instance.configManager.vrConfig.getTracker(this).allowDriftCompensation = !isBno
 				VRServer.instance.configManager.saveConfig()
 			}
 		} else {
@@ -296,13 +312,15 @@ class Tracker @JvmOverloads constructor(
 	 * Synchronized with the VRServer's 1000hz while loop
 	 */
 	fun tick(deltaTime: Float) {
-		val now = System.currentTimeMillis()
+		consumePendingSample()
+		val now = monotonicMillis()
 		val connectionAgeMs = now - timeAtLastUpdate
 		val sampleAgeMs = now - timeAtLastRotationUpdate
+		val livenessAgeMs = if (hasRotation) sampleAgeMs else connectionAgeMs
 		if (usesTimeout) {
-			if (connectionAgeMs > DISCONNECT_MS) {
+			if (livenessAgeMs > DISCONNECT_MS) {
 				status = TrackerStatus.DISCONNECTED
-			} else if (connectionAgeMs > TIMEOUT_MS) {
+			} else if (livenessAgeMs > TIMEOUT_MS) {
 				status = TrackerStatus.TIMED_OUT
 			}
 		}
@@ -312,12 +330,12 @@ class Tracker @JvmOverloads constructor(
 				status = TrackerStatus.TIMED_OUT
 			}
 			// Want to also use timeout but without following disconnect
-			if (System.currentTimeMillis() - timeAtLastUpdate > TIMEOUT_MS) {
+			if (monotonicMillis() - timeAtLastUpdate > TIMEOUT_MS) {
 				status = TrackerStatus.TIMED_OUT
 			}
 		}
 
-		filteringHandler.update()
+		filteringHandler.update(deltaTime, sampleAgeMs)
 		yawResetSmoothing.tick(deltaTime)
 		stayAligned.update()
 		recovery.tick(now, sampleAgeMs)
@@ -327,17 +345,73 @@ class Tracker @JvmOverloads constructor(
 	 * Tells the tracker that it received new data
 	 * NOTE: Use only when rotation is received
 	 */
-	fun dataTick() {
-		val now = System.currentTimeMillis()
-		val gapMs = now - timeAtLastRotationUpdate
-		timer.update()
-		timeAtLastUpdate = now
-		timeAtLastRotationUpdate = now
-		stayAligned.onNewData(_rotation)
-		if (trackRotDirection) {
-			filteringHandler.dataTick(getAdjustedRotation())
+	fun dataTick(timestampNanos: Long = System.nanoTime()) {
+		// Existing synthetic, OSC, HID, and computed trackers call dataTick
+		// synchronously. Network transports use ingestSample so their callbacks
+		// never mutate the filtering/recovery path concurrently with the server.
+		pendingSample.set(null)
+		pendingAcceleration.getAndSet(null)?.let(::applyAccelerationSample)
+		processRotationSample(timestampNanos)
+	}
+
+	/**
+	 * Publishes the latest packet to a bounded mailbox. Intermediate packets may
+	 * be replaced when the server is busy; consuming the newest sample avoids a
+	 * stale backlog and keeps the skeleton responsive after Wi-Fi bursts.
+	 */
+	fun ingestSample(
+		rotation: Quaternion,
+		acceleration: Vector3? = null,
+		arrivalTimeNanos: Long = System.nanoTime(),
+	) {
+		val sample = TrackerSample(
+			rotation = rotation,
+			acceleration = acceleration,
+			arrivalTimeNanos = arrivalTimeNanos,
+		)
+		if (pendingSample.getAndSet(sample) != null) mailboxOverruns++
+	}
+
+	private fun consumePendingSample() {
+		val sample = pendingSample.getAndSet(null)
+		val newerAcceleration = pendingAcceleration.getAndSet(null)
+		if (sample != null) {
+			_rotation = sample.rotation
+			sample.acceleration?.let {
+				applyAccelerationSample(TrackerAccelerationSample(it, sample.arrivalTimeNanos), allowEqualTimestamp = true)
+			}
+			newerAcceleration?.let(::applyAccelerationSample)
+			processRotationSample(sample.arrivalTimeNanos)
+		} else {
+			newerAcceleration?.let(::applyAccelerationSample)
 		}
-		val recovering = recovery.onRotationSample(getRotationBase(), gapMs, now)
+	}
+
+	private fun applyAccelerationSample(sample: TrackerAccelerationSample, allowEqualTimestamp: Boolean = false) {
+		if (sample.arrivalTimeNanos < lastAccelerationCaptureTimeNanos ||
+			(!allowEqualTimestamp && sample.arrivalTimeNanos == lastAccelerationCaptureTimeNanos)
+		) return
+		_acceleration = sample.acceleration
+		lastAccelerationCaptureTimeNanos = sample.arrivalTimeNanos
+	}
+
+	private fun processRotationSample(sampleTimeNanos: Long) {
+		val now = monotonicMillis()
+		val gapMs = if (timeAtLastRotationTimestampNanos > 0L && sampleTimeNanos > timeAtLastRotationTimestampNanos) {
+			((sampleTimeNanos - timeAtLastRotationTimestampNanos) / 1_000_000L).coerceAtLeast(0L)
+		} else {
+			now - timeAtLastRotationUpdate
+		}
+		timer.update()
+		timeAtLastUpdate = maxOf(timeAtLastUpdate, sampleTimeNanos / 1_000_000L)
+		timeAtLastRotationUpdate = sampleTimeNanos / 1_000_000L
+		timeAtLastRotationTimestampNanos = sampleTimeNanos
+		stayAligned.onNewData(_rotation, sampleTimeNanos)
+		val adjustedSample = getAdjustedRotation()
+		if (trackRotDirection) {
+			filteringHandler.dataTick(adjustedSample, sampleTimeNanos)
+		}
+		val recovering = recovery.onRotationSample(adjustedSample, gapMs, now)
 		if (recovering) {
 			status = TrackerStatus.BUSY
 		} else if (status == TrackerStatus.TIMED_OUT || status == TrackerStatus.DISCONNECTED) {
@@ -349,8 +423,10 @@ class Tracker @JvmOverloads constructor(
 	 * A way to delay the timeout of the tracker
 	 */
 	fun heartbeat() {
-		timeAtLastUpdate = System.currentTimeMillis()
+		timeAtLastUpdate = monotonicMillis()
 	}
+
+	private fun monotonicMillis(): Long = System.nanoTime() / 1_000_000L
 
 	/**
 	 * Gets the adjusted tracker rotation after the resetsHandler's corrections
@@ -362,15 +438,15 @@ class Tracker @JvmOverloads constructor(
 	private fun getAdjustedRotation(): Quaternion {
 		var rot = _rotation
 
-		if (!stayAligned.hideCorrection) {
-			// Yaw drift happens in the raw rotation space
-			rot = Quaternion.rotationAroundYAxis(stayAligned.yawCorrection.toRad()) * rot
-		}
-
-		// Reset if needed and is not computed and internal
-		return if (allowReset && !(isComputed && isInternal) && trackerDataType == TrackerDataType.ROTATION) {
+		// Reset/mounting/adaptive drift comes before transient Stay Aligned.
+		rot = if (allowReset && !(isComputed && isInternal) && trackerDataType == TrackerDataType.ROTATION) {
 			// Adjust to reset, mounting and drift compensation
 			resetsHandler.getReferenceAdjustedDriftRotationFrom(rot)
+		} else {
+			rot
+		}
+		return if (!stayAligned.hideCorrection) {
+			Quaternion.rotationAroundYAxis(stayAligned.yawCorrection.toRad()) * rot
 		} else {
 			rot
 		}
@@ -384,16 +460,14 @@ class Tracker @JvmOverloads constructor(
 	fun getAdjustedRotationForceStayAligned(): Quaternion {
 		var rot = _rotation
 
-		// Yaw drift happens in the raw rotation space
-		rot = Quaternion.rotationAroundYAxis(stayAligned.yawCorrection.toRad()) * rot
-
-		// Reset if needed and is not computed and internal
-		return if (allowReset && !(isComputed && isInternal) && trackerDataType == TrackerDataType.ROTATION) {
+		// Reset/mounting/adaptive drift comes before transient Stay Aligned.
+		rot = if (allowReset && !(isComputed && isInternal) && trackerDataType == TrackerDataType.ROTATION) {
 			// Adjust to reset, mounting and drift compensation
 			resetsHandler.getReferenceAdjustedDriftRotationFrom(rot)
 		} else {
 			rot
 		}
+		return Quaternion.rotationAroundYAxis(stayAligned.yawCorrection.toRad()) * rot
 	}
 
 	/**
@@ -437,15 +511,15 @@ class Tracker @JvmOverloads constructor(
 	fun getIdentityAdjustedRotation(): Quaternion {
 		var rot = _rotation
 
-		if (!stayAligned.hideCorrection) {
-			// Yaw drift happens in the raw rotation space
-			rot = Quaternion.rotationAroundYAxis(stayAligned.yawCorrection.toRad()) * rot
-		}
-
 		// Reset if needed or is a computed tracker besides head
-		return if (allowReset && !(isComputed && trackerPosition != TrackerPosition.HEAD) && trackerDataType == TrackerDataType.ROTATION) {
+		rot = if (allowReset && !(isComputed && trackerPosition != TrackerPosition.HEAD) && trackerDataType == TrackerDataType.ROTATION) {
 			// Adjust to reset and mounting
 			resetsHandler.getIdentityAdjustedDriftRotationFrom(rot)
+		} else {
+			rot
+		}
+		return if (!stayAligned.hideCorrection) {
+			Quaternion.rotationAroundYAxis(stayAligned.yawCorrection.toRad()) * rot
 		} else {
 			rot
 		}
@@ -489,6 +563,9 @@ class Tracker @JvmOverloads constructor(
 		_acceleration
 	}
 
+	/** Gets the sensor-space acceleration without reset or mounting corrections. */
+	fun getRawAcceleration(): Vector3 = _acceleration
+
 	/**
 	 * Gets the raw (unadjusted) rotation of the tracker.
 	 * If this is an IMU, this will be the raw sensor rotation.
@@ -505,8 +582,15 @@ class Tracker @JvmOverloads constructor(
 	/**
 	 * Sets the raw (unadjusted) acceleration of the tracker.
 	 */
-	fun setAcceleration(vec: Vector3) {
-		this._acceleration = vec
+	fun setAcceleration(vec: Vector3, arrivalTimeNanos: Long = System.nanoTime()) {
+		pendingAcceleration.set(TrackerAccelerationSample(vec, arrivalTimeNanos))
+	}
+
+	/** True only while captured acceleration is recent enough for stability evidence. */
+	fun hasFreshAcceleration(nowNanos: Long = System.nanoTime()): Boolean {
+		val ageNanos = nowNanos - lastAccelerationCaptureTimeNanos
+		return hasAcceleration && lastAccelerationCaptureTimeNanos > 0L &&
+			ageNanos in 0L..MAX_ACCELERATION_AGE_NANOS && _acceleration.len() > 0f
 	}
 
 	/**

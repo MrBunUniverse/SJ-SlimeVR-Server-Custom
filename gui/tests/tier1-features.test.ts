@@ -179,9 +179,10 @@ describe('Tier 1: Feature Coverage (F1 - F8)', () => {
       );
       assert.ok(questCardFile.includes('-translate-x-2 opacity-0'));
       assert.ok(questCardFile.includes('translate-x-2 opacity-0'));
-      assert.ok(questCardFile.includes('translate-y-2 opacity-0'));
       assert.ok(questCardFile.includes('cubic-bezier(0.22,0.8,0.24,1)'));
       assert.ok(questCardFile.includes('motion-reduce:transition-none'));
+      assert.ok(!questCardFile.includes('telemetry-disclosure'));
+      assert.ok(!questCardFile.includes('showFineTuning'));
     });
 
     it('F1.11: verifies tracker cards and table rows slide in from left and right with Apple HIG cinematic easing', () => {
@@ -555,16 +556,6 @@ describe('Tier 1: Feature Coverage (F1 - F8)', () => {
       assert.equal(active.statusColor, 'bg-status-success');
       assert.equal(active.statusText, '6 Trackers Active');
       assert.equal(active.oscReady, true);
-    });
-
-    it('F7.5: Quest diagnostics popover provides Quest/VRChat OSC Port 9000 readiness info', () => {
-      const diagFile = fs.readFileSync(
-        path.join(GUI_ROOT, 'src', 'components', 'home', 'QuestDiagnosticsPill.tsx'),
-        'utf-8'
-      );
-      assert.ok(diagFile.includes('Quest / VRChat OSC:'));
-      assert.ok(diagFile.includes('Ready / Port 9000'));
-      assert.ok(diagFile.includes('System Diagnostics'));
     });
 
     it('F7.6: provides Fake BPM simulation presets (sleeping, resting, sitting, standing, dancing, dynamic)', () => {

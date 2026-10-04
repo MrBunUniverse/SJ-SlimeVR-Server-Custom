@@ -195,11 +195,7 @@ export const showSidebarAtom = atom(
     const next = typeof update === 'function' ? update(current) : update;
     if (current !== next) {
       set(baseShowSidebarAtom, next);
-      set(sidebarAnimationAtom, (prev) => ({
-        direction: next ? 'left' : 'right',
-        key: (prev?.key ?? 0) + 1,
-        timestamp: Date.now(),
-      }));
+      set(sidebarAnimationAtom, null);
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
@@ -211,7 +207,11 @@ export const showSidebarAtom = atom(
   }
 );
 
+// Published by Home so shared navigation can follow the live sidebar geometry.
+export const homeSidebarWidthAtom = atom(0);
+
 const CARD_3D_STORAGE_KEY = 'slimevr-card-3d-previews';
+const MAX_ACTIVE_3D_PREVIEWS = 2;
 
 function getInitialActive3DTrackers(): string[] {
   if (typeof window === 'undefined') return [];
@@ -227,17 +227,22 @@ function getInitialActive3DTrackers(): string[] {
   return [];
 }
 
-const baseActive3DTrackersAtom = atom<string[]>(getInitialActive3DTrackers());
+const baseActive3DTrackersAtom = atom<string[]>(
+  getInitialActive3DTrackers().slice(-MAX_ACTIVE_3D_PREVIEWS)
+);
 
 export const active3DTrackerKeysAtom = atom(
   (get) => get(baseActive3DTrackersAtom),
   (get, set, update: string[] | ((prev: string[]) => string[])) => {
     const next =
       typeof update === 'function' ? update(get(baseActive3DTrackersAtom)) : update;
-    set(baseActive3DTrackersAtom, next);
+    // Each preview owns a WebGL context and model resources. Keep the GPU
+    // budget bounded when an older local preference contains many previews.
+    const capped = next.slice(-MAX_ACTIVE_3D_PREVIEWS);
+    set(baseActive3DTrackersAtom, capped);
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(CARD_3D_STORAGE_KEY, JSON.stringify(next));
+        localStorage.setItem(CARD_3D_STORAGE_KEY, JSON.stringify(capped));
       } catch {
         // ignore
       }

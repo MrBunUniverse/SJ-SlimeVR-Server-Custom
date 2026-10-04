@@ -7,7 +7,6 @@ import {
   unassignedTrackersAtom,
   hasRealTrackersAtom,
   active3DTrackerKeysAtom,
-  showSidebarAtom,
   cardMorphOriginAtom,
   CardMorphOrigin,
 } from '@/store/app-store';
@@ -156,9 +155,27 @@ export function ClaudeTrackerWindowCard({
     onClick?.(origin);
   };
 
+  const setContourAnimation = (card: HTMLDivElement, shouldRun: boolean) => {
+    if (
+      shouldRun &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+
+    card
+      .querySelectorAll<SVGAnimationElement>('.tracker-card-contours animate')
+      .forEach((animation) => {
+        if (shouldRun) animation.beginElement();
+        else animation.endElement();
+      });
+  };
+
   return (
     <div
       onClick={handleCardClick}
+      onMouseEnter={(event) => setContourAnimation(event.currentTarget, true)}
+      onMouseLeave={(event) => setContourAnimation(event.currentTarget, false)}
       className={classNames(
         'home-tracker-card group relative flex flex-col rounded-[12px] overflow-hidden bg-white dark:bg-[#1B1915] border transition-[border-color,box-shadow,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer select-none hover:-translate-y-0.5 active:scale-[0.985] active:duration-150',
         isMoving
@@ -183,6 +200,7 @@ export function ClaudeTrackerWindowCard({
           >
             <animate
               attributeName="d"
+              begin="indefinite"
               dur="8s"
               repeatCount="indefinite"
               values="M-20 20 C 60 80, 140 -20, 220 50 C 260 90, 310 30, 340 70;M-20 28 C 60 48, 140 14, 220 62 C 260 102, 310 16, 340 58;M-20 20 C 60 80, 140 -20, 220 50 C 260 90, 310 30, 340 70"
@@ -196,7 +214,7 @@ export function ClaudeTrackerWindowCard({
             <animate
               attributeName="d"
               dur="10s"
-              begin="-3s"
+              begin="indefinite"
               repeatCount="indefinite"
               values="M-30 60 C 50 110, 130 10, 210 80 C 250 110, 300 60, 330 90;M-30 52 C 50 86, 130 30, 210 96 C 250 116, 300 44, 330 78;M-30 60 C 50 110, 130 10, 210 80 C 250 110, 300 60, 330 90"
             />
@@ -209,7 +227,7 @@ export function ClaudeTrackerWindowCard({
             <animate
               attributeName="d"
               dur="12s"
-              begin="-6s"
+              begin="indefinite"
               repeatCount="indefinite"
               values="M-10 -10 C 70 40, 150 -50, 230 20 C 270 50, 320 0, 350 40;M-10 -2 C 70 18, 150 -26, 230 32 C 270 68, 320 -14, 350 28;M-10 -10 C 70 40, 150 -50, 230 20 C 270 50, 320 0, 350 40"
             />
@@ -287,9 +305,9 @@ export function ClaudeTrackerWindowCard({
               {/* Tracker body icon shifted smoothly to the left */}
               <div
                 className={classNames(
-                  'tracker-accent shrink-0 pl-1.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] text-[#D97757] fill-[#D97757]',
+                  'tracker-accent shrink-0 pl-0.5 transition-all duration-250 ease-out text-[#D97757] fill-[#D97757]',
                   isMoving
-                    ? 'scale-[1.05] drop-shadow-[0_2px_8px_rgba(217,119,87,0.35)]'
+                    ? 'scale-[1.03] drop-shadow-[0_1px_5px_rgba(217,119,87,0.2)]'
                     : 'opacity-85'
                 )}
               >
@@ -366,10 +384,8 @@ export function ClaudeTrackerWindowCard({
 const FULL_HERO_TITLE = 'Welcome to SirJameSlimeVR';
 
 function ExpandedHeroBanner({
-  showSidebar,
   isCollapsed = false,
 }: {
-  showSidebar?: boolean;
   isCollapsed?: boolean;
 }) {
   const [logoVisible, setLogoVisible] = useState(false);
@@ -406,7 +422,7 @@ function ExpandedHeroBanner({
     <div
       className={classNames(
         'relative w-full flex flex-col items-center justify-center text-center liquid-glass-tab-panel',
-        showSidebar ? 'py-8 sm:py-10 px-4' : 'py-12 sm:py-16 px-6'
+        'py-12 sm:py-16 px-6'
       )}
     >
       {/* Subtle Background Blueprint Gridlines */}
@@ -504,7 +520,6 @@ export function HomeEmptyState({
   const unassignedTrackers = useAtomValue(unassignedTrackersAtom);
   const demoMode = useAtomValue(demoModeAtom);
   const hasRealTrackers = useAtomValue(hasRealTrackersAtom);
-  const showSidebar = useAtomValue(showSidebarAtom);
   const [, toggleDemoMode] = useAtom(toggleDemoModeAtom);
   const allTrackers = [...assignedTrackers, ...unassignedTrackers];
   const navigate = useNavigate();
@@ -749,7 +764,6 @@ export function HomeEmptyState({
     viewSwitchKey == null
       ? undefined
       : ({
-          '--view-content-amp': Math.pow(0.72, depth).toFixed(3),
           '--view-content-delay': `${depth * 45}ms`,
         } as React.CSSProperties);
 
@@ -775,10 +789,7 @@ export function HomeEmptyState({
               toggleHeroCollapse();
             }
           }}
-          className={classNames(
-            'w-full py-2.5 flex items-center justify-between cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D97757]/60',
-            showSidebar ? 'px-3.5 sm:px-4' : 'px-4 sm:px-6'
-          )}
+          className="w-full px-4 py-2.5 flex items-center justify-between cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D97757]/60 sm:px-6"
           title={isHeroCollapsed ? 'Open introduction' : 'Close introduction'}
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-nowrap overflow-hidden">
@@ -795,7 +806,7 @@ export function HomeEmptyState({
             <span
               className={classNames(
                 'text-[11px] text-background-30 whitespace-nowrap truncate',
-                showSidebar ? 'hidden md:inline' : 'hidden sm:inline'
+                'hidden sm:inline'
               )}
             >
               · Real-time full-body tracking
@@ -818,10 +829,7 @@ export function HomeEmptyState({
         >
           <div className="overflow-hidden min-h-0 border-t border-white/[0.025]">
             <div className="collapsible-tab-content">
-              <ExpandedHeroBanner
-                showSidebar={showSidebar}
-                isCollapsed={isHeroCollapsed}
-              />
+              <ExpandedHeroBanner isCollapsed={isHeroCollapsed} />
             </div>
           </div>
         </div>
@@ -831,7 +839,7 @@ export function HomeEmptyState({
       <div
         className={classNames(
           'home-tracker-surface w-full flex-grow min-h-full flex flex-col justify-between items-center bg-[#EFECE2] dark:bg-[#12110E]',
-          showSidebar ? 'py-6 sm:py-10 px-3.5 sm:px-4' : 'py-10 sm:py-14 px-6'
+          'py-10 sm:py-14 px-6'
         )}
       >
         <div className="w-full max-w-[980px] flex flex-col items-center">
@@ -940,7 +948,6 @@ export function HomeEmptyState({
                     ? ''
                     : 'animate-tracker-grid-enter';
                 const animStyle: React.CSSProperties = {
-                  '--tracker-bounce': Math.pow(0.78, row).toFixed(3),
                   animationDelay: isCardLayoutTransition
                     ? '0ms'
                     : `${row * 80 + col * 35}ms`,
@@ -1003,13 +1010,11 @@ export function HomeEmptyState({
                   const animStyle: React.CSSProperties | undefined =
                     isCardLayoutTransition
                       ? ({
-                          '--tracker-bounce': Math.pow(0.78, row).toFixed(3),
                           animationDelay: '0ms',
                         } as React.CSSProperties)
                       : suppressInitialEntrance
                         ? undefined
                         : ({
-                            '--tracker-bounce': Math.pow(0.78, row).toFixed(3),
                             animationDelay: `${row * 80 + col * 35}ms`,
                           } as React.CSSProperties);
 
@@ -1130,7 +1135,7 @@ export function HomeEmptyState({
                     viewBox="0 0 49 29"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    className="text-[#D97757]"
+                    className="home-accent"
                   >
                     <path
                       d="M2 26.996C10.44 25.59 29.16 23.1571 46.509 26.9091C46.509 26.9091 48.89 -0.199966 35.761 2.14503"
@@ -1179,11 +1184,7 @@ export function HomeEmptyState({
                 isConnected ? 'bg-[#30D158]' : 'bg-[#FF453A]'
               )}
             />
-            <span>
-              {isConnected
-                ? 'Server Online · Standalone OSC Ready'
-                : 'Server Offline'}
-            </span>
+            <span>{isConnected ? 'Server Online' : 'Server Offline'}</span>
           </div>
         </div>
       </div>

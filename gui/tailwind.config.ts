@@ -337,7 +337,6 @@ const config = {
         'mac-inner': '7px',
       },
       transitionTimingFunction: {
-        'mac-spring': 'cubic-bezier(0.25, 1.4, 0.5, 1)',
         'mac-glide': 'cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },

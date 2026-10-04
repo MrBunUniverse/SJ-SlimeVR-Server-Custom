@@ -7,7 +7,6 @@ import dev.slimevr.config.config
 import dev.slimevr.protocol.rpc.MAG_TIMEOUT
 import dev.slimevr.tracking.trackers.*
 import io.eiren.util.Util
-import io.eiren.util.collections.FastList
 import io.eiren.util.logging.LogManager
 import io.github.axisangles.ktmath.Quaternion
 import io.github.axisangles.ktmath.Quaternion.Companion.fromRotationVector
@@ -25,7 +24,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.function.Consumer
-import kotlin.collections.HashMap
 import kotlin.coroutines.resume
 
 /**
@@ -33,23 +31,11 @@ import kotlin.coroutines.resume
  */
 class TrackersUDPServer(private val port: Int, name: String, private val trackersConsumer: Consumer<Tracker>) : Thread(name) {
 	private val random = Random()
-	private val connections: MutableList<UDPDevice> = FastList()
-	private val connectionsByAddress: MutableMap<SocketAddress, UDPDevice> = HashMap()
-	private val connectionsByMAC: MutableMap<String, UDPDevice> = HashMap()
-	private val broadcastAddresses: List<InetSocketAddress> = try {
-		NetworkInterface.getNetworkInterfaces().asSequence().filter {
-			// Ignore loopback, PPP, virtual and disabled interfaces
-			!it.isLoopback && it.isUp && !it.isPointToPoint && !it.isVirtual
-		}.flatMap {
-			it.interfaceAddresses.asSequence()
-		}.map {
-			// This ignores IPv6 addresses
-			it.broadcast
-		}.filter { it != null && it.isSiteLocalAddress }.map { InetSocketAddress(it, this.port) }.toList()
-	} catch (e: Exception) {
-		LogManager.severe("[TrackerServer] Can't enumerate network interfaces", e)
-		emptyList()
-	}
+	private val connectionRegistry = UDPConnectionRegistry()
+	@Volatile
+	private var broadcastAddresses: List<InetSocketAddress> = emptyList()
+	@Volatile
+	private var lastBroadcastAddressRefresh = 0L
 	private val parser = UDPProtocolParser()
 
 	// 1500 is a common network MTU. 1472 is the maximum size of a UDP packet (1500 - 20 for IPv4 header - 8 for UDP header)
@@ -59,6 +45,31 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 	// Gets initialized in this.run()
 	private lateinit var socket: DatagramSocket
 	private var lastKeepup = System.currentTimeMillis()
+
+	private fun protocolFor(handshake: UDPPacket3Handshake): NetworkProtocol = if (handshake.firmware?.isEmpty() == true) {
+		// Only old owoTrack doesn't report firmware and has different packet IDs with SlimeVR.
+		NetworkProtocol.OWO_LEGACY
+	} else {
+		NetworkProtocol.SLIMEVR_RAW
+	}
+
+	@Synchronized
+	private fun refreshBroadcastAddressesIfNeeded(now: Long = System.currentTimeMillis()) {
+		if (now - lastBroadcastAddressRefresh < 30_000L) return
+		broadcastAddresses = try {
+			NetworkInterface.getNetworkInterfaces().asSequence().filter {
+				// Ignore loopback, PPP, virtual and disabled interfaces
+				!it.isLoopback && it.isUp && !it.isPointToPoint && !it.isVirtual
+			}.flatMap { it.interfaceAddresses.asSequence() }.map {
+				// This ignores IPv6 addresses
+				it.broadcast
+			}.filter { it != null && it.isSiteLocalAddress }.map { InetSocketAddress(it, port) }.toList()
+		} catch (e: Exception) {
+			LogManager.severe("[TrackerServer] Can't enumerate network interfaces", e)
+			emptyList()
+		}
+		lastBroadcastAddressRefresh = now
+	}
 
 	private fun setUpNewConnection(handshakePacket: DatagramPacket, handshake: UDPPacket3Handshake) {
 		LogManager.info("[TrackerServer] Handshake received from ${handshakePacket.address}:${handshakePacket.port}")
@@ -74,106 +85,41 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 			return
 		}
 
-		// Get a connection either by an existing one, or by creating a new one
-		val connection: UDPDevice = synchronized(connections) {
-			connectionsByMAC[handshake.macString]?.apply {
-				// Look for an existing connection by the MAC address and update the
-				// connection information
-				connectionsByAddress.remove(address)
-				address = socketAddr
-				lastPacketNumber = 0
-				ipAddress = addr
-				name = handshake.macString?.let { "udp://$it" }
-				descriptiveName = "udp:/$addr"
-				protocolVersion = handshake.protocolVersion
-				firmwareVersion = handshake.firmware
-				connectionsByAddress[address] = this
-
-				val i = connections.indexOf(this)
-				LogManager
-					.info(
-						"""
-						[TrackerServer] Tracker $i handed over to address $socketAddr.
-						Board type: ${handshake.boardType},
-						firmware name: ${handshake.firmware},
-						protocol version: $protocolVersion,
-						mac: ${handshake.macString},
-						name: $name
-						""".trimIndent(),
-					)
-			} ?: connectionsByAddress[socketAddr]?.apply {
-				// Look for an existing connection by the socket address (IP and port)
-				// and update the connection information
-				lastPacketNumber = 0
-				ipAddress = addr
-				name = handshake.macString?.let { "udp://$it" }
-					?: "udp:/$addr"
-				descriptiveName = "udp:/$addr"
-				protocolVersion = handshake.protocolVersion
-				firmwareVersion = handshake.firmware
-				val i = connections.indexOf(this)
-				LogManager
-					.info(
-						"""
-						[TrackerServer] Tracker $i reconnected from address $socketAddr.
-						Board type: ${handshake.boardType},
-						firmware name: ${handshake.firmware},
-						protocol version: $protocolVersion,
-						mac: ${handshake.macString},
-						name: $name
-						""".trimIndent(),
-					)
-			}
-		} ?: run {
-			// No existing connection could be found, create a new one
-
-			val connection = UDPDevice(
+		// Reuse a known MAC identity, including a device disconnected by Forget.
+		val existingConnection = connectionRegistry.findForHandshake(handshake.macString, socketAddr)
+		val connection = existingConnection ?: run {
+			val newConnection = UDPDevice(
 				socketAddr,
 				addr,
 				handshake.macString ?: addr.hostAddress,
 				handshake.boardType,
 				handshake.mcuType,
 			)
-			VRServer.instance.deviceManager.addDevice(connection)
-			connection.protocolVersion = handshake.protocolVersion
-			connection.protocol = if (handshake.firmware?.isEmpty() == true) {
-				// Only old owoTrack doesn't report firmware and have different packet IDs with SlimeVR
-				NetworkProtocol.OWO_LEGACY
-			} else {
-				NetworkProtocol.SLIMEVR_RAW
-			}
-			connection.name = handshake.macString?.let { "udp://$it" }
-				?: "udp:/$addr"
-			// TODO: The missing slash in udp:// was intended because InetAddress.toString()
-			// 		returns "hostname/address" but it wasn't known that if hostname is empty
-			// 		string it just looks like "/address" lol.
-			// 		Fixing this would break config!
-			connection.descriptiveName = "udp:/$addr"
-			connection.firmwareVersion = handshake.firmware
-			synchronized(connections) {
-				// Register the new connection
-				val i = connections.size
-				connections.add(connection)
-				connectionsByAddress[socketAddr] = connection
-				if (handshake.macString != null) {
-					connectionsByMAC[handshake.macString!!] = connection
-				}
-				LogManager
-					.info(
-						"""
-						[TrackerServer] Tracker $i connected from address $socketAddr.
-						Board type: ${handshake.boardType},
-						firmware name: ${handshake.firmware},
-						protocol version: ${connection.protocolVersion},
-						mac: ${handshake.macString},
-						name: ${connection.name}
-						""".trimIndent(),
-					)
-			}
+			newConnection.protocolVersion = handshake.protocolVersion
+			newConnection.protocol = protocolFor(handshake)
+			newConnection.name = handshake.macString?.let { "udp://$it" } ?: "udp:/$addr"
+			// Fixing the slash would break existing config names.
+			newConnection.descriptiveName = "udp:/$addr"
+			newConnection.firmwareVersion = handshake.firmware
+			VRServer.instance.deviceManager.addDevice(newConnection)
+			newConnection
+		}
+
+		connection.ipAddress = addr
+		connection.name = handshake.macString?.let { "udp://$it" } ?: "udp:/$addr"
+		connection.descriptiveName = "udp:/$addr"
+		connection.protocolVersion = handshake.protocolVersion
+		connection.protocol = protocolFor(handshake)
+		connection.firmwareVersion = handshake.firmware
+		connection.lastPacketNumber = 0
+		connection.lastPacket = System.currentTimeMillis()
+		connection.timedOut = false
+		val displacedConnection = connectionRegistry.activate(connection, socketAddr, handshake.macString)
+		displacedConnection?.trackers?.forEach { (_, tracker) -> tracker.status = TrackerStatus.DISCONNECTED }
+		if (existingConnection == null) {
+			val index = connectionRegistry.activeSnapshot().indexOf(connection)
+			LogManager.info("[TrackerServer] Tracker $index connected from address $socketAddr. Board type: ${handshake.boardType}, firmware name: ${handshake.firmware}, protocol version: ${connection.protocolVersion}, mac: ${handshake.macString}, name: ${connection.name}")
 			if (connection.protocol == NetworkProtocol.OWO_LEGACY || connection.protocolVersion < 9) {
-				// Set up new sensor for older firmware.
-				// Firmware after 7 should send sensor status packet and sensor
-				// will be created when it's received
 				setUpSensor(
 					connection,
 					0,
@@ -185,7 +131,8 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 					null,
 				)
 			}
-			connection
+		} else {
+			LogManager.info("[TrackerServer] Tracker reconnected from address $socketAddr (device index ${connectionRegistry.activeSnapshot().indexOf(connection)}), protocol version ${connection.protocolVersion}, MAC ${handshake.macString}")
 		}
 		connection.firmwareFeatures = FirmwareFeatures()
 		bb.limit(bb.capacity())
@@ -297,6 +244,7 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 		LogManager.info("[TrackerServer] Manual refresh of trackers initiated")
 		// 1. Broadcast discovery heartbeat on all active network interfaces
 		if (::socket.isInitialized && !socket.isClosed) {
+			refreshBroadcastAddressesIfNeeded()
 			for (addr in broadcastAddresses) {
 				try {
 					bb.limit(bb.capacity())
@@ -308,8 +256,8 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 			}
 
 			// 2. Ping all known connections with error isolation
-			synchronized(connections) {
-				for (conn in connections) {
+			connectionRegistry.withActiveConnections { activeConnections ->
+				for (conn in activeConnections) {
 					try {
 						bb.limit(bb.capacity())
 						bb.rewind()
@@ -336,36 +284,37 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 				while (!isInterrupted) {
 					var received: DatagramPacket? = null
 					try {
-						val hasActiveTrackers = connections.any { it.trackers.size > 0 && !it.timedOut }
-						if (!hasActiveTrackers) {
-							val discoveryPacketTime = System.currentTimeMillis()
-							if (discoveryPacketTime - prevPacketTime >= 2000) {
-								for (addr in broadcastAddresses) {
-									try {
-										bb.limit(bb.capacity())
-										bb.rewind()
-										parser.write(bb, null, UDPPacket0Heartbeat)
-										socket.send(DatagramPacket(rcvBuffer, bb.position(), addr))
-									} catch (ignored: Exception) {
-									}
+						// Keep discovery alive while other trackers are connected. A tracker
+						// powered on later must be able to rejoin without a manual refresh.
+						val discoveryPacketTime = System.currentTimeMillis()
+						if (discoveryPacketTime - prevPacketTime >= 2000) {
+							refreshBroadcastAddressesIfNeeded(discoveryPacketTime)
+							for (addr in broadcastAddresses) {
+								try {
+									bb.limit(bb.capacity())
+									bb.rewind()
+									parser.write(bb, null, UDPPacket0Heartbeat)
+									socket.send(DatagramPacket(rcvBuffer, bb.position(), addr))
+								} catch (ignored: Exception) {
 								}
-								prevPacketTime = discoveryPacketTime
 							}
+							prevPacketTime = discoveryPacketTime
 						}
 						received = DatagramPacket(rcvBuffer, rcvBuffer.size)
 						socket.receive(received)
+						val arrivalTimeNanos = System.nanoTime()
 						bb.limit(received.length)
 						bb.rewind()
-						val connection = synchronized(connections) { connectionsByAddress[received.socketAddress] }
+						val connection = connectionRegistry.findByAddress(received.socketAddress)
 						parser.parse(bb, connection)
 							.filterNotNull()
-							.forEach { processPacket(received, it, connection) }
+							.forEach { processPacket(received, it, connection, arrivalTimeNanos) }
 
 						queues.forEach { (t, p) ->
 							val q = p.firstOrNull() ?: return@forEach
 							if (q.ran) return@forEach
 
-							val device = connectionsByAddress[t.first] ?: run {
+							val device = connectionRegistry.findByAddress(t.first) ?: run {
 								p.removeFirst()
 								LogManager.info("[TrackerServer] Device ${t.first} not connected, so can't communicate with it")
 								return@forEach
@@ -386,8 +335,8 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 					}
 					if (lastKeepup + 500 < System.currentTimeMillis()) {
 						lastKeepup = System.currentTimeMillis()
-						synchronized(connections) {
-							for (conn in connections) {
+						connectionRegistry.withActiveConnections { activeConnections ->
+							for (conn in activeConnections) {
 								// Guard each tracker individually so failure on one never impacts others
 								try {
 									bb.limit(bb.capacity())
@@ -462,7 +411,12 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 		}
 	}
 
-	private fun processPacket(received: DatagramPacket, packet: UDPPacket, connection: UDPDevice?) {
+	private fun processPacket(
+		received: DatagramPacket,
+		packet: UDPPacket,
+		connection: UDPDevice?,
+		arrivalTimeNanos: Long = System.nanoTime(),
+	) {
 		when (packet) {
 			is UDPPacket0Heartbeat, is UDPPacket1Heartbeat, is UDPPacket25SetConfigFlag -> {}
 
@@ -472,17 +426,17 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 				var rot = packet.rotation
 				rot = AXES_OFFSET.times(rot)
 				val tracker = connection?.getTracker(packet.sensorId) ?: return
-				tracker.setRotation(rot)
+				var acceleration: io.github.axisangles.ktmath.Vector3? = null
 				if (packet is UDPPacket23RotationAndAcceleration) {
 					// sensorOffset is applied correctly since protocol 22
 					// See: https://github.com/SlimeVR/SlimeVR-Tracker-ESP/pull/480
-					if (connection.protocolVersion >= 22) {
-						tracker.setAcceleration(packet.acceleration)
+					acceleration = if (connection.protocolVersion >= 22) {
+						packet.acceleration
 					} else {
-						tracker.setAcceleration(SENSOR_OFFSET_CORRECTION.sandwich(packet.acceleration))
+						SENSOR_OFFSET_CORRECTION.sandwich(packet.acceleration)
 					}
 				}
-				tracker.dataTick()
+				tracker.ingestSample(rot, acceleration, arrivalTimeNanos)
 			}
 
 			is UDPPacket17RotationData -> {
@@ -491,8 +445,7 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 				rot17 = AXES_OFFSET * rot17
 				when (packet.dataType) {
 					UDPPacket17RotationData.DATA_TYPE_NORMAL -> {
-						tracker.setRotation(rot17)
-						tracker.dataTick()
+						tracker.ingestSample(rot17, arrivalTimeNanos = arrivalTimeNanos)
 						// tracker.calibrationStatus = rotationData.calibrationInfo;
 						// Not implemented in server
 					}
@@ -513,9 +466,9 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 				// sensorOffset is applied correctly since protocol 22
 				// See: https://github.com/SlimeVR/SlimeVR-Tracker-ESP/pull/480
 				if (connection.protocolVersion >= 22) {
-					tracker.setAcceleration(packet.acceleration)
+					tracker.setAcceleration(packet.acceleration, arrivalTimeNanos)
 				} else {
-					tracker.setAcceleration(SENSOR_OFFSET_CORRECTION.sandwich(packet.acceleration))
+					tracker.setAcceleration(SENSOR_OFFSET_CORRECTION.sandwich(packet.acceleration), arrivalTimeNanos)
 				}
 			}
 
@@ -688,18 +641,13 @@ class TrackersUDPServer(private val port: Int, name: String, private val tracker
 		}
 	}
 
-	fun getConnections(): List<UDPDevice?> = connections
+	fun getConnections(): List<UDPDevice?> = connectionRegistry.activeSnapshot()
+
+	fun getConnectionByMAC(mac: String): UDPDevice? = connectionRegistry.findByMAC(mac)
 
 	// FIXME: for some reason it ends up disconnecting after 30 seconds have passed instead of immediately
 	fun disconnectDevice(device: UDPDevice) {
-		synchronized(connections) {
-			connections.remove(device)
-		}
-		synchronized(connectionsByAddress) {
-			connectionsByAddress.filter { (_, dev) -> dev.id == device.id }.keys.forEach(
-				connectionsByAddress::remove,
-			)
-		}
+		connectionRegistry.disconnect(device)
 		device.trackers.forEach { (_, tracker) ->
 			tracker.status = TrackerStatus.DISCONNECTED
 		}

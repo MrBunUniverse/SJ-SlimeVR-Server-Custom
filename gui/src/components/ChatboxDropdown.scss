@@ -12,13 +12,67 @@
   }
 }
 
+body::before {
+  position: fixed;
+  z-index: 35;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 430px 360px at var(--chatbox-backdrop-x, 50%) 30%,
+    transparent 0%,
+    rgb(33 71 116 / 0.08) 48%,
+    rgb(3 9 22 / 0.38) 100%
+  );
+  transition: opacity 240ms ease-out;
+  will-change: opacity;
+}
+
+body:has(.chatbox-control--open:not(.chatbox-control--dock))::before {
+  opacity: 1;
+}
+
+body::after {
+  position: fixed;
+  z-index: 35;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 460px 520px at var(--chatbox-backdrop-x, 50%) 68%,
+    transparent 0%,
+    rgb(33 71 116 / 0.08) 48%,
+    rgb(3 9 22 / 0.38) 100%
+  );
+  transition: opacity 240ms ease-out;
+  will-change: opacity;
+}
+
+body:has(.chatbox-control--dock.chatbox-control--open)::after {
+  opacity: 1;
+}
+
+.chatbox-control--open button {
+  position: relative;
+  z-index: 1;
+}
+
+.chatbox-dock-button-clip {
+  display: flex;
+  flex: none;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
 .chatbox-panel {
   --broadcast-accent: rgb(var(--accent-background-20));
   --broadcast-accent-text: rgb(var(--accent-background-10));
   --broadcast-border: rgba(104, 98, 90, 0.46);
   --broadcast-border-soft: rgba(104, 98, 90, 0.26);
-  --broadcast-surface: rgb(var(--background-80) / 0.72);
-  --broadcast-surface-strong: rgb(var(--background-90) / 0.82);
+  --broadcast-surface: rgb(var(--background-80));
+  --broadcast-surface-strong: rgb(var(--background-90));
 
   position: absolute;
   top: calc(100% + 8px);
@@ -37,22 +91,17 @@
   overscroll-behavior: contain;
   border: 1px solid var(--broadcast-border);
   border-radius: 18px;
-  background:
-    linear-gradient(
-      145deg,
-      rgb(var(--background-70) / 0.98),
-      rgb(var(--background-80) / 0.96)
-    ),
-    rgb(var(--background-70));
+  background: rgb(var(--background-70));
   color: var(--text-primary);
   box-shadow:
     0 24px 64px rgb(0 0 0 / 0.5),
     0 2px 10px rgb(0 0 0 / 0.26),
     inset 0 1px rgb(255 255 255 / 0.025);
-  backdrop-filter: blur(28px) saturate(1.12);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   font-size: 13px;
   line-height: 1.35;
-  animation: chatbox-reveal 170ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: none;
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--background-40)) transparent;
 
@@ -243,6 +292,12 @@
     }
   }
 
+  .chatbox-mode-shell {
+    height: auto;
+    overflow: hidden;
+    transition: height 200ms ease-out;
+  }
+
   .chatbox-engine,
   .chatbox-feature-toggle {
     min-height: 44px;
@@ -367,15 +422,68 @@
   }
 }
 
-@keyframes chatbox-reveal {
+.chatbox-panel--open {
+  animation: chatbox-panel-open 180ms ease-out both;
+}
+
+.chatbox-panel--closing {
+  pointer-events: none;
+  animation: chatbox-panel-close 160ms ease-in both;
+}
+
+.chatbox-control--dock .chatbox-panel--open {
+  animation-name: chatbox-panel-open-dock;
+}
+
+.chatbox-control--dock .chatbox-panel--closing {
+  animation-name: chatbox-panel-close-dock;
+}
+
+@keyframes chatbox-panel-open {
   from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-5px) scale(0.985);
+    opacity: 0.01;
+    transform: translateX(-50%) translateY(-4px);
   }
 
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes chatbox-panel-close {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+}
+
+@keyframes chatbox-panel-open-dock {
+  from {
+    opacity: 0.01;
+    transform: translateX(-50%) translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes chatbox-panel-close-dock {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
   }
 }
 
@@ -392,20 +500,58 @@
 }
 
 @media (max-width: 600px) {
-  @keyframes chatbox-reveal {
+  @keyframes chatbox-panel-open {
     from {
-      opacity: 0;
-      transform: translateY(-5px) scale(0.985);
+      opacity: 0.01;
+      transform: translateY(-4px);
     }
 
     to {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes chatbox-panel-close {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes chatbox-panel-open-dock {
+    from {
+      opacity: 0.01;
+      transform: translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes chatbox-panel-close-dock {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(4px);
     }
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after,
   .chatbox-control *,
   .chatbox-panel,
   .chatbox-panel * {

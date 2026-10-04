@@ -61,6 +61,10 @@ export default defineConfig({
     sourcemap: true,
   },
   optimizeDeps: {
+    // The protocol is a linked workspace package. Rebuild its prebundle when
+    // generated FlatBuffers exports change so the renderer cannot load a stale
+    // enum table after a protocol update.
+    force: true,
     esbuildOptions: {
       target: 'es2022',
     },

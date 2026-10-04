@@ -1,4 +1,4 @@
-import { useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { useConfig } from './hooks/config';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -44,6 +44,35 @@ export function AppLayout() {
       navigate('/onboarding/home');
     }
   }, [config]);
+
+  useEffect(() => {
+    const handleSettingsShortcut = (event: KeyboardEvent) => {
+      if (
+        !event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.shiftKey ||
+        event.code !== 'Comma'
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      navigate('/settings/trackers');
+    };
+
+    window.addEventListener('keydown', handleSettingsShortcut);
+    return () => window.removeEventListener('keydown', handleSettingsShortcut);
+  }, [navigate]);
 
   return (
     <>

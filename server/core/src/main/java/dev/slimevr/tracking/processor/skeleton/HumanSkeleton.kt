@@ -12,6 +12,7 @@ import dev.slimevr.tracking.processor.config.SkeletonConfigToggles
 import dev.slimevr.tracking.processor.config.SkeletonConfigValues
 import dev.slimevr.tracking.processor.stayaligned.StayAligned
 import dev.slimevr.tracking.processor.stayaligned.trackers.TrackerSkeleton
+import dev.slimevr.tracking.trackers.AdaptiveDriftCompensation
 import dev.slimevr.tracking.trackers.Tracker
 import dev.slimevr.tracking.trackers.TrackerPosition
 import dev.slimevr.tracking.trackers.TrackerRole
@@ -176,6 +177,7 @@ class HumanSkeleton(
 	var rightLittleProximalTracker: Tracker? = null
 	var rightLittleIntermediateTracker: Tracker? = null
 	var rightLittleDistalTracker: Tracker? = null
+	private var inputTrackers: List<Tracker> = emptyList()
 
 	// Output trackers
 	var computedHeadTracker: Tracker? = null
@@ -371,6 +373,7 @@ class HumanSkeleton(
 	 * Set input trackers from a list
 	 */
 	fun setTrackersFromList(trackers: List<Tracker>) {
+		inputTrackers = trackers
 		// Head
 		headTracker = getTrackerForSkeleton(trackers, TrackerPosition.HEAD)
 		neckTracker = getTrackerForSkeleton(trackers, TrackerPosition.NECK)
@@ -542,6 +545,15 @@ class HumanSkeleton(
 	fun updatePose() {
 		tapDetectionManager?.update()
 		userHeightCalibration?.tick()
+
+		// Run persistent drift learning once per shared skeleton update, before
+		// Stay Aligned can contribute a transient correction.
+		val server = humanPoseManager.server
+		AdaptiveDriftCompensation.update(
+			server?.allTrackers ?: inputTrackers,
+			System.nanoTime(),
+			server?.fpsTimer?.timePerFrame ?: 0.01f,
+		)
 
 		StayAligned.adjustNextTracker(trackerSkeleton, stayAlignedConfig)
 

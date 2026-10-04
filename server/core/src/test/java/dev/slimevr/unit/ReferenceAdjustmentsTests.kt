@@ -4,6 +4,7 @@ import com.jme3.math.FastMath
 import dev.slimevr.VRServer.Companion.getNextLocalTrackerId
 import dev.slimevr.tracking.processor.TransformNode
 import dev.slimevr.tracking.trackers.Tracker
+import dev.slimevr.tracking.trackers.TrackerPosition
 import dev.slimevr.tracking.trackers.udp.IMUType
 import io.eiren.math.FloatMath
 import io.eiren.util.StringUtils.prettyNumber
@@ -13,6 +14,7 @@ import io.github.axisangles.ktmath.Quaternion
 import io.github.axisangles.ktmath.Vector3.Companion.POS_Y
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import java.util.stream.Stream
 import kotlin.streams.asStream
@@ -21,6 +23,64 @@ import kotlin.streams.asStream
  * Tests [TrackerResetsHandler.resetFull]
  */
 class ReferenceAdjustmentsTests {
+	@Test
+	fun yawResetDoesNotTurnTiltedFootIntoSidewaysHeading() {
+		val tracker = Tracker(
+			null,
+			getNextLocalTrackerId(),
+			"foot-test",
+			"foot-test",
+			TrackerPosition.LEFT_FOOT,
+			hasRotation = true,
+			imuType = IMUType.UNKNOWN,
+			allowReset = true,
+			trackRotDirection = false,
+		)
+		tracker.resetsHandler.mountingOrientation = Quaternion.IDENTITY
+
+		// This pose has no yaw, but its pitch/roll composition makes the old
+		// YZX Euler extraction report a small heading.
+		val tiltedFoot = Quaternion.rotationAroundXAxis(35f * FastMath.DEG_TO_RAD) *
+			Quaternion.rotationAroundZAxis(-25f * FastMath.DEG_TO_RAD)
+		tracker.setRotation(tiltedFoot)
+		tracker.resetsHandler.resetYaw(Quaternion.IDENTITY)
+
+		val adjustedX = tracker.getRotation().sandwichUnitX()
+		Assertions.assertEquals(0f, adjustedX.z, 0.001f)
+		Assertions.assertTrue(
+			adjustedX.x > 0.9f,
+			"Yaw reset introduced a sideways foot heading: $adjustedX",
+		)
+	}
+
+	@Test
+	fun yawResetKeepsSideMountedFeetFacingForward() {
+		for (position in listOf(TrackerPosition.LEFT_FOOT, TrackerPosition.RIGHT_FOOT)) {
+			for (sideAngle in listOf(-85f, 85f)) {
+				val tracker = Tracker(
+					null,
+					getNextLocalTrackerId(),
+					"side-mounted-foot",
+					"side-mounted-foot",
+					position,
+					hasRotation = true,
+					imuType = IMUType.UNKNOWN,
+					allowReset = true,
+					trackRotDirection = false,
+				)
+				tracker.resetsHandler.mountingOrientation = Quaternion.IDENTITY
+				val raw = Quaternion.rotationAroundYAxis(60f * FastMath.DEG_TO_RAD) *
+					Quaternion.rotationAroundZAxis(sideAngle * FastMath.DEG_TO_RAD)
+				tracker.setRotation(raw)
+				tracker.resetsHandler.resetYaw(Quaternion.IDENTITY)
+
+				val forward = tracker.getRotation().sandwichUnitZ()
+				Assertions.assertEquals(0f, forward.x, 0.02f, "$position at $sideAngle degrees")
+				Assertions.assertTrue(forward.z > 0.98f, "$position at $sideAngle degrees: $forward")
+			}
+		}
+	}
+
 	@get:TestFactory
 	val testsYaw: Stream<DynamicTest>
 		get() = anglesSet

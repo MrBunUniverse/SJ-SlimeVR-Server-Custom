@@ -1,6 +1,7 @@
 package dev.slimevr.protocol.datafeed
 
 import com.google.flatbuffers.FlatBufferBuilder
+import dev.slimevr.config.config
 import dev.slimevr.guards.ServerGuards
 import dev.slimevr.tracking.processor.Bone
 import dev.slimevr.tracking.processor.skeleton.HumanSkeleton
@@ -22,6 +23,8 @@ import solarxr_protocol.data_feed.tracker.TrackerData
 import solarxr_protocol.data_feed.tracker.TrackerDataMaskT
 import solarxr_protocol.data_feed.tracker.TrackerInfo
 import solarxr_protocol.data_feed.tracker.TrackerRecovery
+import solarxr_protocol.data_feed.tracker.AdaptiveDriftState
+import solarxr_protocol.data_feed.tracker.FilterHealth
 import solarxr_protocol.datatypes.DeviceId
 import solarxr_protocol.datatypes.Ipv4Address
 import solarxr_protocol.datatypes.Temperature
@@ -128,6 +131,11 @@ fun createTrackerInfos(
 	} else {
 		0
 	}
+	val imuProfileOverrideOffset = if (tracker.isImu()) {
+		tracker.config.imuProfileOverride?.let { fbb.createString(it) } ?: 0
+	} else {
+		0
+	}
 
 	TrackerInfo.startTrackerInfo(fbb)
 	if (tracker.trackerPosition != null) {
@@ -168,6 +176,15 @@ fun createTrackerInfos(
 	TrackerInfo.addIsHmd(fbb, tracker.isHmd)
 
 	TrackerInfo.addDataSupport(fbb, tracker.trackerDataType.getSolarType())
+	if (tracker.isImu()) {
+		val adaptiveConfig = tracker.config
+		TrackerInfo.addLearnedDriftRateDegPerMin(fbb, adaptiveConfig.learnedDriftRateDegPerMin)
+		TrackerInfo.addTotalDriftObservations(fbb, adaptiveConfig.totalDriftObservations.toLong())
+		TrackerInfo.addAutoLearnDrift(fbb, adaptiveConfig.autoLearnDrift)
+		if (imuProfileOverrideOffset != 0) {
+			TrackerInfo.addImuProfileOverride(fbb, imuProfileOverrideOffset)
+		}
+	}
 
 	return TrackerInfo.endTrackerInfo(fbb)
 }
@@ -209,6 +226,35 @@ fun createTrackerData(
 	} else {
 		0
 	}
+	val adaptiveDriftOffset = if (mask.adaptiveDrift) {
+		val status = tracker.adaptiveDriftStatus
+		AdaptiveDriftState.createAdaptiveDriftState(
+			fbb,
+			status.mode.ordinal,
+			status.confidence,
+			status.stableDurationMs,
+			status.learnedRateDegPerMin,
+			status.appliedCorrectionDeg,
+			status.acceptedObservations.toLong(),
+			status.freezeReason.ordinal,
+		)
+	} else {
+		0
+	}
+	val filterHealthOffset = if (mask.filterHealth) {
+		val health = tracker.filterHealth
+		FilterHealth.createFilterHealth(
+			fbb,
+			health.inputRateHz,
+			health.packetJitterMs,
+			health.packetLoss,
+			health.predictionHorizonMs,
+			health.effectiveLatencyMs,
+			health.filteringImpactRad,
+		)
+	} else {
+		0
+	}
 
 	TrackerData.startTrackerData(fbb)
 
@@ -217,6 +263,8 @@ fun createTrackerData(
 	if (trackerInfosOffset != 0) TrackerData.addInfo(fbb, trackerInfosOffset)
 	if (mask.status) TrackerData.addStatus(fbb, tracker.status.id + 1)
 	if (recoveryOffset != 0) TrackerData.addRecovery(fbb, recoveryOffset)
+	if (adaptiveDriftOffset != 0) TrackerData.addAdaptiveDrift(fbb, adaptiveDriftOffset)
+	if (filterHealthOffset != 0) TrackerData.addFilterHealth(fbb, filterHealthOffset)
 	if (mask.position && tracker.hasPosition) {
 		TrackerData.addPosition(
 			fbb,

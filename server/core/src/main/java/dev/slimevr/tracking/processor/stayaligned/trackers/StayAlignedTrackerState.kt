@@ -28,18 +28,17 @@ class StayAlignedTrackerState(
 		private set
 
 	private var lastDataRotation = Quaternion.IDENTITY
-	private var lastDataTime = 0L
+	private var lastDataTimeNanos = 0L
 
-	fun onNewData(rawRotation: Quaternion) {
-		val now = System.currentTimeMillis()
-		if (lastDataTime > 0L) {
-			val dt = ((now - lastDataTime) / 1000.0f).coerceIn(0.002f, 0.2f)
+	fun onNewData(rawRotation: Quaternion, timestampNanos: Long = System.nanoTime()) {
+		if (lastDataTimeNanos > 0L && timestampNanos > lastDataTimeNanos) {
+			val dt = ((timestampNanos - lastDataTimeNanos) / 1_000_000_000.0f).coerceIn(0.001f, 0.5f)
 			val angleDelta = lastDataRotation.angleToR(rawRotation)
 			val instantVel = angleDelta / dt
-			// Exponential moving average to smoothly filter packet jitter
+			// Exponential moving average using packet time, not server frame time.
 			angularVelocity = angularVelocity * 0.7f + instantVel * 0.3f
 		}
-		lastDataTime = now
+		lastDataTimeNanos = timestampNanos
 		lastDataRotation = rawRotation
 	}
 

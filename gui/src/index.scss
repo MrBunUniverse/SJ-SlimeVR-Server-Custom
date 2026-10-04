@@ -43,40 +43,40 @@ body {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-3.5px);
+    transform: translateY(-1.5px);
   }
 }
 
 .animate-slime-idle {
-  animation: slime-idle-bounce 2.4s ease-in-out infinite;
+  animation: slime-idle-bounce 3.2s ease-in-out infinite;
 }
 
 @keyframes slime-breathe {
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.85;
+    opacity: 0.92;
   }
   50% {
-    transform: scale(1.06);
+    transform: scale(1.02);
     opacity: 1;
   }
 }
 
 .animate-slime-breathe {
-  animation: slime-breathe 4s ease-in-out infinite;
+  animation: slime-breathe 5s ease-in-out infinite;
   transform-origin: center center;
 }
 
 @keyframes warning-breathe-glow {
   0%,
   100% {
-    transform: scale(0.9);
-    opacity: 0.38;
+    transform: scale(0.98);
+    opacity: 0.42;
   }
   50% {
-    transform: scale(1.04);
-    opacity: 0.62;
+    transform: scale(1.02);
+    opacity: 0.52;
   }
 }
 
@@ -89,11 +89,11 @@ body {
   &::before {
     content: '';
     position: absolute;
-    inset: -6px;
+    inset: -4px;
     z-index: -1;
     border-radius: 50%;
     background: rgb(var(--accent-background-20) / 0.28);
-    filter: blur(6px);
+    filter: blur(4px);
     animation: warning-breathe-glow 2.8s ease-in-out infinite;
     pointer-events: none;
   }
@@ -119,7 +119,7 @@ body {
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   20% {
-    transform: scale(1.85);
+    transform: scale(1.35);
     opacity: 0;
   }
   20.1%,
@@ -137,11 +137,11 @@ body {
   }
   14% {
     transform: scale(1);
-    opacity: 0.5;
+    opacity: 0.32;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   34% {
-    transform: scale(2.1);
+    transform: scale(1.45);
     opacity: 0;
   }
   34.1%,
@@ -152,21 +152,18 @@ body {
 }
 
 @keyframes heartbeat-badge {
-  0% {
+  0%,
+  100% {
     transform: scale(1);
-    animation-timing-function: cubic-bezier(0.25, 1.4, 0.5, 1);
   }
   6% {
-    transform: scale(1.035);
-    animation-timing-function: ease-in-out;
+    transform: scale(1.012);
   }
   12% {
-    transform: scale(0.995);
-    animation-timing-function: cubic-bezier(0.25, 1.4, 0.5, 1);
+    transform: scale(1);
   }
   18% {
-    transform: scale(1.05);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    transform: scale(1.018);
   }
   26% {
     transform: scale(1);
@@ -178,15 +175,15 @@ body {
   26%,
   100% {
     opacity: 0;
-    transform: scale(0.86);
+    transform: scale(0.94);
   }
   6% {
-    opacity: 0.2;
-    transform: scale(0.96);
+    opacity: 0.1;
+    transform: scale(0.98);
   }
   18% {
-    opacity: 0.28;
-    transform: scale(1.12);
+    opacity: 0.16;
+    transform: scale(1.04);
   }
 }
 
@@ -215,115 +212,36 @@ body {
     z-index: -1;
     border-radius: inherit;
     background: rgba(217, 119, 87, 0.72);
-    filter: blur(7px);
+    filter: blur(4px);
     animation: heartbeat-badge-glow 4.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
     pointer-events: none;
   }
 }
 
-/* Underwater Shockwave & Buoyant Bubble Resonance for Waiting Beacon Text */
+/* Small text movement follows the waiting indicator's two status pulses. */
 @keyframes heartbeat-text-push-primary {
-  0% {
-    transform: translateY(0) scale(1, 1);
-    animation-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
-  }
-  /* Shockwave 1 hits: fluid downward compression */
-  6% {
-    transform: translateY(2px) scale(1.006, 0.99);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  /* Rebound 1: buoyant bubble recoil floats upward past equilibrium */
-  12% {
-    transform: translateY(-1.1px) scale(0.998, 1.008);
-    animation-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
-  }
-  /* Shockwave 2 hits (stronger second heartbeat pulse): deeper fluid displacement */
-  18% {
-    transform: translateY(3.2px) scale(1.008, 0.985);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  /* Major Buoyancy Surge: large underwater bubble crests upward */
-  30% {
-    transform: translateY(-2.2px) scale(0.995, 1.01);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Damped Oscillation Wave 1: fluid drag pulls downward */
-  42% {
-    transform: translateY(1.4px) scale(1.003, 0.995);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Damped Oscillation Wave 2: gentle upward floating bob */
-  54% {
-    transform: translateY(-0.8px) scale(0.999, 1.004);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Damped Oscillation Wave 3: delicate settling ripple */
-  66% {
-    transform: translateY(0.4px) scale(1.001, 0.999);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Damped Oscillation Wave 4: subtle micro-float */
-  76% {
-    transform: translateY(-0.16px) scale(1, 1);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Fluid equilibrium restored for calm rest */
-  85%,
+  0%,
   100% {
-    transform: translateY(0) scale(1, 1);
+    transform: translateY(0);
+  }
+  6% {
+    transform: translateY(1px);
+  }
+  18% {
+    transform: translateY(0);
   }
 }
 
 @keyframes heartbeat-text-push-secondary {
   0%,
-  2% {
-    transform: translateY(0) scale(1, 1);
-    animation-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
-  }
-  /* Secondary layer lag: acoustic wave reaches lower water column */
-  8% {
-    transform: translateY(1.2px) scale(1.003, 0.994);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  /* Submerged buoyancy recoil */
-  15% {
-    transform: translateY(-0.65px) scale(0.999, 1.005);
-    animation-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
-  }
-  /* Second shockwave compression */
-  21% {
-    transform: translateY(2.1px) scale(1.005, 0.99);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  /* Submerged bubble surge */
-  33% {
-    transform: translateY(-1.4px) scale(0.997, 1.006);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Harmonic damping 1 */
-  45% {
-    transform: translateY(0.9px) scale(1.002, 0.997);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Harmonic damping 2 */
-  57% {
-    transform: translateY(-0.5px) scale(1, 1.002);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Harmonic damping 3 */
-  69% {
-    transform: translateY(0.25px) scale(1, 1);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Harmonic damping 4 */
-  79% {
-    transform: translateY(-0.1px) scale(1, 1);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  /* Fluid equilibrium restored */
-  88%,
   100% {
-    transform: translateY(0) scale(1, 1);
+    transform: translateY(0);
+  }
+  21% {
+    transform: translateY(0.75px);
+  }
+  33% {
+    transform: translateY(0);
   }
 }
 
@@ -339,15 +257,15 @@ body {
   will-change: transform;
 }
 
-/* Lowkey Ethereal Full-Window Shockwave Waves (Strictly clipped inside dashed window) */
+/* Soft rings keep the waiting state visible without filling the window. */
 @keyframes heartbeat-window-wave-1 {
   0% {
     transform: scale(0.8);
-    opacity: 0.18;
+    opacity: 0.1;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   28% {
-    transform: scale(9.5);
+    transform: scale(2.4);
     opacity: 0;
   }
   28.1%,
@@ -365,11 +283,11 @@ body {
   }
   14% {
     transform: scale(0.8);
-    opacity: 0.22;
+    opacity: 0.12;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   40% {
-    transform: scale(11.5);
+    transform: scale(2.8);
     opacity: 0;
   }
   40.1%,
@@ -437,12 +355,12 @@ body {
     background-position: 0 0;
   }
   100% {
-    background-position: 56px 0;
+    background-position: 16px 0;
   }
 }
 
 .animate-grid-drift {
-  animation: grid-drift-horizontal 8s linear infinite;
+  animation: grid-drift-horizontal 12s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -473,30 +391,28 @@ body {
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(217, 119, 87, 0.3),
-      0 2px 14px -1px rgba(217, 119, 87, 0.2),
-      0 0 22px -3px rgba(217, 119, 87, 0.12);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      0 0 0 1px rgba(217, 119, 87, 0.24),
+      0 2px 8px -2px rgba(217, 119, 87, 0.12),
+      0 0 12px -2px rgba(217, 119, 87, 0.06);
   }
   50% {
     box-shadow:
-      0 0 0 1.25px rgba(217, 119, 87, 0.65),
-      0 4px 24px 2px rgba(217, 119, 87, 0.38),
-      0 0 34px 4px rgba(217, 119, 87, 0.22);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      0 0 0 1px rgba(217, 119, 87, 0.36),
+      0 2px 10px -2px rgba(217, 119, 87, 0.18),
+      0 0 16px 0 rgba(217, 119, 87, 0.08);
   }
 }
 
 .animate-tracker-motion {
-  animation: tracker-motion-pulse 2.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation: tracker-motion-pulse 3.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-tracker-motion {
     animation: none;
     box-shadow:
-      0 0 0 1px rgba(217, 119, 87, 0.45),
-      0 2px 14px -1px rgba(217, 119, 87, 0.25);
+      0 0 0 1px rgba(217, 119, 87, 0.36),
+      0 2px 8px -2px rgba(217, 119, 87, 0.16);
   }
 }
 
@@ -679,7 +595,7 @@ body {
   --background-30: 185, 204, 218; /* #B9CCDA muted text */
   --background-40: 107, 139, 164; /* #6B8BA4 quiet structure */
   --background-50: 84, 119, 146; /* #547792 blue-gray structure */
-  --background-60: 26, 47, 69; /* #1A2F45 elevated surface */
+  --background-60: 13, 24, 35; /* #0D1823 deeper elevated surface */
   --background-70: 18, 34, 61; /* #12223D secondary surface */
   --background-80: 13, 25, 50; /* #0D1932 deep navy canvas */
   --background-90: 8, 17, 31; /* #08111F deepest surface */
@@ -697,7 +613,7 @@ body {
   --window-icon-stroke: 232, 226, 219;
 
   --material-canvas: rgba(13, 25, 50, 0.96);
-  --material-primary: rgba(26, 47, 69, 0.92);
+  --material-primary: rgba(13, 24, 35, 0.92);
   --material-secondary: rgba(18, 34, 61, 0.98);
   --material-tertiary: rgba(232, 226, 219, 0.06);
   --material-tertiary-hover: rgba(232, 226, 219, 0.1);
@@ -782,7 +698,7 @@ body {
 }
 
 :root[data-theme='macos'] .home-tracker-surface {
-  background: rgb(var(--background-60));
+  background: rgb(var(--background-80));
 }
 
 :root[data-theme='macos'] .home-tracker-card {
@@ -861,16 +777,6 @@ body {
   border-radius: 8px;
 }
 
-:root[data-theme='macos'] .telemetry-disclosure {
-  min-height: 26px;
-  color: rgb(var(--background-20));
-}
-
-:root[data-theme='macos'] .telemetry-disclosure:hover {
-  background: var(--material-tertiary);
-  color: rgb(var(--background-10));
-}
-
 :root[data-theme='macos'] .telemetry-tabs {
   margin: 8px 8px 0;
   border: 1px solid var(--material-border-subtle);
@@ -900,11 +806,11 @@ body {
 }
 
 :root[data-theme='macos'] .liquid-glass-tab-strip {
-  background: rgb(var(--background-60));
+  background: rgb(var(--background-70));
 }
 
 :root[data-theme='macos'] .liquid-glass-tab-panel {
-  background: rgb(var(--background-70));
+  background: rgb(var(--background-80));
 }
 
 :root[data-theme='macos'] .quest-capture-surface {
@@ -945,7 +851,6 @@ body {
 }
 
 /* The reference theme uses motion for state feedback, not decoration. */
-:root[data-theme='macos'] .tracker-card-contours animate,
 :root[data-theme='macos'] .remote-card__banner animate {
   display: none;
 }
@@ -967,7 +872,39 @@ body {
 }
 
 :root[data-theme='macos'] .tracker-accent-stroke {
-  stroke: rgb(var(--accent-background-20));
+  stroke: rgb(var(--background-50));
+}
+
+/* Keep decorative tracker geometry structural blue; reserve amber for actions and status. */
+:root[data-theme='macos'] .tracker-card-contours,
+:root[data-theme='macos'] .guide-card-contours {
+  stroke: rgb(var(--background-50));
+  filter: none;
+}
+
+@keyframes macos-tracker-motion-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(250, 185, 91, 0.2),
+      0 2px 8px -2px rgba(250, 185, 91, 0.1),
+      0 0 12px -2px rgba(250, 185, 91, 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(250, 185, 91, 0.3),
+      0 2px 10px -2px rgba(250, 185, 91, 0.14),
+      0 0 16px 0 rgba(250, 185, 91, 0.07);
+  }
+}
+
+:root[data-theme='macos'] .animate-tracker-motion {
+  animation-name: macos-tracker-motion-pulse;
+}
+
+/* Decorative SVG motion is intentionally static in the performance-sensitive theme. */
+:root[data-theme='macos'] .guide-card-contours animate {
+  display: none;
 }
 
 :root[data-theme='macos'] .tracker-accent-fill,
@@ -1443,7 +1380,7 @@ a,
   transition:
     background-color 140ms cubic-bezier(0.25, 1, 0.5, 1),
     border-color 140ms cubic-bezier(0.25, 1, 0.5, 1),
-    transform 140ms cubic-bezier(0.25, 1.4, 0.5, 1);
+    transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
     background: var(--material-tertiary-hover);
@@ -1476,12 +1413,50 @@ a,
     0 12px 36px -4px rgba(0, 0, 0, 0.38);
 }
 
+/* Keep the reference theme layered without paying for full-window blur. */
+:root[data-theme='macos'] {
+  .glass-panel,
+  .glass-panel-strong,
+  .glass-panel-primary,
+  .glass-panel-secondary,
+  .glass-popover,
+  .glass-popup,
+  .glass-pill,
+  .glass-interactive,
+  .floating-dock__surface,
+  .liquid-glass-tab-strip,
+  .liquid-glass-tab-panel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .glass-panel,
+  .glass-panel-strong,
+  .glass-panel-primary,
+  .glass-popover,
+  .glass-popup {
+    background: rgb(var(--background-60));
+  }
+
+  .liquid-glass-tab-panel {
+    background: rgb(var(--background-80));
+  }
+
+  .glass-panel-secondary,
+  .glass-pill,
+  .glass-interactive,
+  .floating-dock__surface,
+  .liquid-glass-tab-strip {
+    background: rgb(var(--background-70));
+  }
+}
+
 /* Settings Category Pane Top-to-Bottom Accordion */
 .category-pane-grid {
   display: grid;
   transition:
-    grid-template-rows 280ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 240ms ease;
+    grid-template-rows 220ms ease-out,
+    opacity 180ms ease-out;
 }
 
 .category-pane-grid-collapsed {
@@ -1503,8 +1478,8 @@ a,
   pointer-events: none;
   contain: paint;
   transition:
-    grid-template-rows 460ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 360ms cubic-bezier(0.16, 1, 0.3, 1);
+    grid-template-rows 240ms ease-out,
+    opacity 180ms ease-out;
 }
 
 .collapsible-tab-grid-expanded {
@@ -1523,10 +1498,10 @@ a,
   overflow: hidden;
   min-height: 0;
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-4px);
   transition:
-    transform 460ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 360ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform 240ms ease-out,
+    opacity 180ms ease-out;
 }
 
 .collapsible-tab-grid-expanded .collapsible-tab-content {
@@ -1536,73 +1511,59 @@ a,
 
 .collapsible-tab-grid-collapsed .collapsible-tab-content {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-4px);
 }
 
 /* Tracker Card & Table Row Apple HIG Slide-in Animations */
 @keyframes view-content-settle {
-  0% {
-    transform: translateY(0);
+  from {
+    opacity: 0.98;
+    transform: translateY(2px);
   }
-  36% {
-    transform: translateY(calc(var(--view-content-amp, 0.2) * 2px));
-  }
-  68% {
-    transform: translateY(calc(var(--view-content-amp, 0.2) * -1px));
-  }
-  100% {
+  to {
+    opacity: 1;
     transform: translateY(0);
   }
 }
 
 .animate-view-content-settle {
-  animation: view-content-settle 520ms cubic-bezier(0.22, 1, 0.36, 1)
-    var(--view-content-delay, 0ms) both;
+  animation: view-content-settle 220ms ease-out var(--view-content-delay, 0ms)
+    both;
 }
 
 @keyframes tracker-grid-card-enter {
-  0% {
+  from {
     opacity: 0;
-    transform: translateY(18px) scale(0.985);
+    transform: translateY(8px) scale(0.995);
   }
-  62% {
-    opacity: 1;
-    transform: translateY(calc(var(--tracker-bounce, 1) * -3px)) scale(1.006);
-  }
-  82% {
-    transform: translateY(calc(var(--tracker-bounce, 1) * 1.5px)) scale(0.998);
-  }
-  100% {
+  to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
 .animate-tracker-grid-enter {
-  animation: tracker-grid-card-enter 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: tracker-grid-card-enter 240ms ease-out both;
   will-change: transform, opacity;
 }
 
 @keyframes tracker-card-layout-enter {
-  0% {
-    transform: translateY(calc(var(--tracker-bounce, 1) * 8px)) scale(0.998);
+  from {
+    transform: translateY(4px);
   }
-  58% {
-    transform: translateY(calc(var(--tracker-bounce, 1) * -1.5px)) scale(1.002);
-  }
-  100% {
-    transform: translateY(0) scale(1);
+  to {
+    transform: translateY(0);
   }
 }
 
 .animate-tracker-layout-enter {
-  animation: tracker-card-layout-enter 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: tracker-card-layout-enter 180ms ease-out both;
   will-change: transform;
 }
 
 @keyframes tracker-slide-in-left {
   0% {
-    transform: translateX(-32px);
+    transform: translateX(-8px);
     opacity: 0;
   }
   100% {
@@ -1613,7 +1574,7 @@ a,
 
 @keyframes tracker-slide-in-right {
   0% {
-    transform: translateX(32px);
+    transform: translateX(8px);
     opacity: 0;
   }
   100% {
@@ -1623,12 +1584,12 @@ a,
 }
 
 .animate-tracker-slide-left {
-  animation: tracker-slide-in-left 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: tracker-slide-in-left 220ms ease-out both;
   will-change: transform, opacity;
 }
 
 .animate-tracker-slide-right {
-  animation: tracker-slide-in-right 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: tracker-slide-in-right 220ms ease-out both;
   will-change: transform, opacity;
 }
 
@@ -1660,6 +1621,44 @@ a,
 /* Floating navigation surface. Blur belongs to navigation, not every content card. */
 .floating-dock {
   pointer-events: none;
+  transition: left 240ms ease-out;
+  will-change: left;
+}
+
+.floating-dock--home-sidebar {
+  left: calc(50% - var(--home-sidebar-offset, 0px)) !important;
+}
+
+.floating-dock--settings {
+  left: calc(50% + var(--settings-dock-offset, 0px)) !important;
+}
+
+@keyframes floating-dock-item-inertia-left {
+  from {
+    transform: translateX(4px) scale(0.995);
+  }
+  to {
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes floating-dock-item-inertia-right {
+  from {
+    transform: translateX(-4px) scale(0.995);
+  }
+  to {
+    transform: translateX(0) scale(1);
+  }
+}
+
+.floating-dock__surface--motion-left > .floating-dock__item,
+.floating-dock__surface--motion-left > .chatbox-control {
+  animation: floating-dock-item-inertia-left 220ms ease-out both;
+}
+
+.floating-dock__surface--motion-right > .floating-dock__item,
+.floating-dock__surface--motion-right > .chatbox-control {
+  animation: floating-dock-item-inertia-right 220ms ease-out both;
 }
 
 .floating-dock__surface {
@@ -1667,11 +1666,89 @@ a,
   border: 1px solid var(--material-border-primary);
   border-radius: 20px;
   background: rgba(var(--background-70), 0.92);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow:
     var(--specular-rim),
     0 14px 36px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Localized fade keeps the dock readable without leaving a hard rectangle behind it. */
+.floating-dock {
+  isolation: isolate;
+}
+
+.floating-dock::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  bottom: -56px;
+  width: min(100vw, 1200px);
+  height: 180px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(var(--background-90), 0.78) 0%,
+    rgba(var(--background-90), 0.5) 42%,
+    rgba(var(--background-90), 0) 100%
+  );
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  mask-image: linear-gradient(to top, #000 0%, #000 46%, transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    #000 46%,
+    transparent 100%
+  );
+}
+
+/* Home has live tracker cards directly behind the dock, so keep their content visible. */
+.floating-dock--home::before {
+  bottom: -58px;
+  height: 120px;
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--background-90), 0) 0%,
+    rgba(var(--background-90), 0.08) 28%,
+    rgba(var(--background-90), 0.3) 62%,
+    rgba(var(--background-90), 0.72) 100%
+  );
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.12) 25%,
+    rgba(0, 0, 0, 0.72) 62%,
+    #000 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.12) 25%,
+    rgba(0, 0, 0, 0.72) 62%,
+    #000 100%
+  );
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* Settings has its own solid content surface; the dock scrim must not tint the sidebar. */
+.floating-dock--settings::before {
+  display: none;
+}
+
+:root[data-theme='macos'] .floating-dock__surface {
+  background: linear-gradient(
+    180deg,
+    rgba(var(--background-70), 0.9),
+    rgba(var(--background-60), 0.94)
+  );
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 @media (max-width: 480px) {
@@ -1686,6 +1763,19 @@ a,
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background: rgb(var(--background-70));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-dock {
+    transition: none;
+  }
+
+  .floating-dock__surface--motion-left > .floating-dock__item,
+  .floating-dock__surface--motion-left > .chatbox-control,
+  .floating-dock__surface--motion-right > .floating-dock__item,
+  .floating-dock__surface--motion-right > .chatbox-control {
+    animation: none;
   }
 }
 
@@ -1710,17 +1800,64 @@ a,
   justify-self: end;
 }
 
-@media (max-width: 640px) {
+.toolbar-more-resets__icon {
+  display: none;
+}
+
+@media (max-width: 1024px) {
   .home-command-bar {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    column-gap: 6px;
   }
 
   .home-command-bar__center {
-    grid-column: 1 / -1;
-    grid-row: 2;
     justify-self: center;
     border-inline: 0;
-    padding-top: 3px;
+    padding-inline: 4px;
+  }
+
+  .home-command-bar__views {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .home-view-switcher {
+    gap: 0;
+  }
+
+  .home-view-switcher__button {
+    gap: 0.375rem;
+    padding-inline: 0.5rem;
+  }
+
+  .toolbar-reset-group {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-command-bar {
+    column-gap: 4px;
+  }
+
+  .home-command-bar__status > button {
+    gap: 0.25rem;
+    padding-inline: 0.375rem;
+  }
+
+  .home-tracker-count__label,
+  .home-view-label,
+  .toolbar-more-resets__label {
+    display: none;
+  }
+
+  .toolbar-more-resets__icon {
+    display: block;
+  }
+
+  .toolbar-more-resets > summary {
+    min-width: 2.25rem;
+    padding-inline: 0.5rem;
   }
 }
 
@@ -1808,14 +1945,14 @@ a,
   }
 
   &::-webkit-slider-thumb:hover {
-    transform: scale(1.14);
+    transform: scale(1.04);
     box-shadow:
       0 2px 6px rgba(0, 0, 0, 0.22),
       0 3px 10px rgba(217, 119, 87, 0.35);
   }
 
   &::-webkit-slider-thumb:active {
-    transform: scale(0.96);
+    transform: scale(0.985);
     background: #d97757;
   }
 
@@ -1837,14 +1974,14 @@ a,
   }
 
   &::-moz-range-thumb:hover {
-    transform: scale(1.14);
+    transform: scale(1.04);
     box-shadow:
       0 2px 6px rgba(0, 0, 0, 0.22),
       0 3px 10px rgba(217, 119, 87, 0.35);
   }
 
   &::-moz-range-thumb:active {
-    transform: scale(0.96);
+    transform: scale(0.985);
     background: #d97757;
   }
 }
@@ -1874,143 +2011,25 @@ a,
   }
 }
 
-/* Apple HIG Preset Jump & Gentle Underwater Shockwave Bounce */
-@keyframes preset-jump-bounce {
-  0% {
-    transform: translateY(0) scale(1, 1);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  18% {
-    transform: translateY(2.5px) scale(0.95, 0.93);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  40% {
-    transform: translateY(-7px) scale(1.09, 1.11);
-    animation-timing-function: cubic-bezier(0.25, 0.9, 0.25, 1);
-  }
-  62% {
-    transform: translateY(2.6px) scale(1.03, 0.97);
-    animation-timing-function: cubic-bezier(0.25, 0.95, 0.35, 1);
-  }
-  78% {
-    transform: translateY(-1.4px) scale(0.99, 1.015);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  90% {
-    transform: translateY(0.5px) scale(1.005, 0.995);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  100% {
-    transform: translateY(0) scale(1, 1);
-  }
-}
-
-@keyframes preset-underwater-bounce {
-  0% {
-    transform: translateY(0) scale(1, 1);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  18% {
-    transform: translateY(3px) scale(1.035, 0.965);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  38% {
-    transform: translateY(-3.8px) scale(0.98, 1.038);
-    animation-timing-function: cubic-bezier(0.25, 0.9, 0.3, 1);
-  }
-  58% {
-    transform: translateY(1.9px) scale(1.018, 0.985);
-    animation-timing-function: cubic-bezier(0.25, 0.95, 0.35, 1);
-  }
-  76% {
-    transform: translateY(-0.9px) scale(0.994, 1.01);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  89% {
-    transform: translateY(0.4px) scale(1.002, 0.998);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  100% {
-    transform: translateY(0) scale(1, 1);
-  }
-}
-
-.animate-preset-jump {
-  animation: preset-jump-bounce 1.05s cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: transform;
-}
-
-.animate-preset-underwater {
-  animation: preset-underwater-bounce 1.28s cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: transform;
-}
-
-/* Directional Horizontal Underwater Shockwave Animations */
+/* Subtle feedback for a selected preset and its neighbors. */
 @keyframes preset-selected-pop {
-  0% {
-    transform: scale(
-      calc(1 - 0.08 * var(--pop-scale, 1)),
-      calc(1 - 0.08 * var(--pop-scale, 1))
-    );
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  from {
+    transform: scale(calc(1 - 0.015 * var(--pop-scale, 1)));
   }
-  28% {
-    transform: scale(
-      calc(1 + 0.085 * var(--pop-scale, 1)),
-      calc(1 + 0.085 * var(--pop-scale, 1))
-    );
-    animation-timing-function: cubic-bezier(0.25, 0.9, 0.25, 1);
-  }
-  52% {
-    transform: scale(
-      calc(1 - 0.03 * var(--pop-scale, 1)),
-      calc(1 - 0.03 * var(--pop-scale, 1))
-    );
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  72% {
-    transform: scale(
-      calc(1 + 0.022 * var(--pop-scale, 1)),
-      calc(1 + 0.022 * var(--pop-scale, 1))
-    );
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  88% {
-    transform: scale(
-      calc(1 - 0.006 * var(--pop-scale, 1)),
-      calc(1 - 0.006 * var(--pop-scale, 1))
-    );
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  100% {
-    transform: scale(1, 1);
+  to {
+    transform: scale(1);
   }
 }
 
 @keyframes preset-shockwave-push-left {
   0% {
     transform: translateX(0);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
   18% {
-    transform: translateX(calc(var(--push-amp, 1) * -12px));
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translateX(calc(var(--push-amp, 1) * -3px));
   }
   38% {
-    transform: translateX(calc(var(--push-amp, 1) * 6px));
-    animation-timing-function: cubic-bezier(0.25, 0.9, 0.3, 1);
-  }
-  58% {
-    transform: translateX(calc(var(--push-amp, 1) * -2.8px));
-    animation-timing-function: cubic-bezier(0.25, 0.95, 0.35, 1);
-  }
-  76% {
-    transform: translateX(calc(var(--push-amp, 1) * 1.2px));
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  89% {
-    transform: translateX(calc(var(--push-amp, 1) * -0.4px));
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+    transform: translateX(calc(var(--push-amp, 1) * -1px));
   }
   100% {
     transform: translateX(0);
@@ -2020,27 +2039,12 @@ a,
 @keyframes preset-shockwave-push-right {
   0% {
     transform: translateX(0);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
   18% {
-    transform: translateX(calc(var(--push-amp, 1) * 12px));
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translateX(calc(var(--push-amp, 1) * 3px));
   }
   38% {
-    transform: translateX(calc(var(--push-amp, 1) * -6px));
-    animation-timing-function: cubic-bezier(0.25, 0.9, 0.3, 1);
-  }
-  58% {
-    transform: translateX(calc(var(--push-amp, 1) * 2.8px));
-    animation-timing-function: cubic-bezier(0.25, 0.95, 0.35, 1);
-  }
-  76% {
-    transform: translateX(calc(var(--push-amp, 1) * -1.2px));
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-  89% {
-    transform: translateX(calc(var(--push-amp, 1) * 0.4px));
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+    transform: translateX(calc(var(--push-amp, 1) * 1px));
   }
   100% {
     transform: translateX(0);
@@ -2048,19 +2052,17 @@ a,
 }
 
 .animate-preset-pop {
-  animation: preset-selected-pop 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: preset-selected-pop 180ms ease-out both;
   will-change: transform;
 }
 
 .animate-preset-push-left {
-  animation: preset-shockwave-push-left 1.24s cubic-bezier(0.22, 1, 0.36, 1)
-    both;
+  animation: preset-shockwave-push-left 180ms ease-out both;
   will-change: transform;
 }
 
 .animate-preset-push-right {
-  animation: preset-shockwave-push-right 1.24s cubic-bezier(0.22, 1, 0.36, 1)
-    both;
+  animation: preset-shockwave-push-right 180ms ease-out both;
   will-change: transform;
 }
 
@@ -2071,17 +2073,15 @@ a,
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   32% {
-    transform: translateY(calc(var(--tab-v-amp, 1) * 16px))
-      scale(calc(1 + var(--tab-v-amp, 1) * 0.012));
+    transform: translateY(calc(var(--tab-v-amp, 1) * 4px));
     animation-timing-function: cubic-bezier(0.2, 0.95, 0.3, 1);
   }
   68% {
-    transform: translateY(calc(var(--tab-v-amp, 1) * -4px))
-      scale(calc(1 - var(--tab-v-amp, 1) * 0.004));
+    transform: translateY(0);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   86% {
-    transform: translateY(calc(var(--tab-v-amp, 1) * 1.2px));
+    transform: translateY(0);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   100% {
@@ -2095,17 +2095,15 @@ a,
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   32% {
-    transform: translateY(calc(var(--tab-v-amp, 1) * -16px))
-      scale(calc(1 - var(--tab-v-amp, 1) * 0.012));
+    transform: translateY(calc(var(--tab-v-amp, 1) * -4px));
     animation-timing-function: cubic-bezier(0.2, 0.95, 0.3, 1);
   }
   68% {
-    transform: translateY(calc(var(--tab-v-amp, 1) * 4px))
-      scale(calc(1 + var(--tab-v-amp, 1) * 0.004));
+    transform: translateY(0);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   86% {
-    transform: translateY(calc(var(--tab-v-amp, 1) * -1.2px));
+    transform: translateY(0);
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
   100% {
@@ -2114,66 +2112,61 @@ a,
 }
 
 .animate-card-tab-expand {
-  animation: tracker-card-tab-expand 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: tracker-card-tab-expand 220ms ease-out both;
   will-change: transform;
 }
 
 .animate-card-tab-collapse {
-  animation: tracker-card-tab-collapse 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: tracker-card-tab-collapse 220ms ease-out both;
   will-change: transform;
 }
 
-/* Card Expand Content Blossom */
+/* Content appears with a short, subtle fade. */
 @keyframes card-expand-content {
-  0% {
-    opacity: 0.25;
-    transform: scale(0.975);
+  from {
+    opacity: 0;
+    transform: translateY(3px);
   }
-  100% {
+  to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 }
 
 .animate-card-expand-content {
-  animation: card-expand-content 0.55s cubic-bezier(0.2, 0.95, 0.3, 1) both;
+  animation: card-expand-content 180ms ease-out both;
   will-change: transform, opacity;
 }
 
-/* Soft Gentle Inward Float for Tracker Settings Details */
 @keyframes tracker-settings-fade-in {
-  0% {
+  from {
     opacity: 0;
-    transform: translateY(14px) scale(0.99);
-    filter: blur(4px);
+    transform: translateY(4px);
   }
-  100% {
+  to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateY(0);
   }
 }
 
 .animate-tracker-settings-in {
-  animation: tracker-settings-fade-in 0.52s cubic-bezier(0.2, 0.95, 0.3, 1) both;
-  will-change: transform, opacity, filter;
+  animation: tracker-settings-fade-in 220ms ease-out both;
+  will-change: transform, opacity;
 }
 
 .animate-tracker-settings-left {
-  animation: tracker-settings-fade-in 0.52s cubic-bezier(0.2, 0.95, 0.3, 1) both;
-  animation-delay: 35ms;
-  will-change: transform, opacity, filter;
+  animation: tracker-settings-fade-in 220ms ease-out both;
+  animation-delay: 20ms;
+  will-change: transform, opacity;
 }
 
 .animate-tracker-settings-right {
-  animation: tracker-settings-fade-in 0.54s cubic-bezier(0.2, 0.95, 0.3, 1) both;
-  animation-delay: 80ms;
-  will-change: transform, opacity, filter;
+  animation: tracker-settings-fade-in 220ms ease-out both;
+  animation-delay: 40ms;
+  will-change: transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-preset-jump,
-  .animate-preset-underwater,
   .animate-preset-pop,
   .animate-preset-push-left,
   .animate-preset-push-right,

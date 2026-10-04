@@ -24,10 +24,6 @@ const TrackerRecoveryState = {
   NEEDS_RESET: 6,
 } as const;
 
-const TrackerRecoveryReason = {
-  ROLE_OR_MOUNTING_CHANGED: 6,
-} as const;
-
 const statusLabelMap: { [key: number]: string } = {
   [TrackerStatusEnum.NONE]: 'tracker-status-none',
   [TrackerStatusEnum.BUSY]: 'tracker-status-busy',
@@ -84,10 +80,7 @@ export function TrackerStatus({
   const resetTracker = () => {
     if (bodyPart == null) return;
     const req = new ResetRequestT();
-    req.resetType =
-      recovery?.reason === TrackerRecoveryReason.ROLE_OR_MOUNTING_CHANGED
-        ? ResetType.Full
-        : ResetType.Yaw;
+    req.resetType = ResetType.Full;
     req.bodyParts = [bodyPart];
     sendRPCPacket(RpcMessage.ResetRequest, req);
   };

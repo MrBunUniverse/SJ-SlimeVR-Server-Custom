@@ -29,8 +29,9 @@ import { useConfig } from '@/hooks/config';
 import { Tween } from '@tweenjs/tween.js';
 import { EyeIcon } from '@/components/commons/icon/EyeIcon';
 
-const GROUND_COLOR = '#3C3832';
-const GROUND_CENTER_COLOR = '#4E483F';
+const GROUND_COLOR = '#2F5F86';
+const GROUND_CENTER_COLOR = '#477CA2';
+const MAX_RENDER_PIXEL_RATIO = 1.25;
 
 // Just need to know the length of the total body, so don't need right legs
 const Y_PARTS = [
@@ -75,13 +76,25 @@ function initializePreview(
     depth: true,
   });
   renderer.setPixelRatio(
-    Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 1.5)
+    Math.min(
+      typeof window !== 'undefined' ? window.devicePixelRatio : 1,
+      MAX_RENDER_PIXEL_RATIO
+    )
   );
   renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
   let dirtyFrames = 20;
+  let animationFrameId: number | null = null;
+
+  const scheduleAnimationFrame = () => {
+    if (animationFrameId === null) {
+      animationFrameId = requestAnimationFrame(animate);
+    }
+  };
+
   const markDirty = (frames = 3) => {
     dirtyFrames = Math.max(dirtyFrames, frames);
+    scheduleAnimationFrame();
   };
 
   const grid = new GridHelper(10, 20, GROUND_CENTER_COLOR, GROUND_COLOR);
@@ -102,7 +115,33 @@ function initializePreview(
 
   let heightOffset = 0;
   let skeletonOffset = 0;
-  let animationFrameId: number;
+  const updateSkeletonHeading = (bones: Map<BodyPart, BoneT>) => {
+    const hmd = bones.get(BodyPart.HEAD);
+    const chest =
+      bones.get(BodyPart.UPPER_CHEST) ??
+      bones.get(BodyPart.CHEST) ??
+      bones.get(BodyPart.HIP);
+    // Keep the preview's model-space heading in sync with reset/calibration
+    // updates. Without this, the bones use the new heading while the group
+    // keeps the heading captured when the skeleton was first created.
+    const sourceRotation =
+      hmd?.rotationG && !isIdentity(hmd.rotationG)
+        ? hmd.rotationG
+        : chest?.rotationG;
+    if (!sourceRotation) return;
+
+    const quat = QuaternionFromQuatT(sourceRotation).normalize().invert();
+
+    // Project the inverse rotation onto the world Y axis, matching the
+    // original face-forward transform while avoiding pitch/roll in the group.
+    const VEC_Y = new Vector3(0, 1, 0);
+    const vec = VEC_Y.multiplyScalar(
+      new Vector3(quat.x, quat.y, quat.z).dot(VEC_Y) / VEC_Y.lengthSq()
+    );
+    const yawReset = new Quaternion(vec.x, vec.y, vec.z, quat.w).normalize();
+
+    skeletonGroup.rotation.setFromQuaternion(yawReset);
+  };
 
   const rebuildSkeleton = (
     newSkeleton: (BoneKind | Bone)[],
@@ -119,22 +158,7 @@ function initializePreview(
     skeletonHelper.resolution.copy(resolution);
     skeletonGroup.add(skeletonHelper);
     scene.add(newSkeleton[0]);
-
-    const hmd = bones.get(BodyPart.HEAD);
-    const chest = bones.get(BodyPart.UPPER_CHEST);
-    // Check if HMD is identity, if it's then use upper chest's rotation
-    const quat = isIdentity(hmd?.rotationG)
-      ? QuaternionFromQuatT(chest?.rotationG).normalize().invert()
-      : QuaternionFromQuatT(hmd?.rotationG).normalize().invert();
-
-    // Project quat to (0x, 1y, 0z)
-    const VEC_Y = new Vector3(0, 1, 0);
-    const vec = VEC_Y.multiplyScalar(
-      new Vector3(quat.x, quat.y, quat.z).dot(VEC_Y) / VEC_Y.lengthSq()
-    );
-    const yawReset = new Quaternion(vec.x, vec.y, vec.z, quat.w).normalize();
-
-    skeletonGroup.rotation.setFromQuaternion(yawReset);
+    updateSkeletonHeading(bones);
   };
 
   const computeUserHeight = (bones: Map<BodyPart, BoneT>) => {
@@ -224,8 +248,8 @@ function initializePreview(
     markDirty(8);
   };
 
-  const animate = () => {
-    animationFrameId = requestAnimationFrame(animate);
+  function animate() {
+    animationFrameId = null;
 
     // ResizeObserver can miss the final frame of the drawer width transition.
     // Sync here so reopening a zero-width preview always restores rendering.
@@ -256,7 +280,10 @@ function initializePreview(
 
     const now = performance.now();
     const elapsed = now - lastRenderTimeRef;
-    if (elapsed < effectiveInterval) return;
+    if (elapsed < effectiveInterval) {
+      scheduleAnimationFrame();
+      return;
+    }
     if (dirtyFrames <= 0) {
       previousFrameTime = now;
       return;
@@ -271,9 +298,10 @@ function initializePreview(
 
     render(deltaSeconds);
     lastRenderTimeRef = now - (elapsed % effectiveInterval);
-  };
+    if (dirtyFrames > 0 || autoOrbit) scheduleAnimationFrame();
+  }
 
-  animationFrameId = requestAnimationFrame(animate);
+  scheduleAnimationFrame();
 
   // Make sure orbit controls works only on the current view
   const handlePointerMove = (event: PointerEvent) => {
@@ -310,6 +338,7 @@ function initializePreview(
     rebuildSkeleton,
     updatesBones: (bones: Map<BodyPart, BoneT>) => {
       markDirty(3);
+      updateSkeletonHeading(bones);
       skeleton.forEach(
         (bone) => bone instanceof BoneKind && bone.updateData(bones)
       );
@@ -328,7 +357,10 @@ function initializePreview(
       }
     },
     destroy: () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
       canvas.removeEventListener('pointermove', handlePointerMove);
       views.forEach((view) => view.controls.dispose());
       views.length = 0;

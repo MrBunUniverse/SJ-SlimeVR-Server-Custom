@@ -76,9 +76,9 @@ export function QuestDiagnosticsPill() {
 
             <div className="flex flex-col gap-1.5 text-[12px]">
               <div className="flex justify-between items-center py-1">
-                <span className="text-background-30">Quest / VRChat OSC:</span>
+                <span className="text-background-30">Backend connection:</span>
                 <span className="font-medium text-background-10">
-                  {isConnected ? 'Ready / Port 9000' : 'Unavailable'}
+                  {isConnected ? 'Server connected' : 'Unavailable'}
                 </span>
               </div>
               <div className="flex justify-between items-center py-1">

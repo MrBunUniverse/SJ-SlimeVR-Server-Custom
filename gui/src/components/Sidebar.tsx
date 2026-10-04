@@ -25,6 +25,7 @@ import { useBHV } from '@/hooks/bvh';
 import { usePauseTracking } from '@/hooks/pause-tracking';
 import { PlayIcon } from './commons/icon/PlayIcon';
 import { Rotate360Icon } from './commons/icon/Rotate360Icon';
+import { useLocalization } from '@fluent/react';
 
 export function PreviewControls({
   open,
@@ -36,6 +37,7 @@ export function PreviewControls({
   onToggleOrbit?: () => void;
 }) {
   const [userHeight, setUserHeight] = useState('');
+  const { l10n } = useLocalization();
   const { currentLocales } = useLocaleConfig();
   const { useRPCPacket, sendRPCPacket } = useWebsocketAPI();
 
@@ -89,108 +91,131 @@ export function PreviewControls({
           <Typography variant="section-title">{userHeight}</Typography>
         </div>
       </Tooltip>
-      <div className="absolute bottom-0 pb-4 flex justify-center w-full">
-        <div className="flex bg-background-80 bg-opacity-70 rounded-lg gap-2 px-4 py-2 items-center fill-background-10">
+      <div className="absolute bottom-0 w-full px-2 pb-3 flex justify-center">
+        <div className="flex max-w-full flex-wrap justify-center bg-background-80 bg-opacity-70 rounded-lg gap-1 px-2 py-1.5 items-center fill-background-10">
           {bvhAvailable && (
-            <Tooltip
-              content={
-                <Typography
-                  variant="section-title"
-                  id={
-                    bvhState === 'idle'
-                      ? 'bvh-start_recording'
-                      : 'bvh-stop_recording'
-                  }
-                />
-              }
-              preferedDirection="top"
+            <button
+              type="button"
+              aria-label={l10n.getString(
+                bvhState === 'idle'
+                  ? 'bvh-start_recording'
+                  : 'bvh-stop_recording'
+              )}
+              aria-pressed={bvhState !== 'idle'}
+              title={l10n.getString(
+                bvhState === 'idle'
+                  ? 'bvh-start_recording'
+                  : 'bvh-stop_recording'
+              )}
+              className={classNames(
+                'flex min-h-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20',
+                bvhState !== 'idle'
+                  ? 'bg-status-critical/20 text-status-critical'
+                  : 'hover:bg-background-60'
+              )}
+              onClick={() => toggleBVH()}
             >
-              <div
-                className={classNames(
-                  'flex justify-center items-center w-10 h-10 rounded-full hover:bg-background-60 cursor-pointer',
-                  { 'bg-background-60': bvhState !== 'idle' }
+              {bvhState === 'idle' && <RecordIcon width={17} />}
+              {bvhState !== 'idle' && (
+                <div className="w-3.5 h-3.5 rounded-full bg-status-critical animate-pulse" />
+              )}
+              <span>
+                {l10n.getString(
+                  bvhState === 'idle'
+                    ? 'bvh-start_recording'
+                    : 'bvh-stop_recording'
                 )}
-                onClick={() => toggleBVH()}
-              >
-                {bvhState === 'idle' && <RecordIcon width={20} />}
-                {bvhState !== 'idle' && (
-                  <div className="w-5 h-5 rounded-full bg-status-critical animate-pulse" />
-                )}
-              </div>
-            </Tooltip>
+              </span>
+            </button>
           )}
-          <Tooltip
-            content={
-              <Typography
-                variant="section-title"
-                id={paused ? 'tracking-paused' : 'tracking-unpaused'}
-              />
-            }
-            preferedDirection="top"
+          <button
+            type="button"
+            aria-label={l10n.getString(
+              paused ? 'tracking-paused' : 'tracking-unpaused'
+            )}
+            aria-pressed={paused}
+            title={l10n.getString(
+              paused ? 'tracking-paused' : 'tracking-unpaused'
+            )}
+            className={classNames(
+              'flex min-h-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20',
+              paused
+                ? 'bg-accent-background-20/20 text-accent-background-10'
+                : 'bg-background-60 hover:bg-background-50'
+            )}
+            onClick={() => toggleTracking()}
           >
-            <div
-              className="flex justify-center items-center w-14 h-14 rounded-full bg-background-60 hover:bg-background-50 cursor-pointer"
-              onClick={() => toggleTracking()}
-            >
-              {!paused && <PauseIcon width={25} />}
-              {paused && <PlayIcon width={25} />}
-            </div>
-          </Tooltip>
+            {!paused && <PauseIcon width={19} />}
+            {paused && <PlayIcon width={19} />}
+            <span>
+              {l10n.getString(paused ? 'tracking-paused' : 'tracking-unpaused')}
+            </span>
+          </button>
           {onToggleOrbit && (
-            <Tooltip
-              content={
-                <Typography
-                  variant="section-title"
-                  id={
-                    isOrbiting
-                      ? 'preview-auto_orbit_stop'
-                      : 'preview-auto_orbit'
-                  }
-                />
-              }
-              preferedDirection="top"
+            <button
+              type="button"
+              aria-label={l10n.getString(
+                isOrbiting ? 'preview-auto_orbit_stop' : 'preview-auto_orbit'
+              )}
+              aria-pressed={isOrbiting}
+              title={l10n.getString(
+                isOrbiting ? 'preview-auto_orbit_stop' : 'preview-auto_orbit'
+              )}
+              className={classNames(
+                'flex min-h-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20',
+                isOrbiting
+                  ? 'bg-accent-background-20/20 text-accent-background-10'
+                  : 'hover:bg-background-60 text-background-10'
+              )}
+              onClick={() => onToggleOrbit()}
             >
               <div
-                className="flex justify-center items-center w-10 h-10 rounded-full hover:bg-background-60 cursor-pointer transition-colors text-background-10"
-                onClick={() => onToggleOrbit()}
+                className={classNames('flex items-center justify-center', {
+                  'animate-[spin_4s_linear_infinite]': isOrbiting,
+                })}
               >
-                <div
-                  className={classNames('flex items-center justify-center', {
-                    'animate-[spin_4s_linear_infinite]': isOrbiting,
-                  })}
-                >
-                  <Rotate360Icon width={20} />
-                </div>
+                <Rotate360Icon width={17} />
               </div>
-            </Tooltip>
+              <span>
+                {l10n.getString(
+                  isOrbiting ? 'preview-auto_orbit_stop' : 'preview-auto_orbit'
+                )}
+              </span>
+            </button>
           )}
-          <Tooltip
-            content={
-              <Typography
-                variant="section-title"
-                id="preview-mocap_mode_soon"
-              />
-            }
-            preferedDirection="top"
+          <button
+            type="button"
+            disabled
+            aria-label={l10n.getString('preview-mocap_mode_soon')}
+            title={l10n.getString('preview-mocap_mode_soon')}
+            className="flex min-h-10 items-center justify-center rounded-full px-2.5 text-background-40 opacity-60 cursor-not-allowed"
           >
-            <div className="flex justify-center items-center w-10 h-10 rounded-full cursor-not-allowed">
-              <HumanIcon width={20} />
-            </div>
-          </Tooltip>
+            <HumanIcon width={17} />
+          </button>
         </div>
       </div>
     </>
   );
 }
 
-function PreviewSection({ open }: { open: boolean }) {
+function PreviewSection({
+  open,
+  onResetPreviewWidth,
+}: {
+  open: boolean;
+  onResetPreviewWidth?: () => void;
+}) {
+  const { l10n } = useLocalization();
   const { config, setConfig } = useConfig();
-  const [disabledRender, setDisabledRender] = useState(config?.skeletonPreview);
+  const [renderDisabled, setRenderDisabled] = useState(
+    !config?.skeletonPreview
+  );
+  const disabledRender = renderDisabled || !open;
   const [isOrbiting, setIsOrbiting] = useState(false);
   const previewContextRef = useRef<PreviewContext | null>(null);
 
   const toggleRender = () => {
-    setConfig({ skeletonPreview: disabledRender });
+    setConfig({ skeletonPreview: renderDisabled });
   };
 
   const handleToggleOrbit = () => {
@@ -201,7 +226,7 @@ function PreviewSection({ open }: { open: boolean }) {
 
   useLayoutEffect(() => {
     // need useLayoutEffect to make sure that the state is corect before the first render of the skeleton
-    setDisabledRender(!config?.skeletonPreview);
+    setRenderDisabled(!config?.skeletonPreview);
   }, [config]);
 
   return (
@@ -233,17 +258,33 @@ function PreviewSection({ open }: { open: boolean }) {
           });
         }}
       />
-      <Tooltip
-        preferedDirection="bottom"
-        content={<Typography id="preview-disable_render" />}
-      >
-        <div
-          className="flex justify-center items-center w-10 h-10 cursor-pointer rounded-full fill-background-10 absolute right-2 top-2 bg-background-60 hover:bg-background-50"
+      <div className="absolute right-2 top-2 z-20 flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={l10n.getString(
+            renderDisabled ? 'preview-enable_render' : 'preview-disable_render'
+          )}
+          aria-pressed={!renderDisabled}
+          title={l10n.getString(
+            renderDisabled ? 'preview-enable_render' : 'preview-disable_render'
+          )}
+          className="flex min-h-9 min-w-9 cursor-pointer items-center justify-center rounded-full bg-background-60 fill-background-10 hover:bg-background-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20"
           onClick={() => toggleRender()}
         >
-          <EyeIcon width={18} closed={!disabledRender} />
-        </div>
-      </Tooltip>
+          <EyeIcon width={18} closed={!renderDisabled} />
+        </button>
+        {onResetPreviewWidth && (
+          <button
+            type="button"
+            aria-label={l10n.getString('home-reset-preview-width')}
+            title={l10n.getString('home-reset-preview-width')}
+            className="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-background-60 text-background-20 transition-colors hover:bg-background-50 hover:text-background-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-background-20"
+            onClick={onResetPreviewWidth}
+          >
+            <Rotate360Icon width={16} />
+          </button>
+        )}
+      </div>
       <PreviewControls
         open={open}
         isOrbiting={isOrbiting}
@@ -253,7 +294,11 @@ function PreviewSection({ open }: { open: boolean }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({
+  onResetPreviewWidth,
+}: {
+  onResetPreviewWidth?: () => void;
+}) {
   const { completion } = useTrackingChecklist();
   const [closed, setClosed] = useState(true);
   const [closing, setClosing] = useState(false);
@@ -287,7 +332,7 @@ export function Sidebar() {
       aria-label="Skeleton detail drawer"
     >
       <div
-        className="transition-[height] duration-500 rounded-xl my-1 glass-panel overflow-clip border border-white/10"
+        className="transition-[height] duration-500 rounded-xl mb-1 glass-panel overflow-clip border border-white/10"
         style={{ height: checklistSize }}
       >
         <TrackingChecklist
@@ -300,7 +345,10 @@ export function Sidebar() {
         className="transition-[height] duration-500 rounded-xl my-1 glass-panel overflow-clip border border-white/10 min-h-0"
         style={{ height: previewSize }}
       >
-        <PreviewSection open={closed} />
+        <PreviewSection
+          open={closed}
+          onResetPreviewWidth={onResetPreviewWidth}
+        />
       </div>
     </div>
   );

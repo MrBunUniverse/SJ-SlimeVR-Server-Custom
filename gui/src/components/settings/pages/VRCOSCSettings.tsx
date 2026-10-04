@@ -22,6 +22,7 @@ import {
 import { yupResolver } from '@hookform/resolvers/yup';
 import { boolean, object } from 'yup';
 import { useOperatingMode } from '@/hooks/operating-mode';
+import { useElectron } from '@/hooks/electron';
 import classNames from 'classnames';
 import {
   OSCSettings,
@@ -69,8 +70,13 @@ export function VRCOSCSettings() {
   const { l10n } = useLocalization();
   const { sendRPCPacket, useRPCPacket } = useWebsocketAPI();
   const { oscValidator } = useOscSettingsValidator();
-  const { floorAnchor, setChatboxEnabled, triggerChatboxStatus } =
-    useOperatingMode();
+  const {
+    floorAnchor,
+    isQuestStandalone,
+    setChatboxEnabled,
+    triggerChatboxStatus,
+  } = useOperatingMode();
+  const electron = useElectron();
   const [chatboxSent, setChatboxSent] = useState(false);
 
   const handleSendChatbox = () => {
@@ -101,6 +107,9 @@ export function VRCOSCSettings() {
       })
     ),
   });
+  const oscAddress = watch('vrchat.oscSettings.address')?.trim().toLowerCase();
+  const isLoopbackAddress =
+    oscAddress === '127.0.0.1' || oscAddress === 'localhost';
 
   const onSubmit = (values: VRCOSCSettingsForm) => {
     const settings = new ChangeSettingsRequestT();
@@ -272,6 +281,19 @@ export function VRCOSCSettings() {
                 label=""
               />
             </div>
+            {isQuestStandalone && electron.isElectron && (
+              <Typography
+                className={`pb-4 text-[12px] ${
+                  isLoopbackAddress
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-background-30'
+                }`}
+              >
+                {isLoopbackAddress
+                  ? 'This server is running on the desktop. 127.0.0.1 or localhost points to this computer; enter the headset’s LAN IP to send OSC to standalone VRChat.'
+                  : 'The desktop is configured to send OSC to this address, but that does not confirm the headset or VRChat received it.'}
+              </Typography>
+            )}
             <Typography variant="section-title">
               {l10n.getString('settings-osc-vrchat-network-trackers')}
             </Typography>

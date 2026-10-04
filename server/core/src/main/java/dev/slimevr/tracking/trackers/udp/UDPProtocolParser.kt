@@ -5,72 +5,79 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 class UDPProtocolParser {
+	@Volatile
+	var lastParsedPacketNumber: Long = 0L
+		private set
+
 	@Throws(IOException::class)
 	fun parse(buf: ByteBuffer, connection: UDPDevice?): Array<UDPPacket?> {
 		val packetId = buf.int
 		val packetNumber = buf.long
-		if (connection != null) {
-			if (!connection.isNextPacket(packetNumber)) {
-				// Skip packet because it's not next
-				throw IOException(
-					"Out of order packet received: id $packetId, number $packetNumber, last ${connection.lastPacketNumber}, from $connection",
-				)
-			}
-			connection.lastPacket = System.currentTimeMillis()
-			connection.trackers.forEach { (_, tracker) ->
-				tracker.heartbeat()
-			}
-		}
-		if (packetId == PACKET_BUNDLE) {
-			bundlePackets.clear()
+		val packets = if (packetId == PACKET_BUNDLE) {
+			val parsedPackets = ArrayList<UDPPacket>()
 			while (buf.hasRemaining()) {
-				val bundlePacketLen = Math.min(buf.short.toInt(), buf.remaining())
+				if (buf.remaining() < 2) throw IOException("Truncated UDP bundle length")
+				val bundlePacketLen = buf.short.toInt()
 				if (bundlePacketLen == 0) continue
+				if (bundlePacketLen < Int.SIZE_BYTES || bundlePacketLen > buf.remaining()) {
+					throw IOException("Invalid UDP bundle packet length: $bundlePacketLen")
+				}
 
 				val bundlePacketStart = buf.position()
 				val bundleBuf = buf.slice()
 				bundleBuf.limit(bundlePacketLen)
+				bundleBuf.order(buf.order())
 				val bundlePacketId = bundleBuf.int
 				val newPacket = getNewPacket(bundlePacketId)
-				newPacket?.let {
+				if (newPacket != null) {
 					newPacket.readData(bundleBuf)
-					bundlePackets.add(newPacket)
+					parsedPackets.add(newPacket)
 				}
 
 				buf.position(bundlePacketStart + bundlePacketLen)
 			}
-			return bundlePackets.toTypedArray()
+			Array(parsedPackets.size) { parsedPackets[it] as UDPPacket? }
 		} else if (packetId == PACKET_BUNDLE_COMPACT) {
-			bundlePackets.clear()
+			val parsedPackets = ArrayList<UDPPacket>()
 			while (buf.hasRemaining()) {
-				val bundlePacketLen = Math.min(buf.get().toUByte().toInt(), buf.remaining()) // 1 byte
+				val bundlePacketLen = buf.get().toUByte().toInt() // 1 byte
 				if (bundlePacketLen == 0) continue
+				if (bundlePacketLen > buf.remaining()) throw IOException("Invalid compact UDP bundle packet length: $bundlePacketLen")
 
 				val bundlePacketStart = buf.position()
 				val bundleBuf = buf.slice()
 				bundleBuf.limit(bundlePacketLen)
+				bundleBuf.order(buf.order())
 				val bundlePacketId = bundleBuf.get().toUByte().toInt() // 1 byte
 				val newPacket = getNewPacket(bundlePacketId)
-				newPacket?.let {
+				if (newPacket != null) {
 					newPacket.readData(bundleBuf)
-					bundlePackets.add(newPacket)
+					parsedPackets.add(newPacket)
 				}
 
 				buf.position(bundlePacketStart + bundlePacketLen)
 			}
-			return bundlePackets.toTypedArray()
+			Array(parsedPackets.size) { parsedPackets[it] as UDPPacket? }
+		} else {
+			val newPacket = getNewPacket(packetId)
+			if (newPacket != null) newPacket.readData(buf)
+			arrayOf<UDPPacket?>(newPacket)
 		}
 
-		val newPacket = getNewPacket(packetId)
-		if (newPacket != null) {
-			newPacket.readData(buf)
-		} else {
-// 			LogManager.log.debug(
-// 				"[UDPProtocolParser] Skipped packet id " +
-// 					packetId + " from " + connection
-// 			)
+		if (connection != null && !connection.isNextPacket(packetNumber)) {
+			throw IOException(
+				"Out of order packet received: id $packetId, number $packetNumber, last ${connection.lastPacketNumber}, from $connection",
+			)
 		}
-		return arrayOf(newPacket)
+		lastParsedPacketNumber = packetNumber
+		if (connection != null) {
+			// A valid packet proves that the device has recovered, even if the
+			// keepalive sweep has not run yet.
+			connection.timedOut = false
+			connection.lastPacket = System.currentTimeMillis()
+			connection.trackers.forEach { (_, tracker) -> tracker.heartbeat() }
+		}
+		return packets
 	}
 
 	@Throws(IOException::class)
@@ -159,8 +166,6 @@ class UDPProtocolParser {
 		const val PACKET_BUNDLE_COMPACT = 101
 		const val PACKET_PROTOCOL_CHANGE = 200
 		private val HANDSHAKE_BUFFER = ByteArray(64)
-		private val bundlePackets = ArrayList<UDPPacket>(128)
-
 		init {
 			HANDSHAKE_BUFFER[0] = 3
 			val str = "Hey OVR =D 5".toByteArray(StandardCharsets.US_ASCII)
