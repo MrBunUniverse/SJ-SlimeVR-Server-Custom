@@ -96,8 +96,8 @@ public class OSCRouter {
 			} catch (UnknownHostException e) {
 				throw new RuntimeException(e);
 			}
-			// Sender implementations reuse an internal serialization buffer and are
-			// not safe to share across the router and a handler's worker thread.
+			// Senders reuse an internal buffer, so they must not be shared
+			// between the router and a handler's worker thread.
 			if (oscSender == null) {
 				try {
 					oscSender = new OSCPortOut(new InetSocketAddress(address, portOut));
