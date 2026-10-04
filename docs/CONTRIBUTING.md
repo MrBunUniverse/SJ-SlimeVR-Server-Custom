@@ -1,4 +1,4 @@
-# Contributing to SlimeVR
+# Contributing
 
 Please follow general contribution guidelines: [CONTRIBUTING.md](https://github.com/SlimeVR/.github/blob/main/profile/CONTRIBUTING.md).
 
@@ -14,7 +14,7 @@ This document describes essential knowledge required to contribute to the SlimeV
 First, clone the codebase using git in a terminal in the folder you want.
 
 ```bash
-git clone --recursive https://github.com/SlimeVR/SlimeVR-Server.git
+git clone --recursive https://github.com/MrBunUniverse/SJ-SlimeVR-Server-Custom.git
 ```
 
 Now you can open the codebase in [IDEA](https://www.jetbrains.com/idea/download/) (Recommended; VSCode and Eclipse also work but have limited Kotlin support).
