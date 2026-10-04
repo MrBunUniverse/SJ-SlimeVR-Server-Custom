@@ -32,8 +32,9 @@ The system is architected around two decoupled tiers:
 
 ```
 SJ SlimeVR Server/
-├── Launch SlimeVR.command          # Unified one-click macOS launcher (builds & runs daemon + client)
-├── Stop SlimeVR.command            # Graceful process supervisor shutdown
+├── scripts/
+│   ├── Launch SlimeVR.command      # Unified one-click macOS launcher (builds & runs daemon + client)
+│   └── Stop SlimeVR.command        # Graceful process supervisor shutdown
 │
 ├── gui/                            # Desktop Client (Electron + React 18 + TypeScript)
 │   ├── electron/                   # Native macOS window host, power assertions & menu bar tray
@@ -108,10 +109,10 @@ Double-click either script in Finder or execute via Terminal:
 
 ```bash
 # Launch both tracking server daemon and desktop client
-./"Launch SlimeVR.command"
+./scripts/"Launch SlimeVR.command"
 
 # Terminate all running server and client processes cleanly
-./"Stop SlimeVR.command"
+./scripts/"Stop SlimeVR.command"
 ```
 
 ---

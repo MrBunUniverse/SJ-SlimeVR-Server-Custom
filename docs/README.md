@@ -5,11 +5,11 @@ Use this page as the index for project documentation. Runtime source belongs in 
 ## Project and Development
 
 - [Project overview](PROJECT.md)
-- [Shared AI development guide](../AI_DEVELOPMENT.md)
+- [Shared AI development guide](dev/AI_DEVELOPMENT.md)
 - [Contributing guide](CONTRIBUTING.md)
 - [Test infrastructure](TEST_INFRA.md)
 - [Test readiness checklist](TEST_READY.md)
-- [Repository UI map](../UI_MAP.md)
+- [Repository UI map](dev/UI_MAP.md)
 - [Agent development runbook](../.agents/skills/slimevr-dev/SKILL.md)
 
 ## Audits

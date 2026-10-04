@@ -3,8 +3,8 @@
 ## Launch and Stop
 
 ```bash
-bash "Launch SlimeVR.command"
-bash "Stop SlimeVR.command"
+bash "scripts/Launch SlimeVR.command"
+bash "scripts/Stop SlimeVR.command"
 ```
 
 The launcher starts the Electron development host and the packaged server JAR. Lifecycle changes must preserve single-instance behavior and stop only descendants or exact path-matched project processes.

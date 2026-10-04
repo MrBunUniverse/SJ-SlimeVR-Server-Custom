@@ -41,8 +41,8 @@ Target exactly `gui/node_modules/.vite`; never delete the complete dependency tr
 ## Launch Scripts and Documentation
 
 ```bash
-bash -n "Launch SlimeVR.command"
-bash -n "Stop SlimeVR.command"
+bash -n "scripts/Launch SlimeVR.command"
+bash -n "scripts/Stop SlimeVR.command"
 git diff --check
 ```
 

@@ -20,7 +20,7 @@ This is the shared source of truth for GPT/Codex, Gemini, and other coding agent
 | Desktop server | `server/desktop/` | Desktop entry point and packaged JAR |
 | Protocol | `solarxr-protocol/` | Git submodule; FlatBuffers and generated libraries |
 | OpenVR bindings | `bindings-provider/` | Includes the `openvr` submodule |
-| Launch helpers | `Launch SlimeVR.command`, `Stop SlimeVR.command` | Keep process matching project-scoped |
+| Launch helpers | `scripts/Launch SlimeVR.command`, `scripts/Stop SlimeVR.command` | Keep process matching project-scoped |
 | Documentation | `docs/` | Start at `docs/README.md` |
 
 Do not treat `.backup/`, `.gradle/`, `.kotlin/`, `.pnpm-store/`, `.tools/`, `build/`, `graphify-out/`, `gui/out/`, or any `node_modules/` directory as source. Do not edit generated output when a source file or build command exists.
@@ -28,7 +28,7 @@ Do not treat `.backup/`, `.gradle/`, `.kotlin/`, `.pnpm-store/`, `.tools/`, `bui
 ## Working Method
 
 1. Read the request, `git status --short`, and the files directly involved. Assume existing changes belong to the user.
-2. Use `rg` or direct paths to trace callers, configuration, and tests. For visual UI work, consult `UI_MAP.md` first as a locator, then verify the referenced code because line hints can drift.
+2. Use `rg` or direct paths to trace callers, configuration, and tests. For visual UI work, consult `docs/dev/UI_MAP.md` first as a locator, then verify the referenced code because line hints can drift.
 3. Prefer existing helpers, platform facilities, and installed dependencies. Add abstractions or dependencies only when they reduce real complexity.
 4. Keep edits focused. Do not combine a feature or bug fix with unrelated formatting, renaming, deletion, or repository cleanup.
 5. Treat `solarxr-protocol/` and `bindings-provider/openvr/` as submodules. Do not change their revisions or generated contents unless the request requires it.
@@ -73,7 +73,7 @@ Use the current command output as the truth. Test totals can grow over time.
 
 ## UI Navigation
 
-`UI_MAP.md` is a fast index, not a prohibition against validating the code. Use its paths first. If a path, symbol, or line hint is stale, locate the current symbol with a narrow `rg` query and update the map when the component location or responsibility materially changed.
+`docs/dev/UI_MAP.md` is a fast index, not a prohibition against validating the code. Use its paths first. If a path, symbol, or line hint is stale, locate the current symbol with a narrow `rg` query and update the map when the component location or responsibility materially changed.
 
 ## Safety and Completion
 

@@ -44,8 +44,8 @@ tasks.withType<Javadoc> {
 }
 
 tasks.withType<Jar> {
-	from("../../LICENSE-APACHE")
-	from("../../LICENSE-MIT")
+	from("../../docs/licenses/LICENSE-APACHE")
+	from("../../docs/licenses/LICENSE-MIT")
 }
 
 allprojects {

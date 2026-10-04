@@ -5,7 +5,7 @@ trigger: always_on
 
 # Build Integrity
 
-Use the verification matrix in [`../../AI_DEVELOPMENT.md`](../../AI_DEVELOPMENT.md). Select checks from the files actually changed, and trust current command output rather than a hard-coded test count.
+Use the verification matrix in [`../../docs/dev/AI_DEVELOPMENT.md`](../../docs/dev/AI_DEVELOPMENT.md). Select checks from the files actually changed, and trust current command output rather than a hard-coded test count.
 
 Key invariants:
 

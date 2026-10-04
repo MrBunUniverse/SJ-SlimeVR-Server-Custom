@@ -18,4 +18,4 @@ Avoid speculative abstractions, duplicate utilities, and new dependencies withou
 
 Non-trivial logic needs a focused automated check. Do not compromise input validation, error handling, security, accessibility, user data, or real-hardware requirements to reduce a diff.
 
-For multi-model work, follow the shared workflow in [../../AI_DEVELOPMENT.md](../../AI_DEVELOPMENT.md) and keep one writer per checkout.
+For multi-model work, follow the shared workflow in [../../docs/dev/AI_DEVELOPMENT.md](../../docs/dev/AI_DEVELOPMENT.md) and keep one writer per checkout.

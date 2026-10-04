@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Resolve script directory (Project root)
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )"
 cd "$DIR"
 
 echo "=================================================="
